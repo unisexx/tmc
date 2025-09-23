@@ -39,7 +39,7 @@
     </a>
 </li>
 
-{{--
+
 <li class="pc-item">
     <a href="{{ route('backend.contact.edit', 1) }}" class="pc-link">
         <span class="pc-micon"><i class="ph-duotone ph-phone"></i></span>
@@ -47,10 +47,11 @@
     </a>
 </li>
 
+
 <li class="pc-item">
     <a href="{{ route('backend.privacy.edit', 1) }}" class="pc-link">
         <span class="pc-micon"><i class="ph-duotone ph-shield-check"></i></span>
-        <span class="pc-mtext" data-i18n="นโยบายส่วนบุคคล">นโยบายส่วนบุคคล</span>
+        <span class="pc-mtext" data-i18n="นโยบายข้อมูลส่วนบุคคล">นโยบายข้อมูลส่วนบุคคล</span>
     </a>
 </li>
 
@@ -61,6 +62,7 @@
     </a>
 </li>
 
+{{--
 <li class="pc-item">
     <a href="{{ route('backend.users.index') }}" class="pc-link">
         <span class="pc-micon"><i class="ph-duotone ph-users"></i></span>
