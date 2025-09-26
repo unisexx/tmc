@@ -9,6 +9,7 @@
 <script src="{{ URL::asset('build/js/theme.js') }}"></script>
 <script src="{{ URL::asset('build/js/multi-lang.js') }}"></script>
 <script src="{{ URL::asset('build/js/plugins/feather.min.js') }}"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
 
 @if (env('APP_DARK_LAYOUT') == 'default')
     <script>
@@ -162,3 +163,8 @@
         background-color: var(--bs-danger) !important;
     }
 </style>
+
+
+{{-- Choice JS --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="{{ URL::asset('build/js/plugins/choices.min.js') }}"></script>

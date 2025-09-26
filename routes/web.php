@@ -9,6 +9,7 @@ use App\Http\Controllers\Backend\NewsController;
 use App\Http\Controllers\Backend\PrivacyPolicyController;
 use App\Http\Controllers\Backend\StatController;
 use App\Http\Controllers\Backend\UploadController;
+use App\Http\Controllers\Backend\UserController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -65,26 +66,13 @@ Route::middleware(['auth'])->group(function () {
         // Route::get('/permissions', fn() => view('backend.permissions.index'))->name('permissions.index');
         // Route::get('/logs', fn() => view('backend.logs.index'))->name('logs.index');
 
-        /*
         Route::resource('user', UserController::class)->names('user');
-        // เพิ่มเมนูย่อยสำหรับการจัดการผู้ใช้งาน
         Route::prefix('user')->name('user.')->group(function () {
-        // รายชื่อผู้ใช้งานทั้งหมด
-        Route::get('list', [UserController::class, 'list'])->name('list');
-
-        // ข้อมูลผู้ใช้งานรายบุคคล (view detail)
-        Route::get('{user}/detail', [UserController::class, 'detail'])->name('detail');
-
-        // ดาวน์โหลดข้อมูลการลงทะเบียนเป็น PDF
-        Route::get('{user}/download-pdf', [UserController::class, 'downloadPdf'])->name('downloadPdf');
-
-        // รีเซ็ต Username/Password
-        Route::post('{user}/reset-password', [UserController::class, 'resetPassword'])->name('resetPassword');
-
-        // export รายงานผู้ใช้งาน
-        Route::get('export', [UserController::class, 'export'])->name('export');
+            Route::get('{user}/detail', [UserController::class, 'detail'])->name('detail');
+            Route::get('{user}/download-pdf', [UserController::class, 'downloadPdf'])->name('downloadPdf');
+            Route::post('{user}/reset-password', [UserController::class, 'resetPassword'])->name('resetPassword');
+            Route::get('export', [UserController::class, 'export'])->name('export');
         });
-         */
 
         // tinymce uploads
         Route::post('upload/tinymce', [UploadController::class, 'tinymce'])->name('upload.tinymce');

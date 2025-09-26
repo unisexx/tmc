@@ -62,6 +62,28 @@
     </a>
 </li>
 
+<li class="pc-item">
+    <a href="{{ route('backend.user.index') }}" class="pc-link">
+        <span class="pc-micon"><i class="ph-duotone ph-users-three"></i></span>
+        <span class="pc-mtext" data-i18n="จัดการผู้ใช้งาน">จัดการผู้ใช้งาน</span>
+    </a>
+</li>
+
+{{-- <li class="pc-item pc-hasmenu">
+    <a href="#!" class="pc-link">
+        <span class="pc-micon"><i class="ph-duotone ph-users-three"></i></span>
+        <span class="pc-mtext" data-i18n="จัดการผู้ใช้งาน">จัดการผู้ใช้งาน</span>
+        <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
+    </a>
+    <ul class="pc-submenu">
+        <li class="pc-item">
+            <a href="{{ route('backend.user.index') }}" class="pc-link" data-i18n="รายชื่อผู้ใช้งาน">รายชื่อผู้ใช้งาน</a>
+        </li>
+    </ul>
+</li> --}}
+
+
+
 {{--
 <li class="pc-item">
     <a href="{{ route('backend.users.index') }}" class="pc-link">
