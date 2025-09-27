@@ -65,3 +65,12 @@
         border-color: var(--bs-success) !important;
     }
 </style>
+
+{{-- ดาวแดงบังคับกรอกในฟอร์ม .required --}}
+<style>
+    .required::after {
+        content: " *";
+        color: #dc3545;
+        /* สีแดงแบบ bootstrap danger */
+    }
+</style>

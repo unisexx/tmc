@@ -40,6 +40,8 @@
         @include('layouts.footer')
         @include('layouts.customizer')
 
+        @stack('modal')
+
         @include('layouts.footerjs')
         @yield('scripts')
         @stack('js')
