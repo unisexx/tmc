@@ -18,6 +18,14 @@
     </a>
 </li>
 
+{{-- resources/views/layouts/partials/sidebar.blade.php --}}
+<li class="pc-item">
+    <a href="{{ route('backend.assessment.index') }}" class="pc-link">
+        <span class="pc-micon"><i class="ph-duotone ph-clipboard-text"></i></span>
+        <span class="pc-mtext">การประเมินตนเอง</span>
+    </a>
+</li>
+
 <li class="pc-item">
     <a href="{{ route('backend.hilight.index') }}" class="pc-link">
         <span class="pc-micon"><i class="ph-duotone ph-star"></i></span>
@@ -50,7 +58,7 @@
 
 <li class="pc-item">
     <a href="{{ route('backend.privacy.edit', 1) }}" class="pc-link">
-        <span class="pc-micon"><i class="ph-duotone ph-shield-check"></i></span>
+        <span class="pc-micon"><i class="ph-duotone ph-fingerprint-simple"></i></span>
         <span class="pc-mtext" data-i18n="นโยบายข้อมูลส่วนบุคคล">นโยบายข้อมูลส่วนบุคคล</span>
     </a>
 </li>
@@ -66,6 +74,13 @@
     <a href="{{ route('backend.user.index') }}" class="pc-link">
         <span class="pc-micon"><i class="ph-duotone ph-users-three"></i></span>
         <span class="pc-mtext" data-i18n="จัดการผู้ใช้งาน">จัดการผู้ใช้งาน</span>
+    </a>
+</li>
+
+<li class="pc-item">
+    <a href="{{ route('backend.role.index') }}" class="pc-link">
+        <span class="pc-micon"><i class="ph-duotone ph-shield-check"></i></span>
+        <span class="pc-mtext" data-i18n="สิทธิ์การใช้งาน">สิทธิ์การใช้งาน</span>
     </a>
 </li>
 

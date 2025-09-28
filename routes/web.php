@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Backend\AssessmentController;
+use App\Http\Controllers\Backend\AssessmentFillController;
 use App\Http\Controllers\Backend\ContactController;
 use App\Http\Controllers\Backend\CookiePolicyController;
 use App\Http\Controllers\Backend\DashboardController;
@@ -7,6 +9,7 @@ use App\Http\Controllers\Backend\FaqController;
 use App\Http\Controllers\Backend\HilightController;
 use App\Http\Controllers\Backend\NewsController;
 use App\Http\Controllers\Backend\PrivacyPolicyController;
+use App\Http\Controllers\Backend\RoleController;
 use App\Http\Controllers\Backend\StatController;
 use App\Http\Controllers\Backend\UploadController;
 use App\Http\Controllers\Backend\UserController;
@@ -30,21 +33,27 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/stat', [StatController::class, 'index'])->name('stat');
 
+        // ไฮไลท์
         Route::resource('hilight', HilightController::class)->names('hilight');
         Route::post('hilight/reorder', [HilightController::class, 'reorder'])->name('hilight.reorder');
 
+        // ข่าวประชาสัมพันธ์
         Route::resource('news', NewsController::class)->names('news');
 
+        // คำถามที่พบบ่อย
         Route::resource('faq', FaqController::class)->names('faq');
         Route::post('faq/reorder', [FaqController::class, 'reorder'])->name('faq.reorder');
         Route::post('faq/{faq}/view', [FaqController::class, 'countView'])->name('faq.countView');
 
+        // ติดต่อเรา
         Route::get('contact', [ContactController::class, 'edit'])->name('contact.edit');
         Route::put('contact', [ContactController::class, 'update'])->name('contact.update');
 
+        // นโยบายส่วนบุคคล
         Route::get('privacy-policy', [PrivacyPolicyController::class, 'edit'])->name('privacy.edit');
         Route::put('privacy-policy', [PrivacyPolicyController::class, 'update'])->name('privacy.update');
 
+        // นโยบายคุกกี้
         Route::get('cookie-policy', [CookiePolicyController::class, 'edit'])->name('cookie.edit');
         Route::put('cookie-policy', [CookiePolicyController::class, 'update'])->name('cookie.update');
 
@@ -66,6 +75,7 @@ Route::middleware(['auth'])->group(function () {
         // Route::get('/permissions', fn() => view('backend.permissions.index'))->name('permissions.index');
         // Route::get('/logs', fn() => view('backend.logs.index'))->name('logs.index');
 
+        // จัดการผู้ใช้งาน
         Route::resource('user', UserController::class)->names('user');
         Route::prefix('user')->name('user.')->group(function () {
             Route::get('{user}/detail', [UserController::class, 'detail'])->name('detail');
@@ -73,6 +83,19 @@ Route::middleware(['auth'])->group(function () {
             Route::post('{user}/reset-password', [UserController::class, 'resetPassword'])->name('resetPassword');
             Route::get('export', [UserController::class, 'export'])->name('export');
         });
+
+        // สิทธิ์การใช้งาน (Roles & Permissions)
+        Route::resource('role', RoleController::class);
+
+        // ประเมินตนเอง
+        // หน่วยบริการ (ตัวอย่าง: จัดการเองอยู่แล้ว)
+        // Route::resource('service-unit', ServiceUnitController::class);
+        // ประเมิน
+        Route::resource('assessment', AssessmentController::class)->except(['destroy']);
+        // กรอกองค์ประกอบ (step 2)
+        Route::get('assessment/{assessment}/fill', [AssessmentFillController::class, 'index'])->name('assessment.fill');
+        Route::post('assessment/{assessment}/fill', [AssessmentFillController::class, 'store'])->name('assessment.fill.store');
+        Route::post('assessment/{assessment}/submit', [AssessmentFillController::class, 'submit'])->name('assessment.submit');
 
         // tinymce uploads
         Route::post('upload/tinymce', [UploadController::class, 'tinymce'])->name('upload.tinymce');
