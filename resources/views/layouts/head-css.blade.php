@@ -15,8 +15,9 @@
 <link rel="stylesheet" href="{{ URL::asset('build/css/style.css') }}" id="main-style-link">
 <link rel="stylesheet" href="{{ URL::asset('build/css/style-preset.css') }}">
 
-<link rel="stylesheet" href="{{ asset('build/css/plugins/notifier.css') }}">
-<link rel="stylesheet" href="{{ asset('build/css/plugins/animate.min.css') }}">
+<link rel="stylesheet" href="{{ URL::asset('build/css/plugins/notifier.css') }}">
+<link rel="stylesheet" href="{{ URL::asset('build/css/plugins/animate.min.css') }}">
+<link rel="stylesheet" href="{{ URL::asset('build/css/plugins/style.css') }}">
 
 {{-- Choice JS --}}
 <style>
@@ -72,5 +73,38 @@
         content: " *";
         color: #dc3545;
         /* สีแดงแบบ bootstrap danger */
+    }
+</style>
+
+{{-- Text Avatar --}}
+<style>
+    .avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #eef2f7;
+        color: #6c757d;
+        font-weight: 700;
+    }
+
+    .wid-80 {
+        width: 80px;
+        height: auto;
+    }
+</style>
+
+{{-- DragDrop โหมดจัดเรียง --}}
+<style>
+    /* เคอร์เซอร์สำหรับจับลาก */
+    .drag-handle {
+        cursor: move;
+    }
+
+    /* เงาเบาๆ ตอนกำลังลาก */
+    .sortable-ghost {
+        opacity: .5;
     }
 </style>

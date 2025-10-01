@@ -5,21 +5,6 @@
 @section('breadcrumb-item', 'เนื้อหา')
 @section('breadcrumb-item-active', 'ไฮไลท์')
 
-@section('css')
-    <link rel="stylesheet" href="{{ URL::asset('build/css/plugins/style.css') }}">
-    <style>
-        /* เคอร์เซอร์สำหรับจับลาก */
-        .drag-handle {
-            cursor: move;
-        }
-
-        /* เงาเบาๆ ตอนกำลังลาก */
-        .sortable-ghost {
-            opacity: .5;
-        }
-    </style>
-@endsection
-
 @section('content')
     <div class="row">
         <div class="col-12">

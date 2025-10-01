@@ -2,21 +2,18 @@
 @extends('layouts.main')
 
 @section('title', 'จัดการผู้ใช้งาน')
-@section('breadcrumb-item', 'ผู้ใช้งาน')
-@section('breadcrumb-item-active', 'รายการผู้ใช้งาน')
+@section('breadcrumb-item', 'จัดการผู้ใช้งาน')
+@section('breadcrumb-item-active', 'ตรวจสอบใบสมัคร')
 
 @section('content')
     <div class="row">
         <div class="col-12">
             <div class="card table-card">
                 <div class="card-header d-flex align-items-center justify-content-between py-3">
-                    <h5 class="mb-0">รายการผู้ใช้งาน</h5>
+                    <h5 class="mb-0">ตรวจสอบใบสมัคร</h5>
                     <div class="d-flex gap-2">
-                        <a href="{{ route('backend.user.create') }}" class="btn btn-primary">
-                            <i class="ti ti-plus"></i> เพิ่มผู้ใช้งาน
-                        </a>
-                        <a href="{{ route('backend.user.export') }}" class="btn btn-outline-secondary">
-                            <i class="ti ti-download"></i> ส่งออก CSV
+                        <a href="{{ route('backend.application-review.create') }}" class="btn btn-primary">
+                            <i class="ti ti-plus"></i> เพิ่มใบสมัคร
                         </a>
                     </div>
                 </div>
@@ -94,11 +91,11 @@
                                         {{-- สถานะลงทะเบียน --}}
                                         <td class="text-center d-none d-lg-table-cell">
                                             @switch($regStatus)
-                                                @case('อนุมัติ')
+                                                @case('approved')
                                                     <span class="badge text-bg-primary">อนุมัติ</span>
                                                 @break
 
-                                                @case('ไม่อนุมัติ')
+                                                @case('rejected')
                                                     <span class="badge text-bg-danger">ไม่อนุมัติ</span>
                                                 @break
 
@@ -125,11 +122,11 @@
                                                 </button>
                                             </form>
 
-                                            <a href="{{ route('backend.user.edit', $u) }}" class="avtar avtar-xs btn-link-secondary" title="แก้ไข">
+                                            <a href="{{ route('backend.application-review.edit', $u) }}" class="avtar avtar-xs btn-link-secondary" title="แก้ไข">
                                                 <i class="ti ti-edit f-20"></i>
                                             </a>
 
-                                            <form action="{{ route('backend.user.destroy', $u) }}" method="POST" class="d-inline" onsubmit="return confirm('ยืนยันการลบผู้ใช้งานนี้?')">
+                                            <form action="{{ route('backend.application-review.destroy', $u) }}" method="POST" class="d-inline" onsubmit="return confirm('ยืนยันการลบผู้ใช้งานนี้?')">
                                                 @csrf @method('DELETE')
                                                 <button class="avtar avtar-xs btn-link-secondary" type="submit" title="ลบ">
                                                     <i class="ti ti-trash f-20"></i>

@@ -4,10 +4,6 @@
 @section('breadcrumb-item', 'เนื้อหา')
 @section('breadcrumb-item-active', 'ข่าวประชาสัมพันธ์')
 
-@section('css')
-    <link rel="stylesheet" href="{{ URL::asset('build/css/plugins/style.css') }}">
-@endsection
-
 @section('content')
     <!-- [ Main Content ] start -->
     <div class="row">

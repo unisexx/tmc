@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -60,6 +61,9 @@ class User extends Authenticatable
 
         /* -------------------- อนุญาติให้ login --------------------*/
         'is_active',
+
+        /* -------------------- สิทธิ์การใช้งาน --------------------*/
+        'role_id',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -75,4 +79,9 @@ class User extends Authenticatable
         'consent_log'             => 'array',
         'is_active'               => 'boolean',
     ];
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
 }

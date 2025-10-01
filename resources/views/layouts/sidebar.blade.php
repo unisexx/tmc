@@ -26,15 +26,17 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                        <img src="{{ URL::asset('build/images/user/avatar-1.jpg') }}" alt="user-image" class="user-avtar wid-45 rounded-circle">
+                        {{-- <img src="{{ URL::asset('build/images/user/avatar-1.jpg') }}" alt="user-image" class="user-avtar wid-45 rounded-circle"> --}}
+                        @php $initial = mb_substr(Auth::user()->contact_name ?: (Auth::user()->contact_name ?? 'U'), 0, 1); @endphp
+                        <div class="avatar">{{ $initial }}</div>
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <div class="dropdown">
                             <a href="#" class="arrow-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" data-bs-offset="0,20">
                                 <div class="d-flex align-items-center">
                                     <div class="flex-grow-1 me-2">
-                                        <h6 class="mb-0">Jonh Smith</h6>
-                                        <small>Administrator</small>
+                                        <h6 class="mb-0">{{ Auth::user()->contact_name }}</h6>
+                                        <small>{{ optional(Auth::user()->role)->name ?? '-' }}</small>
                                     </div>
                                     <div class="flex-shrink-0">
                                         <div class="btn btn-icon btn-link-secondary avtar">
@@ -45,22 +47,32 @@
                             </a>
                             <div class="dropdown-menu">
                                 <ul>
-                                    <li><a class="pc-user-links">
+                                    {{-- ✅ ปุ่มหยุดจำลอง แสดงนอก dropdown --}}
+                                    @if (session('is_impersonating'))
+                                        <li>
+                                            <a href="{{ route('backend.impersonate.stop') }}" class="pc-user-links text-danger">
+                                                <i class="ph-duotone ph-user-switch"></i>
+                                                <span>หยุดจำลอง</span>
+                                            </a>
+                                        </li>
+                                    @endif
+
+                                    <li><a href="{{ route('backend.profile.edit', Auth::user()->id) }}" class="pc-user-links">
                                             <i class="ph-duotone ph-user"></i>
-                                            <span>My Account</span>
+                                            <span>ข้อมูลส่วนตัว</span>
                                         </a></li>
-                                    <li><a class="pc-user-links">
+                                    {{-- <li><a class="pc-user-links">
                                             <i class="ph-duotone ph-gear"></i>
                                             <span>Settings</span>
                                         </a></li>
                                     <li><a class="pc-user-links">
                                             <i class="ph-duotone ph-lock-key"></i>
                                             <span>Lock Screen</span>
-                                        </a></li>
+                                        </a></li> --}}
                                     <li><a class="pc-user-links" href="{{ route('logout') }}" onclick="event.preventDefault();
-                                              document.getElementById('logout-form').submit();">
+                                            document.getElementById('logout-form').submit();">
                                             <i class="ph-duotone ph-power"></i>
-                                            <span>Logout</span>
+                                            <span>ออกจากระบบ</span>
                                         </a>
                                     </li>
                                 </ul>

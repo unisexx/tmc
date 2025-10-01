@@ -5,10 +5,6 @@
 @section('breadcrumb-item', 'จัดการผู้ใช้งาน')
 @section('breadcrumb-item-active', 'สิทธิ์การใช้งาน')
 
-@section('css')
-    <link rel="stylesheet" href="{{ URL::asset('build/css/plugins/style.css') }}">
-@endsection
-
 @section('content')
     <div class="row">
         <div class="col-12">

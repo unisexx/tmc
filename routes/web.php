@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Backend\ApplicationReviewController;
 use App\Http\Controllers\Backend\AssessmentController;
 use App\Http\Controllers\Backend\AssessmentFillController;
 use App\Http\Controllers\Backend\ContactController;
@@ -7,8 +8,10 @@ use App\Http\Controllers\Backend\CookiePolicyController;
 use App\Http\Controllers\Backend\DashboardController;
 use App\Http\Controllers\Backend\FaqController;
 use App\Http\Controllers\Backend\HilightController;
+use App\Http\Controllers\Backend\ImpersonateController;
 use App\Http\Controllers\Backend\NewsController;
 use App\Http\Controllers\Backend\PrivacyPolicyController;
+use App\Http\Controllers\Backend\ProfileController;
 use App\Http\Controllers\Backend\RoleController;
 use App\Http\Controllers\Backend\StatController;
 use App\Http\Controllers\Backend\UploadController;
@@ -28,6 +31,10 @@ Route::middleware(['auth'])->group(function () {
     // Backend Routes (ตายตัว - production)
     // ==============================
     Route::prefix('backend')->name('backend.')->group(function () {
+        // แก้ไขข้อมูลส่วนตัว
+        Route::resource('profile', \App\Http\Controllers\Backend\ProfileController::class)
+            ->parameters(['profile' => 'user']) // เปลี่ยน {profile} -> {user}
+            ->names('profile');
 
         // static/simple pages
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -75,6 +82,9 @@ Route::middleware(['auth'])->group(function () {
         // Route::get('/permissions', fn() => view('backend.permissions.index'))->name('permissions.index');
         // Route::get('/logs', fn() => view('backend.logs.index'))->name('logs.index');
 
+        // ตรวจสอบใบสมัคร
+        Route::resource('application-review', ApplicationReviewController::class)->names('application-review');
+
         // จัดการผู้ใช้งาน
         Route::resource('user', UserController::class)->names('user');
         Route::prefix('user')->name('user.')->group(function () {
@@ -99,6 +109,10 @@ Route::middleware(['auth'])->group(function () {
 
         // tinymce uploads
         Route::post('upload/tinymce', [UploadController::class, 'tinymce'])->name('upload.tinymce');
+
+        // จำลอง login
+        Route::post('/impersonate/{user}', [ImpersonateController::class, 'start'])->name('impersonate.start');
+        Route::get('/impersonate/stop', [ImpersonateController::class, 'stop'])->name('impersonate.stop');
     });
 
     // ==============================

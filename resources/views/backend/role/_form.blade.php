@@ -7,6 +7,8 @@
     $moduleLabels = [
         'dashboard' => 'แดชบอร์ด',
         'visitor-stats' => 'สถิติผู้เข้าชม',
+        'assessment' => 'การประเมินตนเอง',
+        'approve-assessment' => 'อนุมัติผลการประเมิน',
         'highlights' => 'ไฮไลท์',
         'news' => 'ข่าว',
         'faqs' => 'คำถามที่พบบ่อย',

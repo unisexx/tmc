@@ -10,27 +10,28 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
     public function __construct()
     {
-        // กำหนดสิทธิ์ได้ตามต้องการ
         // $this->middleware('permission:ผู้ใช้งาน-จัดการผู้ใช้งาน-ดู|ผู้ใช้งาน-จัดการผู้ใช้งาน-เพิ่ม|ผู้ใช้งาน-จัดการผู้ใช้งาน-แก้ไข|ผู้ใช้งาน-จัดการผู้ใช้งาน-ลบ', ['only' => ['index', 'show']]);
     }
 
     /* =========================================================================
     | 1) รายชื่อผู้ใช้
-     * ====================================================================== */
+     * =========================================================================*/
     public function index(Request $request)
     {
         $q     = trim($request->get('q', ''));
         $users = User::query()
+            ->with('roles:id,name')
             ->when($q !== '', function ($qr) use ($q) {
                 $qr->where(function ($x) use ($q) {
                     $x->where('name', 'like', "%{$q}%")
+                        ->orWhere('contact_name', 'like', "%{$q}%")
                         ->orWhere('email', 'like', "%{$q}%")
                         ->orWhere('username', 'like', "%{$q}%");
                 });
@@ -44,7 +45,7 @@ class UserController extends Controller
 
     /* =========================================================================
     | 2) เพิ่มผู้ใช้
-     * ====================================================================== */
+     * =========================================================================*/
     public function create()
     {
         return view('backend.user.create');
@@ -57,7 +58,15 @@ class UserController extends Controller
         // สร้างผู้ใช้
         $user = User::create($data);
 
-        // ส่งอีเมลแจ้งบัญชีให้ผู้ใช้ (ตาม TOR ข้อ 4)
+        // กำหนดสิทธิ์
+        if ($request->filled('role_id')) {
+            $role = Role::find($request->role_id);
+            if ($role) {
+                $user->assignRole($role->name);
+            }
+        }
+
+        // ส่งอีเมลแจ้ง credential
         $this->notifyCredentials($user->email, $user->username, $pwdPlain);
 
         flash_notify('เพิ่มผู้ใช้งานเรียบร้อย', 'success');
@@ -66,7 +75,7 @@ class UserController extends Controller
 
     /* =========================================================================
     | 3) แก้ไขผู้ใช้
-     * ====================================================================== */
+     * =========================================================================*/
     public function edit(User $user)
     {
         return view('backend.user.edit', compact('user'));
@@ -78,7 +87,17 @@ class UserController extends Controller
 
         $user->update($data);
 
-        // ถ้ามีการตั้งรหัสผ่านใหม่ อาจแจ้งอีเมล (เปิดใช้ถ้าต้องการ)
+        // กำหนดสิทธิ์
+        if ($request->filled('role_id')) {
+            $role = Role::find($request->role_id);
+            if ($role) {
+                $user->syncRoles([$role->name]);
+            }
+        } else {
+            $user->syncRoles([]);
+        }
+
+        // ถ้าต้องการแจ้งอีเมลเมื่อเปลี่ยนรหัสผ่าน ค่อยเปิดใช้บรรทัดนี้
         // if ($pwdPlain) { $this->notifyCredentials($user->email, $user->username, $pwdPlain); }
 
         flash_notify('อัปเดตข้อมูลผู้ใช้งานเรียบร้อย', 'success');
@@ -87,10 +106,9 @@ class UserController extends Controller
 
     /* =========================================================================
     | 4) ลบผู้ใช้
-     * ====================================================================== */
+     * =========================================================================*/
     public function destroy(User $user)
     {
-        // ลบไฟล์แนบ (ถ้ามี)
         if ($user->officer_doc_path && Storage::disk('public')->exists($user->officer_doc_path)) {
             Storage::disk('public')->delete($user->officer_doc_path);
         }
@@ -101,194 +119,71 @@ class UserController extends Controller
 
     /* =========================================================================
     | Helpers
-     * ====================================================================== */
+     * =========================================================================*/
 
     /**
-     * รวมขั้นตอน validate + normalize + เตรียมข้อมูล upload/file + PDPA
+     * Validate + Normalize + Upload
      * คืนค่า: [$data สำหรับบันทึก, $passwordPlain ถ้ามีการตั้ง/สุ่มให้]
      */
     private function validatedPayload(Request $request, ?User $current): array
     {
-        $purposeWhitelist = [
-            'หน่วยบริการสุขภาพผู้เดินทาง',
-            'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
-            'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
-        ];
-
-        $affWhitelist = [
-            'สำนักงานปลัดกระทรวงสาธารณสุข', 'กรมควบคุมโรค', 'กรมการแพทย์', 'กรมสุขภาพจิต',
-            'สภากาชาดไทย', 'สำนักการแพทย์ กรุงเทพมหานคร',
-            'กระทรวงอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม', 'กระทรวงกลาโหม',
-            'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ',
-        ];
-
-        // ==== Validate หลัก ====
         $rules = [
-            // 1) วัตถุประสงค์
-            'reg_purpose'                 => ['required', 'array', 'max:3'],
-            'reg_purpose.*'               => ['string', Rule::in($purposeWhitelist)],
+            // ผู้ลงทะเบียน
+            'contact_cid'           => ['required', 'regex:/^\d{13}$/', Rule::unique('users', 'contact_cid')->ignore($current?->id)],
+            'contact_name'          => ['required', 'string', 'max:255'],
+            'contact_position'      => ['required', 'string', 'max:255'],
+            'contact_mobile'        => ['required', 'string', 'max:60'],
+            'email'                 => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($current?->id)],
 
-            // required เงื่อนไข
-            'reg_supervise_province_code' => [
-                'nullable', 'string', 'max:10',
-                Rule::requiredIf(function () use ($request) {
-                    return in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
-                        (array) $request->input('reg_purpose', []), true);
-                }),
-            ],
-            'reg_supervise_region_id'     => [
-                'nullable', 'integer',
-                Rule::requiredIf(function () use ($request) {
-                    return in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
-                        (array) $request->input('reg_purpose', []), true);
-                }),
-            ],
+            // เอกสารเจ้าหน้าที่
+            'officer_doc'           => [$current ? 'sometimes' : 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'remove_officer_doc'    => ['nullable', 'boolean'],
 
-            // 2) หน่วยบริการ/หน่วยงาน
-            'org_name'                    => ['required', 'string', 'max:255'],
-            'org_affiliation'             => ['required', 'string', Rule::in($affWhitelist)],
-            'org_affiliation_other'       => ['nullable', 'string', 'max:255',
-                Rule::requiredIf(fn() => $request->input('org_affiliation') === 'อื่น ๆ')],
-            'org_tel'                     => ['required', 'string', 'max:60'],
-            'org_address'                 => ['required', 'string', 'max:1000'],
-            'org_lat'                     => ['nullable', 'numeric', 'between:-90,90'],
-            'org_lng'                     => ['nullable', 'numeric', 'between:-180,180'],
+            // บัญชีผู้ใช้
+            'username'              => ['required', 'string', 'max:60', Rule::unique('users', 'username')->ignore($current?->id)],
+            'password'              => [$current ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
+            'password_confirmation' => [$current ? 'nullable' : 'required', 'same:password', 'required_with:password'],
 
-            // เวลาทำการ
-            'org_working_hours'           => ['nullable', 'string', 'max:1000'],
-            'working_hours'               => ['nullable', 'array'],
-            'working_hours.*.day'         => ['required_with:working_hours', 'in:mon,tue,wed,thu,fri,sat,sun'],
-            'working_hours.*.start'       => ['nullable', 'date_format:H:i'],
-            'working_hours.*.end'         => ['nullable', 'date_format:H:i', 'after:working_hours.*.start'],
-            'working_hours.*.note'        => ['nullable', 'string', 'max:255'],
-            'working_hours.*.closed'      => ['nullable'],
+            // Role
+            'role_id'               => ['required', 'integer', Rule::exists('roles', 'id')->where('guard_name', 'web')],
 
-            // 3) ผู้ลงทะเบียน
-            'contact_cid'                 => ['required', 'regex:/^\d{13}$/', Rule::unique('users', 'contact_cid')->ignore($current?->id)],
-            'contact_name'                => ['required', 'string', 'max:255'],
-            'contact_position'            => ['required', 'string', 'max:255'],
-            'contact_mobile'              => ['required', 'string', 'max:60'],
-            'email'                       => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($current?->id)],
-            'officer_doc'                 => [
-                $current ? 'sometimes' : 'required',
-                'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120',
-            ],
-            'remove_officer_doc'          => ['nullable', 'boolean'],
-
-            // 4) บัญชีผู้ใช้
-            'username'                    => ['required', 'string', 'max:60', Rule::unique('users', 'username')->ignore($current?->id)],
-            'password'                    => [
-                $current ? 'nullable' : 'required',
-                'string', 'min:8', 'confirmed',
-            ],
-            'password_confirmation'       => [
-                $current ? 'nullable' : 'required',
-                'same:password', 'required_with:password',
-            ],
-
-            // 5) PDPA
-            'pdpa_accept'                 => ['accepted', 'boolean'],
-
-            // 6) ตรวจสอบ/อนุมัติ (เฉพาะ Admin ที่มีสิทธิ์)
-            'reg_status'                  => ['nullable', 'in:pending,approved,rejected'],
-            'reg_review_note'             => ['nullable', 'string', 'max:1000', Rule::requiredIf(fn() => $request->input('reg_status') === 'rejected'),
-            ],
-            'officer_doc_verified'        => ['nullable', 'in:0,1'],
+            // 🔹 สถานะการพิจารณา (รับทั้งไทย/อังกฤษ)
+            'reg_status'            => ['nullable', 'string', Rule::in(['approved', 'อนุมัติ', 'pending', 'rejected'])],
         ];
 
-        // ==== Messages ====
         $messages = [
             'required'                            => 'กรุณากรอก :attribute',
-            'required_with'                       => 'กรุณากรอก :attribute ให้ครบถ้วน',
-            'array'                               => 'รูปแบบของ :attribute ต้องเป็นรายการข้อมูล',
-            'max'                                 => 'ความยาวของ :attribute ต้องไม่เกิน :max ตัวอักษร',
-            'string'                              => ':attribute ต้องเป็นข้อความตัวอักษร',
+            'string'                              => ':attribute ต้องเป็นข้อความ',
+            'max'                                 => 'ความยาว :attribute ต้องไม่เกิน :max ตัวอักษร',
             'email'                               => 'รูปแบบ :attribute ไม่ถูกต้อง',
             'unique'                              => ':attribute นี้ถูกใช้งานแล้ว',
-            'integer'                             => ':attribute ต้องเป็นตัวเลขจำนวนเต็ม',
-            'numeric'                             => ':attribute ต้องเป็นตัวเลข',
-            'between'                             => ':attribute ต้องอยู่ระหว่าง :min ถึง :max',
-            'date_format'                         => ':attribute ต้องอยู่ในรูปแบบเวลา HH:MM',
-            'after'                               => ':attribute ต้องมากกว่าเวลาเริ่ม',
             'mimes'                               => ':attribute ต้องเป็นไฟล์ประเภท: :values',
             'max.file'                            => 'ขนาดไฟล์ :attribute ต้องไม่เกิน :max กิโลไบต์',
-
-            'reg_purpose.required'                => 'กรุณาเลือก "ในฐานะ" อย่างน้อย 1 ตัวเลือก',
-            'reg_purpose.*.in'                    => 'ตัวเลือกใน "ในฐานะ" ไม่ถูกต้อง',
-
-            'working_hours.*.day.required_with'   => 'กรุณาเลือกวันในช่วงวัน-เวลาทำการ',
-            'working_hours.*.day.in'              => 'ค่าวันในช่วงวัน-เวลาทำการไม่ถูกต้อง',
-            'working_hours.*.start.date_format'   => 'เวลาเริ่มต้องอยู่ในรูปแบบ HH:MM',
-            'working_hours.*.end.date_format'     => 'เวลาสิ้นสุดต้องอยู่ในรูปแบบ HH:MM',
-            'working_hours.*.end.after'           => 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม',
-
-            'contact_cid.required'                => 'กรุณากรอกเลขบัตรประชาชน',
-            'contact_cid.regex'                   => 'เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก',
-            'contact_cid.unique'                  => 'เลขบัตรประชาชนนี้ถูกใช้งานแล้ว',
-
-            'officer_doc.mimes'                   => 'ไฟล์เอกสารเจ้าหน้าที่ต้องเป็น PDF/JPG/PNG',
-            'officer_doc.max'                     => 'ไฟล์เอกสารเจ้าหน้าที่ต้องไม่เกิน 5MB',
-
-            'password.confirmed'                  => 'กรุณายืนยันรหัสผ่านให้ตรงกัน',
             'password.min'                        => 'รหัสผ่านต้องมีอย่างน้อย :min ตัวอักษร',
-            'password.required'                   => 'กรุณากรอกรหัสผ่าน',
-            'password_confirmation.required'      => 'กรุณากรอกยืนยันรหัสผ่าน',
-            'password_confirmation.required_with' => 'กรุณากรอกยืนยันรหัสผ่าน',
+            'password.confirmed'                  => 'กรุณายืนยันรหัสผ่านให้ตรงกัน',
             'password_confirmation.same'          => 'ยืนยันรหัสผ่านไม่ตรงกับรหัสผ่าน',
-
-            'pdpa_accept.accepted'                => 'กรุณายอมรับประกาศความเป็นส่วนตัว (PDPA)',
+            'password_confirmation.required_with' => 'กรุณากรอกยืนยันรหัสผ่าน',
+            'contact_cid.regex'                   => 'เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก',
         ];
 
-        // ==== Attributes ====
         $attributes = [
-            'reg_purpose'                          => 'ในฐานะ',
-            'reg_purpose.*'                        => 'ในฐานะ',
-            'reg_supervise_province_code.required' => 'กรุณาเลือกจังหวัดที่กำกับดูแล (สสจ.)',
-            'reg_supervise_region_id.required'     => 'กรุณาเลือกเขตสุขภาพ (สคร.)',
-
-            'email'                                => 'อีเมล',
-            'username'                             => 'Username',
-
-            'reg_supervise_province_code'          => 'จังหวัดที่กำกับดูแล (สสจ.)',
-            'reg_supervise_region_id'              => 'เขตสุขภาพ (สคร.)',
-
-            'org_name'                             => 'ชื่อหน่วยบริการ/หน่วยงาน',
-            'org_affiliation'                      => 'สังกัด',
-            'org_affiliation_other'                => 'โปรดระบุสังกัด',
-            'org_address'                          => 'ที่อยู่หน่วยงาน',
-            'org_tel'                              => 'หมายเลขโทรศัพท์',
-
-            'org_lat'                              => 'Latitude',
-            'org_lng'                              => 'Longitude',
-
-            'org_working_hours'                    => 'คำอธิบายเวลาทำการ',
-            'working_hours'                        => 'วัน-เวลาทำการ',
-            'working_hours.*.day'                  => 'วัน',
-            'working_hours.*.start'                => 'เวลาเริ่ม',
-            'working_hours.*.end'                  => 'เวลาสิ้นสุด',
-            'working_hours.*.note'                 => 'หมายเหตุ',
-
-            'contact_cid'                          => 'เลขบัตรประจำตัวประชาชน',
-            'contact_name'                         => 'ชื่อ-สกุลผู้ลงทะเบียน',
-            'contact_position'                     => 'ตำแหน่งผู้ลงทะเบียน',
-            'contact_mobile'                       => 'โทรศัพท์มือถือผู้ลงทะเบียน',
-
-            'officer_doc'                          => 'เอกสารยืนยันตัวเจ้าหน้าที่',
-            'remove_officer_doc'                   => 'ลบไฟล์เอกสารเดิม',
-
-            'password'                             => 'รหัสผ่าน',
-            'password_confirmation'                => 'ยืนยันรหัสผ่าน',
-
-            'pdpa_accept'                          => 'การยอมรับ PDPA',
-
-            'reg_review_note'                      => 'หมายเหตุ/เหตุผลการพิจารณา กรณีที่ "ไม่อนุมัติ"',
+            'contact_cid'           => 'เลขบัตรประจำตัวประชาชน',
+            'contact_name'          => 'ชื่อ-สกุล',
+            'contact_position'      => 'ตำแหน่ง',
+            'contact_mobile'        => 'โทรศัพท์มือถือ',
+            'email'                 => 'อีเมล',
+            'officer_doc'           => 'เอกสารยืนยันตัวเจ้าหน้าที่',
+            'username'              => 'Username',
+            'password'              => 'รหัสผ่าน',
+            'password_confirmation' => 'ยืนยันรหัสผ่าน',
+            'role_id'               => 'สิทธิ์การใช้งาน',
+            'reg_status'            => 'สถานะการพิจารณา',
         ];
 
-        // ใช้ Validator เพื่อ custom เช็กซัม CID
         $validator = Validator::make($request->all(), $rules, $messages, $attributes);
 
+        // ตรวจ checksum บัตรประชาชน
         $validator->after(function ($v) use ($request) {
-            // เก็บเฉพาะตัวเลข + ตรวจเช็กซัม
             $cid = preg_replace('/\D/', '', (string) $request->input('contact_cid'));
             if ($cid && !$this->isValidThaiCitizenId($cid)) {
                 $v->errors()->add('contact_cid', 'เลขบัตรประชาชนไม่ถูกต้อง (เช็กซัมไม่ผ่าน)');
@@ -297,17 +192,16 @@ class UserController extends Controller
 
         $data = $validator->validate();
 
-        // ปรับ contact_cid ให้เหลือตัวเลขก่อนบันทึก
+        // Normalize
         $data['contact_cid'] = preg_replace('/\D/', '', (string) ($data['contact_cid'] ?? ''));
+        $data['name']        = $data['contact_name'];
 
-        // ==== Username/Password ====
+        // Password
         $passwordPlain = null;
         if (!$current) {
-            // create: ต้องมี password (required + confirmed)
             $passwordPlain    = $data['password'];
             $data['password'] = Hash::make($data['password']);
         } else {
-            // update: ใส่ค่อยเปลี่ยน
             if (!empty($data['password'])) {
                 $passwordPlain    = $data['password'];
                 $data['password'] = Hash::make($data['password']);
@@ -316,28 +210,7 @@ class UserController extends Controller
             }
         }
 
-        // ==== Normalize reg_purpose ====
-        if (!isset($data['reg_purpose'])) {
-            $data['reg_purpose'] = [];
-        }
-
-        $cbProvince = in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)', $data['reg_purpose'] ?? [], true);
-        $cbRegion   = in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)', $data['reg_purpose'] ?? [], true);
-
-        if ($cbProvince && !$cbRegion) {
-            $data['reg_supervise_region_id'] = null;
-        } elseif ($cbRegion && !$cbProvince) {
-            $data['reg_supervise_province_code'] = null;
-        }
-        if (!$cbProvince && !$cbRegion) {
-            $data['reg_supervise_province_code'] = null;
-            $data['reg_supervise_region_id']     = null;
-        }
-
-        // ==== เวลาทำการโครงสร้าง ====
-        $data['org_working_hours_json'] = $this->normalizeWorkingHours($request->input('working_hours', []));
-
-        // ==== อัปโหลดไฟล์เอกสารเจ้าหน้าที่ ====
+        // Upload / Remove officer_doc
         if ($request->boolean('remove_officer_doc') && $current) {
             if ($current->officer_doc_path && Storage::disk('public')->exists($current->officer_doc_path)) {
                 Storage::disk('public')->delete($current->officer_doc_path);
@@ -353,112 +226,25 @@ class UserController extends Controller
             $data['officer_doc_verified_by'] = null;
         }
 
-        // ==== PDPA ====
-        if ($request->boolean('pdpa_accept')) {
-            $data['pdpa_accepted_at'] = Carbon::now();
-            $data['pdpa_version']     = $data['pdpa_version'] ?? 'v1.0';
+        /* 🔹 เปิด/ปิดการใช้งานอัตโนมัติตาม reg_status (ภาษาไทย) */
+        $incomingStatus = $request->input('reg_status'); // อาจเป็น null
+        if ($incomingStatus !== null) {
+            $data['reg_status'] = $incomingStatus;
+            $data['is_active']  = $incomingStatus === 'อนุมัติ' ? 1 : 0;
+        } else {
+            // ไม่มี reg_status เข้ามา → ใช้ค่าเดิมถ้ามี ไม่งั้น default = 0
+            $effectiveStatus   = $current?->reg_status;
+            $data['is_active'] = $effectiveStatus === 'อนุมัติ' ? 1 : 0;
         }
 
-        // ===== ส่วน Admin: ตรวจสอบเอกสารเจ้าหน้าที่ =====
-        if ($request->filled('officer_doc_verified')) {
-            if ($request->input('officer_doc_verified') === '1') {
-                $data['officer_doc_verified_at'] = Carbon::now();
-                $data['officer_doc_verified_by'] = $request->user()?->id;
-            } else {
-                // เลือก "ยังไม่ตรวจสอบ" -> เคลียร์ค่า
-                $data['officer_doc_verified_at'] = null;
-                $data['officer_doc_verified_by'] = null;
-            }
-        }
-
-        // ===== ส่วน Admin: อนุมัติ/ไม่อนุมัติ =====
-        if ($request->filled('reg_status')) {
-            $data['reg_status'] = $request->input('reg_status');
-
-            if ($data['reg_status'] === 'approved') {
-                // (ถ้ามี business rule ตรวจไฟล์/verify เอกสาร คงไว้ตามเดิม)
-                $data['approved_at'] = Carbon::now();
-                $data['approved_by'] = $request->user()?->id;
-
-                // ✅ อนุมัติ -> เปิดใช้งาน
-                $data['is_active'] = 1;
-            } else {
-                // pending / rejected
-                $data['approved_at'] = null;
-                $data['approved_by'] = null;
-
-                // ✅ อื่น ๆ -> ปิดใช้งาน
-                $data['is_active'] = 0;
-            }
-        }
-
-        // ===== ค่าตั้งต้น is_active กรณีไม่ได้ส่ง reg_status มา =====
-        if (!array_key_exists('is_active', $data)) {
-            $effectiveStatus   = $data['reg_status'] ?? ($current->reg_status ?? 'pending');
-            $data['is_active'] = $effectiveStatus === 'approved' ? 1 : 0;
-        }
-
-        // เก็บหมายเหตุพิจารณา (ถ้ามี)
-        if ($request->filled('reg_review_note')) {
-            $data['reg_review_note'] = trim((string) $request->input('reg_review_note'));
-        }
-
-        unset($data['officer_doc'], $data['remove_officer_doc'], $data['pdpa_accept']);
+        // เคลียร์ฟิลด์ชั่วคราว
+        unset($data['officer_doc'], $data['remove_officer_doc']);
 
         return [$data, $passwordPlain];
     }
 
     /**
-     * แปลง array จากฟอร์ม working_hours → array โครงสร้างสะอาด สำหรับบันทึกใน org_working_hours_json
-     */
-    private function normalizeWorkingHours(array $rows): array
-    {
-        $out = [];
-        foreach ($rows as $r) {
-            if (!is_array($r)) {
-                continue;
-            }
-
-            $day    = $r['day'] ?? null;
-            $start  = $r['start'] ?? null;
-            $end    = $r['end'] ?? null;
-            $note   = trim($r['note'] ?? '');
-            $closed = !empty($r['closed']); // checkbox
-
-            // ข้ามแถวที่ไม่มี day
-            if (!$day) {
-                continue;
-            }
-
-            // ถ้า closed = true ไม่ต้องมีเวลา
-            if ($closed) {
-                $out[] = [
-                    'day'    => $day,
-                    'closed' => true,
-                    'start'  => null,
-                    'end'    => null,
-                    'note'   => $note ?: null,
-                ];
-                continue;
-            }
-
-            // กรณีเปิดให้บริการ ต้องมีเวลา start/end ที่ถูกต้อง
-            if ($start && $end && $end > $start) {
-                $out[] = [
-                    'day'    => $day,
-                    'closed' => false,
-                    'start'  => $start,
-                    'end'    => $end,
-                    'note'   => $note ?: null,
-                ];
-            }
-            // ถ้าเวลาไม่ครบ/ไม่ถูกต้อง -> ทิ้งแถว (เพื่อความสะอาดของข้อมูล)
-        }
-        return $out;
-    }
-
-    /**
-     * ส่งอีเมลแจ้งบัญชี (แบบง่าย)
+     * ส่งอีเมลแจ้ง credential แบบง่าย
      */
     private function notifyCredentials(string $email, string $username, ?string $passwordPlain): void
     {
@@ -486,7 +272,6 @@ class UserController extends Controller
         if (!preg_match('/^\d{13}$/', $cid)) {
             return false;
         }
-
         $sum = 0;
         for ($i = 0; $i < 12; $i++) {
             $sum += intval($cid[$i]) * (13 - $i);
@@ -494,5 +279,4 @@ class UserController extends Controller
         $check = (11 - ($sum % 11)) % 10;
         return $check === intval($cid[12]);
     }
-
 }
