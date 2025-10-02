@@ -1,0 +1,30 @@
+{{-- resources/views/backend/assessment/step1/edit.blade.php --}}
+@extends('layouts.main')
+
+@section('title', 'แก้ไขรอบการประเมิน (ขั้นที่ 1)')
+@section('breadcrumb-item', 'แบบประเมินตนเอง')
+@section('breadcrumb-item-active', 'แก้ไขรอบการประเมิน (ขั้นที่ 1)')
+
+@section('css')
+    {{-- ถ้ามี CSS เสริมของหน้า ใส่ได้ที่นี่ --}}
+    {{-- <link rel="stylesheet" href="{{ URL::asset('build/css/plugins/style.css') }}"> --}}
+@endsection
+
+@section('content')
+    <!-- [ Main Content ] start -->
+    <form method="post" action="{{ route('backend.assessment.update', $row->id) }}" enctype="multipart/form-data">
+        @csrf
+        @method('PUT')
+
+        {{-- ส่งตัวแปรให้พาร์เชียล เพื่อ render ค่าจาก $row และปรับปุ่ม/พฤติกรรมเป็นโหมดแก้ไข --}}
+        @include('backend.assessment.step1._form', [
+            'mode' => 'edit',
+            'row' => $row,
+        ])
+    </form>
+    <!-- [ Main Content ] end -->
+@endsection
+
+@section('scripts')
+    {{-- สคริปต์เฉพาะหน้า (ถ้ามี) --}}
+@endsection

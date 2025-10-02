@@ -211,7 +211,7 @@ class ApplicationReviewController extends Controller
             'pdpa_accept'                 => ['accepted', 'boolean'],
 
             // 6) ตรวจสอบ/อนุมัติ (เฉพาะ Admin ที่มีสิทธิ์)
-            'reg_status'                  => ['nullable', 'in:pending,approved,rejected'],
+            'reg_status'                  => ['nullable', 'in:รอตรวจสอบ,อนุมัติ,ไม่อนุมัติ'],
             'reg_review_note'             => ['nullable', 'string', 'max:1000', Rule::requiredIf(fn() => $request->input('reg_status') === 'rejected'),
             ],
             'officer_doc_verified'        => ['nullable', 'in:0,1'],
@@ -407,7 +407,7 @@ class ApplicationReviewController extends Controller
         if ($request->filled('reg_status')) {
             $data['reg_status'] = $request->input('reg_status');
 
-            if ($data['reg_status'] === 'approved') {
+            if ($data['reg_status'] === 'อนุมัติ') {
                 // (ถ้ามี business rule ตรวจไฟล์/verify เอกสาร คงไว้ตามเดิม)
                 $data['approved_at'] = Carbon::now();
                 $data['approved_by'] = $request->user()?->id;
@@ -433,6 +433,14 @@ class ApplicationReviewController extends Controller
         // เก็บหมายเหตุพิจารณา (ถ้ามี)
         if ($request->filled('reg_review_note')) {
             $data['reg_review_note'] = trim((string) $request->input('reg_review_note'));
+        }
+
+        // --- ปรับ name = contact_name ---
+        if (!empty($data['contact_name'])) {
+            $data['name'] = trim((string) $data['contact_name']);
+        } elseif ($current) {
+            // เผื่อกรณีฟิลด์หายไปในบางฟอร์ม ให้อนุรักษ์ค่าเดิมไว้
+            $data['name'] = $current->name;
         }
 
         unset($data['officer_doc'], $data['remove_officer_doc'], $data['pdpa_accept']);

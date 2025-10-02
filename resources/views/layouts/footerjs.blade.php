@@ -168,3 +168,6 @@
 {{-- Choice JS --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
 <script src="{{ URL::asset('build/js/plugins/choices.min.js') }}"></script>
+
+{{-- flatpickr --}}
+<script src="{{ URL::asset('build/js/plugins/flatpickr.min.js') }}"></script>

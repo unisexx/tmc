@@ -19,6 +19,10 @@
 <link rel="stylesheet" href="{{ URL::asset('build/css/plugins/animate.min.css') }}">
 <link rel="stylesheet" href="{{ URL::asset('build/css/plugins/style.css') }}">
 
+{{-- ===== CSS ของ Flatpickr ===== --}}
+<link rel="stylesheet" href="{{ URL::asset('build/css/plugins/flatpickr.min.css') }}">
+
+
 {{-- Choice JS --}}
 <style>
     /* กล่องหลักของ Choices ให้ดูเหมือน .form-select ของธีม */

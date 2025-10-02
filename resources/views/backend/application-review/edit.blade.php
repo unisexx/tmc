@@ -12,7 +12,7 @@
                     <h5>แก้ไขผู้ใช้งาน</h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('backend.application-review.update', $user->id) }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('backend.application-review.update', $user) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                         @include('backend.application-review._form')

@@ -208,518 +208,644 @@
         </script>
     @endpush
 
-
-    <hr class="my-4">
-    <h5>2. ข้อมูลทั่วไปของหน่วยบริการ/หน่วยงาน</h5>
-
-    {{-- ชื่อหน่วยบริการ/หน่วยงาน (ขึ้นแถวใหม่แบบเต็มความกว้าง) --}}
-    <div class="col-12">
-        <label for="org_name" class="form-label required">ชื่อหน่วยบริการ/หน่วยงาน</label>
-        <input type="text" name="org_name" id="org_name" value="{{ old('org_name', $user->org_name ?? '') }}" class="form-control">
-        @error('org_name')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-
-    <div class="col-md-6">
-        <label for="org_affiliation" class="form-label required">สังกัด</label>
-        <select name="org_affiliation" id="org_affiliation" class="form-select">
-            <option value="">--- เลือก ---</option>
-            @foreach (['สำนักงานปลัดกระทรวงสาธารณสุข', 'กรมควบคุมโรค', 'กรมการแพทย์', 'กรมสุขภาพจิต', 'สภากาชาดไทย', 'สำนักการแพทย์ กรุงเทพมหานคร', 'กระทรวงอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม', 'กระทรวงกลาโหม', 'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ'] as $option)
-                <option value="{{ $option }}" @selected(old('org_affiliation', $user->org_affiliation ?? '') == $option)>
-                    {{ $option }}
-                </option>
-            @endforeach
-        </select>
-        @error('org_affiliation')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-
-    <div class="col-md-6" id="org_affiliation_other_box" style="display: none;">
-        <label for="org_affiliation_other" class="form-label required">โปรดระบุ</label>
-        <input type="text" name="org_affiliation_other" id="org_affiliation_other" class="form-control" value="{{ old('org_affiliation_other', $user->org_affiliation_other ?? '') }}">
-        @error('org_affiliation_other')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-
+    {{-- ซ่อน/แสดง section 2 ถ้าเลือก สสจ./สคร. --}}
     @push('js')
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                const orgSelect = document.getElementById('org_affiliation');
-                const otherBox = document.getElementById('org_affiliation_other_box');
+            document.addEventListener('DOMContentLoaded', function() {
+                // 0=หน่วยบริการ, 1=สสจ., 2=สคร.
+                const cbService = document.getElementById('reg_purpose_0');
+                const cbProv = document.getElementById('reg_purpose_1');
+                const cbRegion = document.getElementById('reg_purpose_2');
 
+                const box = document.getElementById('section2Body'); // collapse target
+                const hint = document.getElementById('section2Hint');
+                const form = document.querySelector('form');
 
-                function toggleOtherBox(value) {
-                    if (value === 'อื่น ๆ') {
-                        otherBox.style.display = 'block';
-                    } else {
-                        otherBox.style.display = 'none';
-                        document.getElementById('org_affiliation_other').value = '';
-                    }
+                // Bootstrap Collapse instance
+                const coll = new bootstrap.Collapse(box, {
+                    toggle: false
+                });
+
+                function isSupervisorOnly() {
+                    const isServiceUnit = !!(cbService && cbService.checked);
+                    const anySupervisor = !!((cbProv && cbProv.checked) || (cbRegion && cbRegion.checked));
+                    return !isServiceUnit && anySupervisor;
                 }
 
-                toggleOtherBox(orgSelect.value);
-
-                orgSelect.addEventListener('change', function() {
-                    toggleOtherBox(this.value);
-                });
-            });
-        </script>
-    @endpush
-
-
-    <div class="col-md-6">
-        <label for="org_tel" class="form-label required">หมายเลขโทรศัพท์</label>
-        <input type="text" name="org_tel" id="org_tel" value="{{ old('org_tel', $user->org_tel ?? '') }}" class="form-control">
-        @error('org_tel')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-
-    {{-- ========== Address + Map (Leaflet + Nominatim) ========== --}}
-    <div class="col-12">
-        <label for="org_address" class="form-label required">ที่อยู่หน่วยบริการ</label>
-        <textarea name="org_address" id="org_address" rows="2" class="form-control" placeholder="พิมพ์ที่อยู่ให้ละเอียด แล้วกด “ค้นหาพิกัดจากที่อยู่”">{{ old('org_address', $user->org_address ?? '') }}</textarea>
-        @error('org_address')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-
-    <div class="col-12">
-        <div class="d-flex align-items-center gap-2 my-2">
-            <button type="button" id="btn-geocode" class="btn btn-outline-primary btn-sm">
-                ค้นหาพิกัดจากที่อยู่
-            </button>
-            <button type="button" id="btn-center-marker" class="btn btn-outline-secondary btn-sm">
-                จัดกึ่งกลางที่หมุด
-            </button>
-            <button type="button" id="btn-reset-initial" class="btn btn-outline-danger btn-sm">
-                รีเซ็ตจุดเริ่มต้น
-            </button>
-            <small class="text-muted">หรือคลิกบนแผนที่/ลากหมุดเพื่อกำหนดพิกัดเอง</small>
-            <span id="coord-badge" class="badge bg-secondary ms-auto d-none"></span>
-        </div>
-        <div id="map" style="height: 360px; border-radius: .5rem; overflow: hidden;"></div>
-    </div>
-
-    <div class="col-md-6">
-        <label for="org_lat" class="form-label">Latitude</label>
-        <input type="text" name="org_lat" id="org_lat" value="{{ old('org_lat', $user->org_lat ?? '') }}" class="form-control" placeholder="จะถูกกรอกอัตโนมัติเมื่อเลือกพิกัด">
-    </div>
-
-    <div class="col-md-6">
-        <label for="org_lng" class="form-label">Longitude</label>
-        <input type="text" name="org_lng" id="org_lng" value="{{ old('org_lng', $user->org_lng ?? '') }}" class="form-control" placeholder="จะถูกกรอกอัตโนมัติเมื่อเลือกพิกัด">
-    </div>
-
-    @push('js')
-        {{-- Leaflet CSS/JS (CDN) --}}
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const latEl = document.getElementById('org_lat');
-                const lngEl = document.getElementById('org_lng');
-                const addrEl = document.getElementById('org_address');
-                const badgeEl = document.getElementById('coord-badge');
-
-                const hasLatLng = latEl.value && lngEl.value && !isNaN(parseFloat(latEl.value)) && !isNaN(parseFloat(lngEl.value));
-
-                // const TH_CENTER = [13.736717, 100.523186]; // กทม.
-                const TH_CENTER = [13.853450, 100.527171]; // พิกัดเริ่มต้น:: กรมควบคุมโรค กระทรวงสาธารณสุข
-                const initLatLng = hasLatLng ? [parseFloat(latEl.value), parseFloat(lngEl.value)] : TH_CENTER;
-                const initZoom = hasLatLng ? 14 : 6;
-
-                // สร้างแผนที่
-                const map = L.map('map', {
-                    scrollWheelZoom: true
-                }).setView(initLatLng, initZoom);
-
-                // พื้นหลังแผนที่ (OSM)
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap contributors'
-                }).addTo(map);
-
-                // หมุด
-                const marker = L.marker(initLatLng, {
-                    draggable: true
-                }).addTo(map);
-
-                function setCoord(lat, lng, zoom = 16, pan = true) {
-                    lat = parseFloat(lat);
-                    lng = parseFloat(lng);
-                    if (isNaN(lat) || isNaN(lng)) return;
-
-                    marker.setLatLng([lat, lng]);
-                    if (pan) map.setView([lat, lng], zoom);
-
-                    latEl.value = lat.toFixed(6);
-                    lngEl.value = lng.toFixed(6);
-
-                    badgeEl.textContent = `Lat: ${latEl.value} , Lng: ${lngEl.value}`;
-                    badgeEl.classList.remove('d-none');
-                }
-
-                // อัปเดตเมื่อลากหมุด
-                marker.on('dragend', e => {
-                    const {
-                        lat,
-                        lng
-                    } = e.target.getLatLng();
-                    setCoord(lat, lng, map.getZoom(), false);
-                });
-
-                // คลิกบนแผนที่เพื่อย้ายหมุด
-                map.on('click', e => {
-                    setCoord(e.latlng.lat, e.latlng.lng);
-                });
-
-                // กด Enter ในช่องที่อยู่ => geocode
-                addrEl.addEventListener('keydown', (ev) => {
-                    if (ev.key === 'Enter') {
-                        ev.preventDefault();
-                        doGeocode();
-                    }
-                });
-
-                // ปุ่ม geocode
-                document.getElementById('btn-geocode').addEventListener('click', doGeocode);
-
-                // ฟังก์ชันเรียก Nominatim หา Lat/Lng จากข้อความที่อยู่
-                async function doGeocode() {
-                    const q = (addrEl.value || '').trim();
-                    if (!q) {
-                        addrEl.focus();
-                        return;
-                    }
-
-                    const url = new URL('https://nominatim.openstreetmap.org/search');
-                    url.searchParams.set('q', q + ', Thailand'); // บีบให้เน้นประเทศไทย
-                    url.searchParams.set('format', 'json');
-                    url.searchParams.set('addressdetails', '1');
-                    url.searchParams.set('limit', '1');
-
-                    try {
-                        const res = await fetch(url.toString(), {
-                            headers: {
-                                'Accept-Language': 'th'
-                            }
-                        });
-                        if (!res.ok) throw new Error('HTTP ' + res.status);
-                        const data = await res.json();
-
-                        if (Array.isArray(data) && data.length) {
-                            const p = data[0];
-                            setCoord(parseFloat(p.lat), parseFloat(p.lon), 17);
+                // disable/enable fields when collapsed/expanded
+                function setDisabledInside(disabled) {
+                    box.querySelectorAll('input, select, textarea, button').forEach(el => {
+                        // ยกเว้นปุ่มแผนที่ utility ถ้าอยาก
+                        if (['btn-center-marker', 'btn-reset-initial', 'btn-geocode'].includes(el.id)) return;
+                        if (disabled) {
+                            el.setAttribute('data-was-disabled', el.disabled ? '1' : '0');
+                            el.disabled = true;
                         } else {
-                            alert('ไม่พบพิกัดจากที่อยู่นี้ กรุณาระบุให้ละเอียดขึ้น (เช่น เลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด)');
+                            if (el.getAttribute('data-was-disabled') === '0') el.disabled = false;
+                            el.removeAttribute('data-was-disabled');
                         }
-                    } catch (err) {
-                        console.error(err);
-                        alert('เกิดข้อผิดพลาดในการค้นหาพิกัด โปรดลองใหม่อีกครั้ง');
+                    });
+                }
+
+                function updateHint(isHidden) {
+                    if (!hint) return;
+                    hint.textContent = isHidden ?
+                        'พับเก็บ “ส่วนที่ 2” และจะไม่ถูกบันทึก' :
+                        'กำลังบันทึกข้อมูลส่วนที่ 2';
+                    hint.classList.toggle('text-danger', isHidden);
+                    hint.classList.toggle('text-muted', !isHidden);
+                }
+
+                function applyState() {
+                    const hide = isSupervisorOnly();
+                    if (hide) {
+                        coll.hide();
+                    } else {
+                        coll.show();
                     }
                 }
 
-                // ถ้ามีพิกัดเดิมในฟอร์มแล้ว แสดง badge ให้เห็น
-                if (hasLatLng) {
-                    badgeEl.textContent = `Lat: ${parseFloat(latEl.value).toFixed(6)} , Lng: ${parseFloat(lngEl.value).toFixed(6)}`;
-                    badgeEl.classList.remove('d-none');
-                }
-
-                // ป้องกันผู้ใช้พิมพ์ค่าที่ไม่ใช่ตัวเลขลงช่อง lat/lng
-                function sanitizeCoordInput(el, min, max) {
-                    el.addEventListener('input', () => {
-                        let v = el.value.replace(/[^0-9.\-]/g, '');
-                        el.value = v;
-                    });
-                    el.addEventListener('change', () => {
-                        let n = parseFloat(el.value);
-                        if (isNaN(n)) return;
-                        n = Math.max(min, Math.min(max, n));
-                        el.value = n.toFixed(6);
-                        setCoord(
-                            parseFloat(latEl.value || TH_CENTER[0]),
-                            parseFloat(lngEl.value || TH_CENTER[1]),
-                            map.getZoom()
-                        );
-                    });
-                }
-                sanitizeCoordInput(latEl, -90, 90);
-                sanitizeCoordInput(lngEl, -180, 180);
-
-                // เก็บค่าเริ่มต้นไว้ใช้ตอนรีเซ็ต
-                const initialState = {
-                    lat: initLatLng[0],
-                    lng: initLatLng[1],
-                    zoom: initZoom
-                };
-
-                // ฟังก์ชันจัดกึ่งกลางที่หมุด (ไม่เปลี่ยน lat/lng)
-                function centerToMarker() {
-                    const {
-                        lat,
-                        lng
-                    } = marker.getLatLng();
-                    map.flyTo([lat, lng], Math.max(map.getZoom(), 16));
-                }
-
-                // ฟังก์ชันรีเซ็ตกลับค่าตั้งต้น (ย้ายหมุด + แผนที่ + อัพเดตช่องฟอร์ม)
-                function resetToInitial() {
-                    setCoord(initialState.lat, initialState.lng, initialState.zoom, true);
-                }
-
-                // ผูกปุ่ม
-                document.getElementById('btn-center-marker').addEventListener('click', centerToMarker);
-                document.getElementById('btn-reset-initial').addEventListener('click', resetToInitial);
-
-                // เพิ่มช็อตคัตคีย์: กด `r` = รีเซ็ต, `c` = จัดกึ่งกลางที่หมุด
-                document.addEventListener('keydown', (e) => {
-                    if (e.target.matches('input, textarea')) return; // ไม่ให้ชนตอนพิมพ์
-                    if (e.key.toLowerCase() === 'r') resetToInitial();
-                    if (e.key.toLowerCase() === 'c') centerToMarker();
+                // Bootstrap collapse events = สไลด์เสร็จค่อยสลับ disabled เพื่อกันกระตุกอินพุต
+                box.addEventListener('shown.bs.collapse', () => {
+                    setDisabledInside(false);
+                    updateHint(false);
+                });
+                box.addEventListener('hidden.bs.collapse', () => {
+                    setDisabledInside(true);
+                    updateHint(true);
                 });
 
+                // bind changes
+                [cbService, cbProv, cbRegion].forEach(el => el && el.addEventListener('change', applyState));
+
+                // initial
+                applyState();
+
+                // กันค่าหลุดตอน submit เผื่อผู้ใช้กดเร็วระหว่างกำลังสไลด์
+                form?.addEventListener('submit', () => {
+                    if (!box.classList.contains('show')) setDisabledInside(true);
+                });
             });
         </script>
     @endpush
+    <hr class="my-4">
 
 
 
+    <div id="section2" class="col-12">
+        <!-- กล่องที่มีเอฟเฟกต์สไลด์ -->
+        <div id="section2Body" class="collapse show">
 
+            <div class="row g-3">
+                <h5 class="col-12">2. ข้อมูลทั่วไปของหน่วยบริการ/หน่วยงาน</h5>
 
-    @php
-        $dayOptions = [
-            'mon' => 'จันทร์',
-            'tue' => 'อังคาร',
-            'wed' => 'พุธ',
-            'thu' => 'พฤหัสบดี',
-            'fri' => 'ศุกร์',
-            'sat' => 'เสาร์',
-            'sun' => 'อาทิตย์',
-        ];
-        $existing = old('working_hours', $user->org_working_hours ?? []);
-    @endphp
-
-    <div class="col-12">
-        <label class="form-label">วัน-เวลาทำการ</label>
-
-        {{-- รายการช่วงวัน–เวลา (จะถูกเติมด้วย JS) --}}
-        <div id="wh-rows" class="vstack gap-2"></div>
-
-        <div class="mt-2 d-flex flex-wrap gap-2">
-            <button type="button" id="btnAddWh" class="btn btn-outline-primary btn-sm">
-                <i class="ti ti-plus"></i> เพิ่มช่วงวัน–เวลา
-            </button>
-        </div>
-
-        {{-- ตัวช่วยกรอกเร็ว (Batch) --}}
-        <div class="mt-3 border rounded p-3 bg-light-subtle">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-2">
-                    <label class="form-label mb-0">เริ่ม (Batch)</label>
-                    <input type="time" id="batchStart" class="form-control" step="300" placeholder="เช่น 08:30">
+                {{-- ชื่อหน่วยบริการ/หน่วยงาน (ขึ้นแถวใหม่แบบเต็มความกว้าง) --}}
+                <div class="col-12">
+                    <label for="org_name" class="form-label required">ชื่อหน่วยบริการ/หน่วยงาน</label>
+                    <input type="text" name="org_name" id="org_name" value="{{ old('org_name', $user->org_name ?? '') }}" class="form-control">
+                    @error('org_name')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label mb-0">สิ้นสุด (Batch)</label>
-                    <input type="time" id="batchEnd" class="form-control" step="300" placeholder="เช่น 16:30">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label mb-0">หมายเหตุ (Batch)</label>
-                    <input type="text" id="batchNote" class="form-control" placeholder="ถ้ามี">
-                </div>
-                <div class="col-md-2">
-                    <div class="form-check mt-4">
-                        <input class="form-check-input" type="checkbox" id="batchClosed">
-                        <label class="form-check-label" for="batchClosed">ปิดให้บริการทั้งวัน</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="batchClear">
-                        <label class="form-check-label" for="batchClear">ล้างรายการเดิมก่อนเติม</label>
-                    </div>
-                    <div class="d-grid d-md-flex gap-2 mt-2">
-                        <button type="button" id="btnFillAllDays" class="btn btn-secondary btn-sm">เติมทุกวัน</button>
-                        <button type="button" id="btnFillWeekdays" class="btn btn-secondary btn-sm">เติมเฉพาะจันทร์–ศุกร์</button>
-                    </div>
-                </div>
-            </div>
-            <small class="text-muted d-block mt-2">
-                เลือกช่วงเวลา/หมายเหตุครั้งเดียวแล้วกดปุ่ม ระบบจะสร้างแถวอัตโนมัติ (ถ้าเลือก “ปิดให้บริการทั้งวัน” จะไม่ใช้เวลา)
-            </small>
-        </div>
 
-        <small class="text-muted d-block mt-2">
-            เพิ่มหลายแถวได้ (วันเดียวกันได้หลายช่วง) • ใช้ช่อง “ปิดให้บริการ” สำหรับวันที่ปิดทั้งวัน
-        </small>
-
-        {{-- ข้อความอิสระเพิ่มเติม (ถ้าต้องการเก็บบันทึก/คำอธิบาย) --}}
-        <div class="mt-3">
-            <label for="org_working_hours" class="form-label">คำอธิบายเพิ่มเติม (ไม่บังคับ)</label>
-            <textarea name="org_working_hours" id="org_working_hours" rows="2" class="form-control">{{ old('org_working_hours', $user->org_working_hours_text ?? '') }}</textarea>
-        </div>
-    </div>
-
-    {{-- Template แถวเดี่ยว --}}
-    <template id="wh-row-tpl">
-        <div class="card p-2 border rounded wh-row">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label mb-0">วัน</label>
-                    <select class="form-select wh-day" name="">
-                        @foreach ($dayOptions as $k => $v)
-                            <option value="{{ $k }}">{{ $v }}</option>
+                <div class="col-md-6">
+                    <label for="org_affiliation" class="form-label required">สังกัด</label>
+                    <select name="org_affiliation" id="org_affiliation" class="form-select">
+                        <option value="">--- เลือก ---</option>
+                        @foreach (['สำนักงานปลัดกระทรวงสาธารณสุข', 'กรมควบคุมโรค', 'กรมการแพทย์', 'กรมสุขภาพจิต', 'สภากาชาดไทย', 'สำนักการแพทย์ กรุงเทพมหานคร', 'กระทรวงอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม', 'กระทรวงกลาโหม', 'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ'] as $option)
+                            <option value="{{ $option }}" @selected(old('org_affiliation', $user->org_affiliation ?? '') == $option)>
+                                {{ $option }}
+                            </option>
                         @endforeach
                     </select>
+                    @error('org_affiliation')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label mb-0">เริ่ม</label>
-                    <input type="time" class="form-control wh-start" name="" step="300">
+
+                <div class="col-md-6" id="org_affiliation_other_box" style="display: none;">
+                    <label for="org_affiliation_other" class="form-label required">โปรดระบุ</label>
+                    <input type="text" name="org_affiliation_other" id="org_affiliation_other" class="form-control" value="{{ old('org_affiliation_other', $user->org_affiliation_other ?? '') }}">
+                    @error('org_affiliation_other')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label mb-0">สิ้นสุด</label>
-                    <input type="time" class="form-control wh-end" name="" step="300">
+
+                @push('js')
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            const orgSelect = document.getElementById('org_affiliation');
+                            const otherBox = document.getElementById('org_affiliation_other_box');
+
+
+                            function toggleOtherBox(value) {
+                                if (value === 'อื่น ๆ') {
+                                    otherBox.style.display = 'block';
+                                } else {
+                                    otherBox.style.display = 'none';
+                                    document.getElementById('org_affiliation_other').value = '';
+                                }
+                            }
+
+                            toggleOtherBox(orgSelect.value);
+
+                            orgSelect.addEventListener('change', function() {
+                                toggleOtherBox(this.value);
+                            });
+                        });
+                    </script>
+                @endpush
+
+
+                <div class="col-md-6">
+                    <label for="org_tel" class="form-label required">หมายเลขโทรศัพท์</label>
+                    <input type="text" name="org_tel" id="org_tel" value="{{ old('org_tel', $user->org_tel ?? '') }}" class="form-control">
+                    @error('org_tel')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label mb-0">หมายเหตุ</label>
-                    <input type="text" class="form-control wh-note" name="" placeholder="ถ้ามี">
+
+                {{-- ========== Address + Map (Leaflet + Nominatim) ========== --}}
+                <div class="col-12">
+                    <label for="org_address" class="form-label required">ที่อยู่หน่วยบริการ</label>
+                    <textarea name="org_address" id="org_address" rows="2" class="form-control" placeholder="พิมพ์ที่อยู่ให้ละเอียด แล้วกด “ค้นหาพิกัดจากที่อยู่”">{{ old('org_address', $user->org_address ?? '') }}</textarea>
+                    @error('org_address')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
                 </div>
-                <div class="col-md-2">
-                    <div class="form-check mt-4">
-                        <input class="form-check-input wh-closed" type="checkbox" name="">
-                        <label class="form-check-label">ปิดให้บริการ</label>
+
+                <div class="col-12">
+                    <div class="d-flex align-items-center gap-2 my-2">
+                        <button type="button" id="btn-geocode" class="btn btn-outline-primary btn-sm">
+                            ค้นหาพิกัดจากที่อยู่
+                        </button>
+                        <button type="button" id="btn-center-marker" class="btn btn-outline-secondary btn-sm">
+                            จัดกึ่งกลางที่หมุด
+                        </button>
+                        <button type="button" id="btn-reset-initial" class="btn btn-outline-danger btn-sm">
+                            รีเซ็ตจุดเริ่มต้น
+                        </button>
+                        <small class="text-muted">หรือคลิกบนแผนที่/ลากหมุดเพื่อกำหนดพิกัดเอง</small>
+                        <span id="coord-badge" class="badge bg-secondary ms-auto d-none"></span>
+                    </div>
+                    <div id="map" style="height: 360px; border-radius: .5rem; overflow: hidden;"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="org_lat" class="form-label">Latitude</label>
+                    <input type="text" name="org_lat" id="org_lat" value="{{ old('org_lat', $user->org_lat ?? '') }}" class="form-control" placeholder="จะถูกกรอกอัตโนมัติเมื่อเลือกพิกัด">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="org_lng" class="form-label">Longitude</label>
+                    <input type="text" name="org_lng" id="org_lng" value="{{ old('org_lng', $user->org_lng ?? '') }}" class="form-control" placeholder="จะถูกกรอกอัตโนมัติเมื่อเลือกพิกัด">
+                </div>
+
+                @push('js')
+                    {{-- Leaflet CSS/JS (CDN) --}}
+                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const latEl = document.getElementById('org_lat');
+                            const lngEl = document.getElementById('org_lng');
+                            const addrEl = document.getElementById('org_address');
+                            const badgeEl = document.getElementById('coord-badge');
+
+                            const hasLatLng = latEl.value && lngEl.value && !isNaN(parseFloat(latEl.value)) && !isNaN(parseFloat(lngEl.value));
+
+                            // const TH_CENTER = [13.736717, 100.523186]; // กทม.
+                            const TH_CENTER = [13.853450, 100.527171]; // พิกัดเริ่มต้น:: กรมควบคุมโรค กระทรวงสาธารณสุข
+                            const initLatLng = hasLatLng ? [parseFloat(latEl.value), parseFloat(lngEl.value)] : TH_CENTER;
+                            const initZoom = hasLatLng ? 14 : 6;
+
+                            // สร้างแผนที่
+                            const map = L.map('map', {
+                                scrollWheelZoom: true
+                            }).setView(initLatLng, initZoom);
+
+                            // พื้นหลังแผนที่ (OSM)
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19,
+                                attribution: '&copy; OpenStreetMap contributors'
+                            }).addTo(map);
+
+                            // หมุด
+                            const marker = L.marker(initLatLng, {
+                                draggable: true
+                            }).addTo(map);
+
+                            function setCoord(lat, lng, zoom = 16, pan = true) {
+                                lat = parseFloat(lat);
+                                lng = parseFloat(lng);
+                                if (isNaN(lat) || isNaN(lng)) return;
+
+                                marker.setLatLng([lat, lng]);
+                                if (pan) map.setView([lat, lng], zoom);
+
+                                latEl.value = lat.toFixed(6);
+                                lngEl.value = lng.toFixed(6);
+
+                                badgeEl.textContent = `Lat: ${latEl.value} , Lng: ${lngEl.value}`;
+                                badgeEl.classList.remove('d-none');
+                            }
+
+                            // อัปเดตเมื่อลากหมุด
+                            marker.on('dragend', e => {
+                                const {
+                                    lat,
+                                    lng
+                                } = e.target.getLatLng();
+                                setCoord(lat, lng, map.getZoom(), false);
+                            });
+
+                            // คลิกบนแผนที่เพื่อย้ายหมุด
+                            map.on('click', e => {
+                                setCoord(e.latlng.lat, e.latlng.lng);
+                            });
+
+                            // กด Enter ในช่องที่อยู่ => geocode
+                            addrEl.addEventListener('keydown', (ev) => {
+                                if (ev.key === 'Enter') {
+                                    ev.preventDefault();
+                                    doGeocode();
+                                }
+                            });
+
+                            // ปุ่ม geocode
+                            document.getElementById('btn-geocode').addEventListener('click', doGeocode);
+
+                            // ฟังก์ชันเรียก Nominatim หา Lat/Lng จากข้อความที่อยู่
+                            async function doGeocode() {
+                                const q = (addrEl.value || '').trim();
+                                if (!q) {
+                                    addrEl.focus();
+                                    return;
+                                }
+
+                                const url = new URL('https://nominatim.openstreetmap.org/search');
+                                url.searchParams.set('q', q + ', Thailand'); // บีบให้เน้นประเทศไทย
+                                url.searchParams.set('format', 'json');
+                                url.searchParams.set('addressdetails', '1');
+                                url.searchParams.set('limit', '1');
+
+                                try {
+                                    const res = await fetch(url.toString(), {
+                                        headers: {
+                                            'Accept-Language': 'th'
+                                        }
+                                    });
+                                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                                    const data = await res.json();
+
+                                    if (Array.isArray(data) && data.length) {
+                                        const p = data[0];
+                                        setCoord(parseFloat(p.lat), parseFloat(p.lon), 17);
+                                    } else {
+                                        alert('ไม่พบพิกัดจากที่อยู่นี้ กรุณาระบุให้ละเอียดขึ้น (เช่น เลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด)');
+                                    }
+                                } catch (err) {
+                                    console.error(err);
+                                    alert('เกิดข้อผิดพลาดในการค้นหาพิกัด โปรดลองใหม่อีกครั้ง');
+                                }
+                            }
+
+                            // ถ้ามีพิกัดเดิมในฟอร์มแล้ว แสดง badge ให้เห็น
+                            if (hasLatLng) {
+                                badgeEl.textContent = `Lat: ${parseFloat(latEl.value).toFixed(6)} , Lng: ${parseFloat(lngEl.value).toFixed(6)}`;
+                                badgeEl.classList.remove('d-none');
+                            }
+
+                            // ป้องกันผู้ใช้พิมพ์ค่าที่ไม่ใช่ตัวเลขลงช่อง lat/lng
+                            function sanitizeCoordInput(el, min, max) {
+                                el.addEventListener('input', () => {
+                                    let v = el.value.replace(/[^0-9.\-]/g, '');
+                                    el.value = v;
+                                });
+                                el.addEventListener('change', () => {
+                                    let n = parseFloat(el.value);
+                                    if (isNaN(n)) return;
+                                    n = Math.max(min, Math.min(max, n));
+                                    el.value = n.toFixed(6);
+                                    setCoord(
+                                        parseFloat(latEl.value || TH_CENTER[0]),
+                                        parseFloat(lngEl.value || TH_CENTER[1]),
+                                        map.getZoom()
+                                    );
+                                });
+                            }
+                            sanitizeCoordInput(latEl, -90, 90);
+                            sanitizeCoordInput(lngEl, -180, 180);
+
+                            // เก็บค่าเริ่มต้นไว้ใช้ตอนรีเซ็ต
+                            const initialState = {
+                                lat: initLatLng[0],
+                                lng: initLatLng[1],
+                                zoom: initZoom
+                            };
+
+                            // ฟังก์ชันจัดกึ่งกลางที่หมุด (ไม่เปลี่ยน lat/lng)
+                            function centerToMarker() {
+                                const {
+                                    lat,
+                                    lng
+                                } = marker.getLatLng();
+                                map.flyTo([lat, lng], Math.max(map.getZoom(), 16));
+                            }
+
+                            // ฟังก์ชันรีเซ็ตกลับค่าตั้งต้น (ย้ายหมุด + แผนที่ + อัพเดตช่องฟอร์ม)
+                            function resetToInitial() {
+                                setCoord(initialState.lat, initialState.lng, initialState.zoom, true);
+                            }
+
+                            // ผูกปุ่ม
+                            document.getElementById('btn-center-marker').addEventListener('click', centerToMarker);
+                            document.getElementById('btn-reset-initial').addEventListener('click', resetToInitial);
+
+                            // เพิ่มช็อตคัตคีย์: กด `r` = รีเซ็ต, `c` = จัดกึ่งกลางที่หมุด
+                            document.addEventListener('keydown', (e) => {
+                                if (e.target.matches('input, textarea')) return; // ไม่ให้ชนตอนพิมพ์
+                                if (e.key.toLowerCase() === 'r') resetToInitial();
+                                if (e.key.toLowerCase() === 'c') centerToMarker();
+                            });
+
+                        });
+                    </script>
+                @endpush
+
+
+
+
+
+                @php
+                    $dayOptions = [
+                        'mon' => 'จันทร์',
+                        'tue' => 'อังคาร',
+                        'wed' => 'พุธ',
+                        'thu' => 'พฤหัสบดี',
+                        'fri' => 'ศุกร์',
+                        'sat' => 'เสาร์',
+                        'sun' => 'อาทิตย์',
+                    ];
+                    $existing = old('working_hours', $user->org_working_hours ?? []);
+                @endphp
+
+                <div class="col-12">
+                    <label class="form-label">วัน-เวลาทำการ</label>
+
+                    {{-- รายการช่วงวัน–เวลา (จะถูกเติมด้วย JS) --}}
+                    <div id="wh-rows" class="vstack gap-2"></div>
+
+                    <div class="mt-2 d-flex flex-wrap gap-2">
+                        <button type="button" id="btnAddWh" class="btn btn-outline-primary btn-sm">
+                            <i class="ti ti-plus"></i> เพิ่มช่วงวัน–เวลา
+                        </button>
+                    </div>
+
+                    {{-- ตัวช่วยกรอกเร็ว (Batch) --}}
+                    <div class="mt-3 border border-info rounded p-3 bg-info-subtle">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 mb-2">
+                                <h6 class="text-dark mb-0">
+                                    <i class="ti ti-bolt me-1"></i> ตัวช่วยกรอกแบบรวดเร็ว
+                                </h6>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0">เริ่ม</label>
+                                <input type="text" id="batchStart" class="form-control" placeholder="เช่น 08:30">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0">สิ้นสุด</label>
+                                <input type="text" id="batchEnd" class="form-control" placeholder="เช่น 16:30">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-0">หมายเหตุ</label>
+                                <input type="text" id="batchNote" class="form-control" placeholder="ถ้ามี">
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="batchClosed">
+                                    <label class="form-check-label" for="batchClosed">ปิดให้บริการทั้งวัน</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="batchClear">
+                                    <label class="form-check-label" for="batchClear">ล้างรายการเดิมก่อนเติม</label>
+                                </div>
+                                <div class="d-grid d-md-flex gap-2 mt-2">
+                                    <button type="button" id="btnFillAllDays" class="btn btn-secondary btn-sm">เติมทุกวัน</button>
+                                    <button type="button" id="btnFillWeekdays" class="btn btn-secondary btn-sm">เติมเฉพาะจันทร์–ศุกร์</button>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            เลือกช่วงเวลา/หมายเหตุครั้งเดียวแล้วกดปุ่ม ระบบจะสร้างแถวอัตโนมัติ (ถ้าเลือก “ปิดให้บริการทั้งวัน” จะไม่ใช้เวลา)
+                        </small>
+                    </div>
+
+                    <small class="text-muted d-block mt-2">
+                        เพิ่มหลายแถวได้ (วันเดียวกันได้หลายช่วง) • ใช้ช่อง “ปิดให้บริการ” สำหรับวันที่ปิดทั้งวัน
+                    </small>
+
+                    {{-- ข้อความอิสระเพิ่มเติม (ถ้าต้องการเก็บบันทึก/คำอธิบาย) --}}
+                    <div class="mt-3">
+                        <label for="org_working_hours" class="form-label">คำอธิบายเพิ่มเติม (ไม่บังคับ)</label>
+                        <textarea name="org_working_hours" id="org_working_hours" rows="2" class="form-control">{{ old('org_working_hours', $user->org_working_hours_text ?? '') }}</textarea>
                     </div>
                 </div>
 
-                <div class="col-12 d-flex justify-content-end">
-                    <button type="button" class="btn btn-outline-danger btn-sm wh-remove">
-                        <i class="ti ti-x"></i> ลบช่วงนี้
-                    </button>
-                </div>
+                {{-- Template แถวเดี่ยว --}}
+                <template id="wh-row-tpl">
+                    <div class="card p-2 border rounded wh-row">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label mb-0">วัน</label>
+                                <select class="form-select wh-day" name="">
+                                    @foreach ($dayOptions as $k => $v)
+                                        <option value="{{ $k }}">{{ $v }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0">เริ่ม</label>
+                                {{-- เปลี่ยนเป็น text เพื่อใช้ Flatpickr --}}
+                                <input type="text" class="form-control wh-start" name="">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0">สิ้นสุด</label>
+                                <input type="text" class="form-control wh-end" name="">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-0">หมายเหตุ</label>
+                                <input type="text" class="form-control wh-note" name="" placeholder="ถ้ามี">
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input wh-closed" type="checkbox" name="">
+                                    <label class="form-check-label">ปิดให้บริการ</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 d-flex justify-content-end">
+                                <button type="button" class="btn btn-outline-danger btn-sm wh-remove">
+                                    <i class="ti ti-x"></i> ลบช่วงนี้
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                @push('js')
+                    <script>
+                        (function() {
+                            const container = document.getElementById('wh-rows');
+                            const tpl = document.getElementById('wh-row-tpl').content;
+                            const addBtn = document.getElementById('btnAddWh');
+
+                            // Batch controls
+                            const batchStart = document.getElementById('batchStart');
+                            const batchEnd = document.getElementById('batchEnd');
+                            const batchNote = document.getElementById('batchNote');
+                            const batchClosed = document.getElementById('batchClosed');
+                            const batchClear = document.getElementById('batchClear');
+                            const btnFillAll = document.getElementById('btnFillAllDays');
+                            const btnFillWeek = document.getElementById('btnFillWeekdays');
+
+                            const DAYS_ALL = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+                            const DAYS_WEEK = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
+                            let idx = 0;
+
+                            // ===== ตัวเลือก timepicker กลาง (24 ชม.) =====
+                            const timeOpts = {
+                                enableTime: true,
+                                noCalendar: true,
+                                dateFormat: 'H:i', // แสดง/ส่งค่าเป็น HH:mm
+                                time_24hr: true,
+                                minuteIncrement: 5,
+                                allowInput: true,
+                                disableMobile: true
+                            };
+
+                            // ผูก timepicker กับ Batch
+                            flatpickr(batchStart, timeOpts);
+                            flatpickr(batchEnd, timeOpts);
+
+                            // ฟังก์ชันผูก timepicker กับแถวใหม่
+                            window.initWhTimePickers = function(rowEl) {
+                                flatpickr(rowEl.querySelector('.wh-start'), timeOpts);
+                                flatpickr(rowEl.querySelector('.wh-end'), timeOpts);
+                            };
+
+                            function addRow(rowData = null) {
+                                const node = document.importNode(tpl, true);
+                                const row = node.querySelector('.wh-row');
+
+                                const day = row.querySelector('.wh-day');
+                                const start = row.querySelector('.wh-start');
+                                const end = row.querySelector('.wh-end');
+                                const note = row.querySelector('.wh-note');
+                                const closed = row.querySelector('.wh-closed');
+
+                                day.name = `working_hours[${idx}][day]`;
+                                start.name = `working_hours[${idx}][start]`;
+                                end.name = `working_hours[${idx}][end]`;
+                                note.name = `working_hours[${idx}][note]`;
+                                closed.name = `working_hours[${idx}][closed]`;
+
+                                if (rowData) {
+                                    if (rowData.day) day.value = rowData.day;
+                                    if (rowData.start) start.value = rowData.start; // ควรเป็นรูปแบบ HH:mm
+                                    if (rowData.end) end.value = rowData.end;
+                                    if (rowData.note) note.value = rowData.note;
+                                    if (rowData.closed) {
+                                        closed.checked = true;
+                                    }
+                                }
+
+                                // แปะลง DOM ก่อน แล้วค่อยผูก Flatpickr
+                                container.appendChild(row);
+                                window.initWhTimePickers(row);
+
+                                // ถ้า closed ให้ disable และเคลียร์ด้วย
+                                toggleClosed(row, closed.checked);
+
+                                closed.addEventListener('change', (e) => toggleClosed(row, e.target.checked));
+                                row.querySelector('.wh-remove').addEventListener('click', () => row.remove());
+
+                                idx++;
+                            }
+
+                            function toggleClosed(row, isClosed) {
+                                const start = row.querySelector('.wh-start');
+                                const end = row.querySelector('.wh-end');
+
+                                start.disabled = end.disabled = isClosed;
+
+                                // เคลียร์ค่าทั้ง input และอินสแตนซ์ flatpickr ถ้ามี
+                                const fps = start._flatpickr;
+                                const fpe = end._flatpickr;
+                                if (isClosed) {
+                                    if (fps) fps.clear();
+                                    else start.value = '';
+                                    if (fpe) fpe.clear();
+                                    else end.value = '';
+                                }
+                            }
+
+                            addBtn.addEventListener('click', () => addRow());
+
+                            // โหลดข้อมูลเดิมจาก PHP
+                            const existing = @json($existing);
+                            if (Array.isArray(existing) && existing.length) {
+                                existing.forEach(r => addRow(r));
+                            } else {
+                                addRow();
+                            }
+
+                            // ===== Batch Fill =====
+                            function fillDays(days) {
+                                const isClosed = batchClosed.checked;
+                                const startVal = batchStart.value || '';
+                                const endVal = batchEnd.value || '';
+                                const noteVal = batchNote.value || '';
+
+                                if (!isClosed) {
+                                    // เทียบรูปแบบ HH:mm ได้ตรง ๆ
+                                    if (!startVal || !endVal || endVal <= startVal) {
+                                        alert('กรุณาใส่เวลาเริ่ม/สิ้นสุดให้ถูกต้อง (สิ้นสุดต้องมากกว่าเริ่ม)');
+                                        return;
+                                    }
+                                }
+
+                                if (batchClear && batchClear.checked) {
+                                    container.innerHTML = '';
+                                    idx = 0;
+                                }
+
+                                days.forEach(d => {
+                                    addRow({
+                                        day: d,
+                                        closed: isClosed,
+                                        start: isClosed ? null : startVal,
+                                        end: isClosed ? null : endVal,
+                                        note: noteVal || null
+                                    });
+                                });
+                            }
+
+                            btnFillAll?.addEventListener('click', () => fillDays(DAYS_ALL));
+                            btnFillWeek?.addEventListener('click', () => fillDays(DAYS_WEEK));
+                        })();
+                    </script>
+                @endpush
+
             </div>
+            <hr class="my-4">
         </div>
-    </template>
-
-    @push('js')
-        <script>
-            (function() {
-                const container = document.getElementById('wh-rows');
-                const tpl = document.getElementById('wh-row-tpl').content;
-                const addBtn = document.getElementById('btnAddWh');
-
-                // Batch controls
-                const batchStart = document.getElementById('batchStart');
-                const batchEnd = document.getElementById('batchEnd');
-                const batchNote = document.getElementById('batchNote');
-                const batchClosed = document.getElementById('batchClosed');
-                const batchClear = document.getElementById('batchClear');
-                const btnFillAllDays = document.getElementById('btnFillAllDays');
-                const btnFillWeekdays = document.getElementById('btnFillWeekdays');
-
-                const DAYS_ALL = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-                const DAYS_WEEK = ['mon', 'tue', 'wed', 'thu', 'fri'];
-
-                let idx = 0;
-
-                function addRow(rowData = null) {
-                    const node = document.importNode(tpl, true);
-                    const row = node.querySelector('.wh-row');
-
-                    const day = row.querySelector('.wh-day');
-                    day.name = `working_hours[${idx}][day]`;
-                    const start = row.querySelector('.wh-start');
-                    start.name = `working_hours[${idx}][start]`;
-                    const end = row.querySelector('.wh-end');
-                    end.name = `working_hours[${idx}][end]`;
-                    const note = row.querySelector('.wh-note');
-                    note.name = `working_hours[${idx}][note]`;
-                    const closed = row.querySelector('.wh-closed');
-                    closed.name = `working_hours[${idx}][closed]`;
-
-                    if (rowData) {
-                        if (rowData.day) day.value = rowData.day;
-                        if (rowData.start) start.value = rowData.start;
-                        if (rowData.end) end.value = rowData.end;
-                        if (rowData.note) note.value = rowData.note;
-                        if (rowData.closed) {
-                            closed.checked = true;
-                            toggleClosed(row, true);
-                        }
-                    }
-
-                    closed.addEventListener('change', (e) => toggleClosed(row, e.target.checked));
-                    row.querySelector('.wh-remove').addEventListener('click', () => row.remove());
-
-                    container.appendChild(row);
-                    idx++;
-                }
-
-                function toggleClosed(row, isClosed) {
-                    const start = row.querySelector('.wh-start');
-                    const end = row.querySelector('.wh-end');
-                    start.disabled = end.disabled = isClosed;
-                    if (isClosed) {
-                        start.value = '';
-                        end.value = '';
-                    }
-                }
-
-                addBtn.addEventListener('click', () => addRow());
-
-                // โหลดข้อมูลเดิมจาก PHP
-                const existing = @json($existing);
-                if (Array.isArray(existing) && existing.length) {
-                    existing.forEach(r => addRow(r));
-                } else {
-                    addRow();
-                }
-
-                // ===== Batch Fill =====
-                function fillDays(days) {
-                    const isClosed = batchClosed.checked;
-                    const startVal = (batchStart && batchStart.value) ? batchStart.value : '';
-                    const endVal = (batchEnd && batchEnd.value) ? batchEnd.value : '';
-                    const noteVal = (batchNote && batchNote.value) ? batchNote.value : '';
-
-                    if (!isClosed) {
-                        if (!startVal || !endVal || endVal <= startVal) {
-                            alert('กรุณาใส่เวลาเริ่ม/สิ้นสุดให้ถูกต้อง (สิ้นสุดต้องมากกว่าเริ่ม)');
-                            return;
-                        }
-                    }
-
-                    if (batchClear && batchClear.checked) {
-                        container.innerHTML = '';
-                        idx = 0;
-                    }
-
-                    days.forEach(d => {
-                        addRow({
-                            day: d,
-                            closed: isClosed,
-                            start: isClosed ? null : startVal,
-                            end: isClosed ? null : endVal,
-                            note: noteVal || null
-                        });
-                    });
-                }
-
-                btnFillAllDays?.addEventListener('click', () => fillDays(DAYS_ALL));
-                btnFillWeekdays?.addEventListener('click', () => fillDays(DAYS_WEEK));
-            })();
-        </script>
-    @endpush
-
-
-
-
-
-
-    <hr class="my-4">
+    </div>
 
     {{-- ====================== ข้อมูลทั่วไปของผู้ลงทะเบียน ====================== --}}
     <h5>3. ข้อมูลทั่วไปของผู้ลงทะเบียน</h5>
@@ -869,33 +995,33 @@
     {{-- ====================== การยืนยันและข้อกำหนด PDPA ====================== --}}
     <h5>5. การยืนยันความถูกต้องและข้อกำหนด PDPA</h5>
 
-    <div class="col-12">
-        <div class="border rounded p-3 bg-light-subtle">
-            <p class="mb-2">
-                เพื่อความถูกต้องของข้อมูลและการคุ้มครองข้อมูลส่วนบุคคล โปรดอ่าน
-                <a href="#" data-bs-toggle="modal" data-bs-target="#pdpaModal">ประกาศความเป็นส่วนตัว (Privacy Notice)</a>
-                และติ๊กยอมรับก่อนบันทึก
-            </p>
-            <ul class="mb-3 small">
-                <li>ข้าพเจ้ายืนยันว่าข้อมูลที่กรอกมีความถูกต้อง ครบถ้วน และเป็นปัจจุบัน</li>
-                <li>ยินยอมให้กระทรวงสาธารณสุขเก็บ รวบรวม ใช้ และเปิดเผยข้อมูลตามวัตถุประสงค์ของระบบหน่วยบริการสุขภาพผู้เดินทาง</li>
-                <li>รับทราบสิทธิในการเข้าถึง แก้ไข ลบ ระงับการใช้ หรือคัดค้านการประมวลผลข้อมูล รวมถึงสิทธิถอนความยินยอม</li>
-                <li>ทราบมาตรการรักษาความมั่นคงปลอดภัยและระยะเวลาเก็บรักษาข้อมูลตามที่กฎหมายกำหนด</li>
-            </ul>
-
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="pdpa_accept" name="pdpa_accept" value="1" {{ old('pdpa_accept', !empty($user?->pdpa_accepted_at)) ? 'checked' : '' }}>
-                <label class="form-check-label" for="pdpa_accept">
-                    ข้าพเจ้าได้อ่านและยอมรับข้อกำหนดตาม
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#pdpaModal">ประกาศความเป็นส่วนตัว (Privacy Notice)</a>
-                    ของกระทรวงสาธารณสุข
-                </label>
-            </div>
-            @error('pdpa_accept')
-                <div class="text-danger small mt-1">{{ $message }}</div>
-            @enderror
+    <div class="border border-success rounded p-3 bg-success-subtle">
+        <h6 class="text-dark mb-2">
+            <i class="ti ti-shield-check me-1"></i> ข้อกำหนดการคุ้มครองข้อมูลส่วนบุคคล (PDPA)
+        </h6>
+        <p class="mb-2">
+            เพื่อความถูกต้องของข้อมูลและการคุ้มครองข้อมูลส่วนบุคคล โปรดอ่าน
+            <a href="#" data-bs-toggle="modal" data-bs-target="#pdpaModal" class="fw-bold text-decoration-underline">
+                ประกาศความเป็นส่วนตัว (Privacy Notice)
+            </a> และติ๊กยอมรับก่อนบันทึก
+        </p>
+        <ul class="mb-3 small">
+            <li>ข้าพเจ้ายืนยันว่าข้อมูลที่กรอกมีความถูกต้อง ครบถ้วน และเป็นปัจจุบัน</li>
+            <li>ยินยอมให้กระทรวงสาธารณสุขเก็บ รวบรวม ใช้ และเปิดเผยข้อมูลตามวัตถุประสงค์ของระบบ</li>
+            <li>รับทราบสิทธิในการเข้าถึง แก้ไข ลบ ระงับการใช้ หรือคัดค้าน รวมถึงสิทธิถอนความยินยอม</li>
+        </ul>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="pdpa_accept" name="pdpa_accept" value="1" {{ old('pdpa_accept', !empty($user->pdpa_version) ? 1 : 0) ? 'checked' : '' }}>
+            <label for="pdpa_accept">ยอมรับ PDPA</label>
+            <label class="form-check-label fw-semibold" for="pdpa_accept">
+                ข้าพเจ้าได้อ่านและยอมรับข้อกำหนดตาม
+                <a href="#" data-bs-toggle="modal" data-bs-target="#pdpaModal">Privacy Notice</a>
+            </label>
         </div>
     </div>
+
+
+
 
     @push('modal')
         {{-- Modal: Privacy Notice (ประกาศความเป็นส่วนตัวของ สธ.) --}}

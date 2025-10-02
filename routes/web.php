@@ -83,7 +83,9 @@ Route::middleware(['auth'])->group(function () {
         // Route::get('/logs', fn() => view('backend.logs.index'))->name('logs.index');
 
         // ตรวจสอบใบสมัคร
-        Route::resource('application-review', ApplicationReviewController::class)->names('application-review');
+        Route::resource('application-review', ApplicationReviewController::class)
+            ->parameters(['application-review' => 'user'])
+            ->names('application-review');
 
         // จัดการผู้ใช้งาน
         Route::resource('user', UserController::class)->names('user');
@@ -97,22 +99,27 @@ Route::middleware(['auth'])->group(function () {
         // สิทธิ์การใช้งาน (Roles & Permissions)
         Route::resource('role', RoleController::class);
 
-        // ประเมินตนเอง
-        // หน่วยบริการ (ตัวอย่าง: จัดการเองอยู่แล้ว)
-        // Route::resource('service-unit', ServiceUnitController::class);
-        // ประเมิน
-        Route::resource('assessment', AssessmentController::class)->except(['destroy']);
-        // กรอกองค์ประกอบ (step 2)
-        Route::get('assessment/{assessment}/fill', [AssessmentFillController::class, 'index'])->name('assessment.fill');
-        Route::post('assessment/{assessment}/fill', [AssessmentFillController::class, 'store'])->name('assessment.fill.store');
-        Route::post('assessment/{assessment}/submit', [AssessmentFillController::class, 'submit'])->name('assessment.submit');
-
         // tinymce uploads
         Route::post('upload/tinymce', [UploadController::class, 'tinymce'])->name('upload.tinymce');
 
         // จำลอง login
         Route::post('/impersonate/{user}', [ImpersonateController::class, 'start'])->name('impersonate.start');
         Route::get('/impersonate/stop', [ImpersonateController::class, 'stop'])->name('impersonate.stop');
+
+        // ประเมินตนเอง
+        Route::get('assessment', [AssessmentController::class, 'index'])->name('assessment.index');
+
+        // Step 1
+        Route::get('assessment/step1/create', [AssessmentController::class, 'create_step1'])
+            ->name('assessment.step1.create');
+        Route::post('assessment/step1', [AssessmentController::class, 'store_step1'])
+            ->name('assessment.step1.store');
+
+        // CRUD หลัก
+        Route::get('assessment/{id}/edit', [AssessmentController::class, 'edit'])->name('assessment.edit');
+        Route::put('assessment/{id}', [AssessmentController::class, 'update'])->name('assessment.update'); // << เพิ่มบรรทัดนี้
+        Route::delete('assessment/{id}', [AssessmentController::class, 'destroy'])->name('assessment.destroy');
+
     });
 
     // ==============================
