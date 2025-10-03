@@ -86,15 +86,27 @@
 @endcan
 
 
+{{-- เมนูตรวจสอบใบสมัคร --}}
+<li class="pc-item">
+    <a class="pc-link" href="{{ route('backend.application-review.index') }}">
+        <span class="pc-micon"><i class="ph-duotone ph-identification-card"></i></span>
+        <span class="pc-mtext" data-i18n="ตรวจสอบใบสมัคร">ตรวจสอบใบสมัคร</span>
+        @if (!empty($pendingApplicationCount) && $pendingApplicationCount > 0)
+            <span class="pc-badge">{{ $pendingApplicationCount }}</span>
+        @endif
+    </a>
+</li>
+
 @can('users.view')
-    <li class="pc-item pc-hasmenu">
-        <a href="#!" class="pc-link"><span class="pc-micon"> <i class="ph-duotone ph-users-three"></i></span><span class="pc-mtext" data-i18n="จัดการผู้ใช้งาน">จัดการผู้ใช้งาน</span><span class="pc-arrow"><i data-feather="chevron-right"></i></span></a>
-        <ul class="pc-submenu">
-            <li class="pc-item"><a class="pc-link" href="{{ route('backend.application-review.index') }}" data-i18n="ตรวจสอบใบสมัคร">ตรวจสอบใบสมัคร</a></li>
-            <li class="pc-item"><a class="pc-link" href="{{ route('backend.user.index') }}" data-i18n="ผู้ใช้งาน">ผู้ใช้งาน</a></li>
-        </ul>
+    {{-- เมนูผู้ใช้งาน --}}
+    <li class="pc-item">
+        <a class="pc-link" href="{{ route('backend.user.index') }}">
+            <span class="pc-micon"><i class="ph-duotone ph-users-three"></i></span>
+            <span class="pc-mtext" data-i18n="ผู้ใช้งาน">ผู้ใช้งาน</span>
+        </a>
     </li>
 @endcan
+
 
 
 @can('roles-permissions')
@@ -130,7 +142,7 @@
 </li> --}}
 {{-- TMC Backend --}}
 
-<li class="pc-item pc-caption">
+{{-- <li class="pc-item pc-caption">
     <label data-i18n="Navigation">Navigation</label>
     <i class="ph-duotone ph-gauge"></i>
 </li>
@@ -761,4 +773,4 @@
         <span class="pc-micon">
             <i class="ph-duotone ph-desktop"></i>
         </span>
-        <span class="pc-mtext" data-i18n="Sample Page">Sample page</span></a></li>
+        <span class="pc-mtext" data-i18n="Sample Page">Sample page</span></a></li> --}}

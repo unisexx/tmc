@@ -27,7 +27,8 @@ class UserController extends Controller
     {
         $q     = trim($request->get('q', ''));
         $users = User::query()
-            ->with('roles:id,name')
+            ->with(['roles:id,name', 'serviceUnits' => fn($q) => $q->select('service_units.id', 'org_affiliation')])
+            ->whereNotNull('role_id')
             ->when($q !== '', function ($qr) use ($q) {
                 $qr->where(function ($x) use ($q) {
                     $x->where('name', 'like', "%{$q}%")
@@ -148,7 +149,7 @@ class UserController extends Controller
             'role_id'               => ['required', 'integer', Rule::exists('roles', 'id')->where('guard_name', 'web')],
 
             // 🔹 สถานะการพิจารณา (รับทั้งไทย/อังกฤษ)
-            'reg_status'            => ['nullable', 'string', Rule::in(['approved', 'อนุมัติ', 'pending', 'rejected'])],
+            'reg_status'            => ['nullable', 'string', Rule::in(['รอตรวจสอบ', 'อนุมัติ', 'ไม่อนุมัติ'])],
         ];
 
         $messages = [

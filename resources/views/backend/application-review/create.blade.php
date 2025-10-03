@@ -12,7 +12,7 @@
                     <h5>เพิ่มผู้ใช้งาน</h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('backend.application-review.store') }}" method="POST" enctype="multipart/form-data">
+                    <form id="appReviewForm" action="{{ route('backend.application-review.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         @include('backend.application-review._form')
                     </form>

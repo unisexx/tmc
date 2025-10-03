@@ -1,4 +1,8 @@
 @php
+    // หน่วยบริการหลักของผู้ใช้ที่ถูกส่งมาจาก Controller
+    // ถ้า controller ไม่ได้ส่งมา ให้ลองดึงเองเผื่อใช้กับหน้า create
+    $unit = $unit ?? (optional($user)->serviceUnits()->wherePivot('is_primary', true)->first() ?? optional($user)->serviceUnits()->first());
+
     // provinces: CODE, TITLE
     $provinces = \Illuminate\Support\Facades\Cache::remember('blade.provinces.all', now()->addDay(), function () {
         return \App\Models\Province::query()
@@ -302,7 +306,7 @@
                 {{-- ชื่อหน่วยบริการ/หน่วยงาน (ขึ้นแถวใหม่แบบเต็มความกว้าง) --}}
                 <div class="col-12">
                     <label for="org_name" class="form-label required">ชื่อหน่วยบริการ/หน่วยงาน</label>
-                    <input type="text" name="org_name" id="org_name" value="{{ old('org_name', $user->org_name ?? '') }}" class="form-control">
+                    <input type="text" name="org_name" id="org_name" value="{{ old('org_name', $unit->org_name ?? '') }}" class="form-control">
                     @error('org_name')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
@@ -313,7 +317,7 @@
                     <select name="org_affiliation" id="org_affiliation" class="form-select">
                         <option value="">--- เลือก ---</option>
                         @foreach (['สำนักงานปลัดกระทรวงสาธารณสุข', 'กรมควบคุมโรค', 'กรมการแพทย์', 'กรมสุขภาพจิต', 'สภากาชาดไทย', 'สำนักการแพทย์ กรุงเทพมหานคร', 'กระทรวงอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม', 'กระทรวงกลาโหม', 'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ'] as $option)
-                            <option value="{{ $option }}" @selected(old('org_affiliation', $user->org_affiliation ?? '') == $option)>
+                            <option value="{{ $option }}" @selected(old('org_affiliation', $unit->org_affiliation ?? '') == $option)>
                                 {{ $option }}
                             </option>
                         @endforeach
@@ -325,7 +329,7 @@
 
                 <div class="col-md-6" id="org_affiliation_other_box" style="display: none;">
                     <label for="org_affiliation_other" class="form-label required">โปรดระบุ</label>
-                    <input type="text" name="org_affiliation_other" id="org_affiliation_other" class="form-control" value="{{ old('org_affiliation_other', $user->org_affiliation_other ?? '') }}">
+                    <input type="text" name="org_affiliation_other" id="org_affiliation_other" class="form-control" value="{{ old('org_affiliation_other', $unit->org_affiliation_other ?? '') }}">
                     @error('org_affiliation_other')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
@@ -359,7 +363,7 @@
 
                 <div class="col-md-6">
                     <label for="org_tel" class="form-label required">หมายเลขโทรศัพท์</label>
-                    <input type="text" name="org_tel" id="org_tel" value="{{ old('org_tel', $user->org_tel ?? '') }}" class="form-control">
+                    <input type="text" name="org_tel" id="org_tel" value="{{ old('org_tel', $unit->org_tel ?? '') }}" class="form-control">
                     @error('org_tel')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
@@ -368,7 +372,7 @@
                 {{-- ========== Address + Map (Leaflet + Nominatim) ========== --}}
                 <div class="col-12">
                     <label for="org_address" class="form-label required">ที่อยู่หน่วยบริการ</label>
-                    <textarea name="org_address" id="org_address" rows="2" class="form-control" placeholder="พิมพ์ที่อยู่ให้ละเอียด แล้วกด “ค้นหาพิกัดจากที่อยู่”">{{ old('org_address', $user->org_address ?? '') }}</textarea>
+                    <textarea name="org_address" id="org_address" rows="2" class="form-control" placeholder="พิมพ์ที่อยู่ให้ละเอียด แล้วกด “ค้นหาพิกัดจากที่อยู่”">{{ old('org_address', $unit->org_address ?? '') }}</textarea>
                     @error('org_address')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
@@ -393,12 +397,12 @@
 
                 <div class="col-md-6">
                     <label for="org_lat" class="form-label">Latitude</label>
-                    <input type="text" name="org_lat" id="org_lat" value="{{ old('org_lat', $user->org_lat ?? '') }}" class="form-control" placeholder="จะถูกกรอกอัตโนมัติเมื่อเลือกพิกัด">
+                    <input type="text" name="org_lat" id="org_lat" value="{{ old('org_lat', $unit->org_lat ?? '') }}" class="form-control" placeholder="จะถูกกรอกอัตโนมัติเมื่อเลือกพิกัด">
                 </div>
 
                 <div class="col-md-6">
                     <label for="org_lng" class="form-label">Longitude</label>
-                    <input type="text" name="org_lng" id="org_lng" value="{{ old('org_lng', $user->org_lng ?? '') }}" class="form-control" placeholder="จะถูกกรอกอัตโนมัติเมื่อเลือกพิกัด">
+                    <input type="text" name="org_lng" id="org_lng" value="{{ old('org_lng', $unit->org_lng ?? '') }}" class="form-control" placeholder="จะถูกกรอกอัตโนมัติเมื่อเลือกพิกัด">
                 </div>
 
                 @push('js')
@@ -418,7 +422,7 @@
                             // const TH_CENTER = [13.736717, 100.523186]; // กทม.
                             const TH_CENTER = [13.853450, 100.527171]; // พิกัดเริ่มต้น:: กรมควบคุมโรค กระทรวงสาธารณสุข
                             const initLatLng = hasLatLng ? [parseFloat(latEl.value), parseFloat(lngEl.value)] : TH_CENTER;
-                            const initZoom = hasLatLng ? 14 : 6;
+                            const initZoom = hasLatLng ? 17 : 6;
 
                             // สร้างแผนที่
                             const map = L.map('map', {
@@ -588,7 +592,7 @@
                         'sat' => 'เสาร์',
                         'sun' => 'อาทิตย์',
                     ];
-                    $existing = old('working_hours', $user->org_working_hours ?? []);
+                    $existing = old('working_hours', $unit->org_working_hours_json ?? []);
                 @endphp
 
                 <div class="col-12">
@@ -652,7 +656,7 @@
                     {{-- ข้อความอิสระเพิ่มเติม (ถ้าต้องการเก็บบันทึก/คำอธิบาย) --}}
                     <div class="mt-3">
                         <label for="org_working_hours" class="form-label">คำอธิบายเพิ่มเติม (ไม่บังคับ)</label>
-                        <textarea name="org_working_hours" id="org_working_hours" rows="2" class="form-control">{{ old('org_working_hours', $user->org_working_hours_text ?? '') }}</textarea>
+                        <textarea name="org_working_hours" id="org_working_hours" rows="2" class="form-control">{{ old('org_working_hours', $unit->org_working_hours_text ?? '') }}</textarea>
                     </div>
                 </div>
 
@@ -1058,106 +1062,92 @@
     @endpush
 
 
-    {{-- ====================== การตรวจสอบและอนุมัติ ====================== --}}
+
+
+    {{-- ====================== การตรวจสอบและอนุมัติ (สำหรับผู้ตรวจสอบ) ====================== --}}
     <hr class="my-4">
-    <h5>6. การตรวจสอบและอนุมัติ (สำหรับผู้ตรวจสอบ)</h5>
 
-    <div class="col-12">
-        <div class="row g-3">
+    <div class="card admin-review border-2 border-warning shadow-sm position-relative">
+        {{-- Ribbon มุมขวาบน --}}
+        <div class="position-absolute top-0 start-0 translate-middle-y badge rounded-pill text-bg-warning admin-ribbon ms-3">
+            สำหรับผู้ตรวจสอบ
+        </div>
 
-            {{-- สถานะการลงทะเบียน --}}
-            <div class="col-md-4">
-                <label for="reg_status" class="form-label">สถานะการลงทะเบียน</label>
-                <select name="reg_status" id="reg_status" class="form-select">
-                    @php
-                        $status = old('reg_status', $user->reg_status ?? 'รอตรวจสอบ');
-                    @endphp
-                    <option value="รอตรวจสอบ" @selected($status === 'รอตรวจสอบ')>รอตรวจสอบ</option>
-                    <option value="อนุมัติ" @selected($status === 'อนุมัติ')>อนุมัติ</option>
-                    <option value="ไม่อนุมัติ" @selected($status === 'ไม่อนุมัติ')>ไม่อนุมัติ</option>
-                </select>
-                @error('reg_status')
-                    <div class="text-danger small mt-1">{{ $message }}</div>
-                @enderror
 
-                {{-- แสดงประวัติอนุมัติ --}}
-                {{-- <div class="form-text mt-1">
-                    @if ($user?->approved_at)
-                        อนุมัติเมื่อ: {{ $user->approved_at->format('d/m/Y H:i') }}
-                        โดย: {{ optional(\App\Models\User::find($user->approved_by))->name ?? 'System' }}
-                    @else
-                        ยังไม่อนุมัติ
-                    @endif
-                </div> --}}
+        <div class="card-header d-flex align-items-center gap-2 py-3 border-0">
+            <i class="ti ti-shield-check fs-4 text-warning"></i>
+            <h5 class="mb-0">6. การตรวจสอบและอนุมัติ</h5>
+        </div>
+
+        <div class="card-body pt-3">
+            <div class="alert alert-warning d-flex align-items-start gap-2 py-2 mb-4">
+                <i class="ti ti-alert-triangle fs-5 mt-1"></i>
+                <div class="small">
+                    ส่วนนี้มีผลต่อสิทธิ์การเข้าถึงและสถานะการใช้งานของผู้ใช้ กรุณาตรวจสอบเอกสารและข้อมูลให้ครบถ้วนก่อนอนุมัติ
+                </div>
             </div>
 
-            {{-- ตรวจสอบไฟล์เอกสารเจ้าหน้าที่ --}}
-            {{-- <div class="col-md-4">
-                <label class="form-label d-block">การตรวจสอบเอกสารเจ้าหน้าที่</label>
+            <div class="row g-3">
+                {{-- สถานะการลงทะเบียน --}}
+                <div class="col-md-4">
+                    <label for="reg_status" class="form-label">สถานะการลงทะเบียน</label>
+                    <select name="reg_status" id="reg_status" class="form-select form-select-lg admin-input">
+                        @php $status = old('reg_status', $user->reg_status ?? 'รอตรวจสอบ'); @endphp
+                        <option value="รอตรวจสอบ" @selected($status === 'รอตรวจสอบ')>รอตรวจสอบ</option>
+                        <option value="อนุมัติ" @selected($status === 'อนุมัติ')>อนุมัติ</option>
+                        <option value="ไม่อนุมัติ" @selected($status === 'ไม่อนุมัติ')>ไม่อนุมัติ</option>
+                    </select>
+                </div>
+
+                {{-- หมายเหตุการพิจารณา --}}
+                <div class="col-md-8">
+                    <label for="reg_review_note" class="form-label">หมายเหตุ/เหตุผลการพิจารณา</label>
+                    <textarea name="reg_review_note" id="reg_review_note" class="form-control admin-input" rows="3" placeholder="ระบุเหตุผลประกอบการอนุมัติ/ไม่อนุมัติ (บังคับเมื่อเลือก 'ไม่อนุมัติ')">{{ old('reg_review_note', $user->reg_review_note ?? '') }}</textarea>
+                    @error('reg_review_note')
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- กำหนดสิทธิ์การใช้งาน --}}
                 @php
-                    $verified = old('officer_doc_verified', !empty($user?->officer_doc_verified_at) ? '1' : '0');
+                    $allRoles = Spatie\Permission\Models\Role::query()
+                        ->whereRaw('LOWER(name) not like ?', ['%admin%'])
+                        ->where('guard_name', 'web')
+                        ->orderBy('name')
+                        ->get(['id', 'name']);
+                    $currentRole = isset($user) ? optional($user->getRoleNames()->first()) : null;
                 @endphp
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="officer_doc_verified" id="doc_verified_1" value="1" @checked($verified === '1')>
-                    <label class="form-check-label" for="doc_verified_1">ตรวจสอบแล้ว</label>
+                <div class="col-md-4">
+                    <label for="role" class="form-label">สิทธิ์การใช้งาน</label>
+                    <select name="role_id" id="role" class="form-select admin-input" data-placeholder="--- เลือกสิทธิ์การใช้งาน ---">
+                        <option value="">--- เลือกสิทธิ์การใช้งาน ---</option>
+                        @foreach ($allRoles as $role)
+                            <option value="{{ $role->id }}" {{ $currentRole === $role->name ? 'selected' : '' }}>
+                                {{ $role->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('role_id')
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="officer_doc_verified" id="doc_verified_0" value="0" @checked($verified === '0')>
-                    <label class="form-check-label" for="doc_verified_0">ยังไม่ตรวจสอบ</label>
-                </div>
-                @error('officer_doc_verified')
-                    <div class="text-danger small mt-1">{{ $message }}</div>
-                @enderror
 
-                <div class="form-text mt-1">
-                    @if ($user?->officer_doc_verified_at)
-                        ตรวจแล้วเมื่อ: {{ $user->officer_doc_verified_at->format('d/m/Y H:i') }}
-                        โดย: {{ optional(\App\Models\User::find($user->officer_doc_verified_by))->name ?? 'System' }}
-                    @else
-                        ยังไม่ตรวจเอกสาร
-                    @endif
+                {{-- ปุ่มลัดสำหรับผู้ตรวจสอบ --}}
+                <div class="col-md-8 d-flex flex-wrap gap-2 align-items-end">
+                    <button type="button" class="btn btn-outline-primary" id="btnQuickApprove">
+                        <i class="ti ti-check"></i> อนุมัติทันที
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="btnQuickReject">
+                        <i class="ti ti-x"></i> ไม่อนุมัติและแจ้งเหตุผล
+                    </button>
+                    <div class="ms-auto small text-muted">
+                        บันทึกจะมีผลทันทีเมื่อกด “บันทึก” ด้านล่าง
+                    </div>
                 </div>
-            </div> --}}
-
-            {{-- หมายเหตุการพิจารณา --}}
-            <div class="col-md-12">
-                <label for="reg_review_note" class="form-label">หมายเหตุ/เหตุผลการพิจารณา</label>
-                <textarea name="reg_review_note" id="reg_review_note" class="form-control" rows="3" placeholder="ระบุหมายเหตุสำหรับการอนุมัติ/ไม่อนุมัติ (ถ้ามี)">{{ old('reg_review_note', $user->reg_review_note ?? '') }}</textarea>
-                @error('reg_review_note')
-                    <div class="text-danger small mt-1">{{ $message }}</div>
-                @enderror
             </div>
-
-
-            {{-- กำหนดสิทธิ์การใช้งาน ไม่นับสิทธิ์ admin --}}
-            @php
-                $allRoles = Spatie\Permission\Models\Role::query()
-                    ->whereRaw('LOWER(name) not like ?', ['%admin%'])
-                    ->where('guard_name', 'web')
-                    ->orderBy('name')
-                    ->get(['id', 'name']);
-
-                // ชื่อ role ปัจจุบัน (ถ้ามี)
-                $currentRole = isset($user) ? optional($user->getRoleNames()->first()) : null;
-            @endphp
-            <div class="col-md-4">
-                <label for="role" class="form-label">สิทธิ์การใช้งาน</label>
-                <select name="role_id" id="role" class="form-select" data-placeholder="--- เลือกสิทธิ์การใช้งาน ---">
-                    <option value="">--- เลือกสิทธิ์การใช้งาน ---</option>
-                    @foreach ($allRoles ?? [] as $role)
-                        <option value="{{ $role->id }}" {{ $currentRole === $role->name ? 'selected' : '' }}>
-                            {{ $role->name }}
-                        </option>
-                    @endforeach
-                </select>
-                @error('role_id')
-                    <div class="text-danger small mt-1">{{ $message }}</div>
-                @enderror
-            </div>
-
-
         </div>
     </div>
+
 </div>
 
 <div class="mt-3">
@@ -1166,3 +1156,118 @@
     </button>
     <a href="{{ route('backend.application-review.index') }}" class="btn btn-secondary">ยกเลิก</a>
 </div>
+
+
+@push('css')
+    <style>
+        .admin-review {
+            background-color: #fff;
+            /* พื้นหลังขาว */
+            border: 2px solid #FFE08A;
+            /* กรอบเหลืองอ่อน */
+            box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .05);
+        }
+
+        .admin-review .card-header {
+            background: #fff;
+            border-bottom: 1px solid #FFE08A;
+        }
+
+        .admin-ribbon {
+            background: #FFE08A;
+            color: #5c3a00;
+            padding: .45rem .75rem;
+        }
+
+        .admin-input:focus {
+            border-color: #ffc10780 !important;
+            box-shadow: 0 0 0 .2rem rgba(255, 193, 7, .2) !important;
+        }
+
+        .admin-review .alert-warning {
+            --bs-alert-bg: #FFF9DB;
+            /* กล่องแจ้งเตือนอ่อน ๆ */
+            --bs-alert-border-color: #FFE08A;
+            --bs-alert-color: #856404;
+            padding: .5rem .75rem;
+            margin-bottom: 1rem;
+        }
+
+        .admin-review::after {
+            content: "ADMIN";
+            position: absolute;
+            right: 1rem;
+            bottom: .5rem;
+            font-weight: 800;
+            letter-spacing: .2rem;
+            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            color: rgba(0, 0, 0, .05);
+            /* watermark จาง ๆ */
+            pointer-events: none;
+        }
+    </style>
+@endpush
+
+
+
+@push('js')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sel = document.getElementById('reg_status');
+            const note = document.getElementById('reg_review_note');
+            const role = document.getElementById('role'); // สิทธิ์การใช้งาน
+
+            document.getElementById('btnQuickApprove')?.addEventListener('click', () => {
+                sel.value = 'อนุมัติ';
+                role?.focus(); // เปลี่ยนจาก note เป็น role
+            });
+
+            document.getElementById('btnQuickReject')?.addEventListener('click', () => {
+                sel.value = 'ไม่อนุมัติ';
+                if (!note.value.trim()) note.focus();
+            });
+        });
+    </script>
+@endpush
+
+
+@push('js')
+    <script>
+        (function() {
+            const form = document.getElementById('appReviewForm');
+            if (!form) return;
+
+            const statusEl = document.getElementById('reg_status');
+            const roleEl = document.getElementById('role');
+            const noteEl = document.getElementById('reg_review_note');
+
+            form.addEventListener('submit', async (e) => {
+                const status = statusEl?.value || '';
+
+                if (status === 'อนุมัติ' && (!roleEl || !roleEl.value)) {
+                    e.preventDefault();
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'โปรดเลือกสิทธิ์การใช้งาน',
+                        text: 'การอนุมัติผู้ใช้งาน ต้องกำหนดสิทธิ์การใช้งานด้วย',
+                        confirmButtonText: 'ตกลง'
+                    });
+                    roleEl?.focus();
+                    return;
+                }
+
+                if (status === 'ไม่อนุมัติ' && (!noteEl || !noteEl.value.trim())) {
+                    e.preventDefault();
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'กรุณาระบุเหตุผล',
+                        text: 'หากเลือก "ไม่อนุมัติ" จำเป็นต้องกรอกเหตุผลการพิจารณา',
+                        confirmButtonText: 'ตกลง'
+                    });
+                    noteEl?.focus();
+                    return;
+                }
+            });
+        })();
+    </script>
+@endpush

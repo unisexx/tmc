@@ -34,12 +34,24 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                {{-- ก่อนตาราง หรือภายใน @foreach ก็ได้ แต่แนะนำทำใน loop เพื่อลด scope --}}
                                 @forelse($users as $i => $u)
                                     @php
                                         $rowNo = method_exists($users, 'firstItem') ? $users->firstItem() + $i : $loop->iteration;
+
+                                        // หน่วยบริการหลักของผู้ใช้
+                                        $unit = $u->serviceUnits()->wherePivot('is_primary', true)->first() ?? $u->serviceUnits()->first();
+
                                         $isActive = (bool) ($u->is_active ?? false);
-                                        $regStatus = $u->reg_status ?? 'pending';
-                                        $docVerified = !empty($u->officer_doc_verified_at);
+
+                                        $regStatusRaw = $u->reg_status ?? 'รอตรวจสอบ';
+                                        $regStatus = match ($regStatusRaw) {
+                                            'อนุมัติ' => 'อนุมัติ',
+                                            'ไม่อนุมัติ' => 'ไม่อนุมัติ',
+                                            'รอตรวจสอบ' => 'รอตรวจสอบ',
+                                            default => 'รอตรวจสอบ',
+                                        };
+
                                         $purposes = is_array($u->reg_purpose) ? $u->reg_purpose : (is_string($u->reg_purpose) && $u->reg_purpose !== '' ? json_decode($u->reg_purpose, true) ?? explode(',', $u->reg_purpose) : []);
                                     @endphp
                                     <tr>
@@ -63,13 +75,14 @@
                                             </div>
                                         </td>
 
-                                        {{-- สังกัด / บทบาท --}}
+                                        {{-- สังกัด / บทบาท จาก service_units --}}
                                         <td class="d-none d-xl-table-cell">
-                                            <div class="truncate-1" title="{{ $u->org_affiliation ?? '-' }}">
-                                                <i class="ti ti-building"></i> {{ $u->org_affiliation ?? '-' }}
+                                            <div class="truncate-1" title="{{ $unit?->org_affiliation ?? '-' }}">
+                                                <i class="ti ti-building"></i>
+                                                {{ $unit?->org_affiliation ?? '-' }}
                                             </div>
 
-                                            {{-- วัตถุประสงค์ที่ลงทะเบียน (purpose) --}}
+                                            {{-- วัตถุประสงค์ที่ลงทะเบียน --}}
                                             <div class="mt-1 d-flex flex-wrap gap-1">
                                                 @forelse($purposes as $pp)
                                                     <span class="badge bg-light text-dark border">{{ $pp }}</span>
@@ -78,13 +91,14 @@
                                                 @endforelse
                                             </div>
 
-                                            {{-- สิทธิ์การใช้งาน (Roles) --}}
+                                            {{-- สิทธิ์การใช้งาน --}}
                                             <div class="mt-1 d-flex flex-wrap gap-1">
                                                 <span class="badge text-bg-primary">
                                                     {{ optional($u->role)->name ?? '-' }}
                                                 </span>
                                             </div>
                                         </td>
+
                                         <td class="d-none d-md-table-cell">{{ $u->username ?? '-' }}</td>
                                         <td class="d-none d-lg-table-cell">{{ $u->contact_mobile ?? '-' }}</td>
 
@@ -104,7 +118,7 @@
                                             @endswitch
                                         </td>
 
-                                        {{-- สถานะระบบ (is_active) --}}
+                                        {{-- สถานะระบบ --}}
                                         <td class="text-center">
                                             @if ($isActive)
                                                 <i class="ph-duotone ph-check-circle text-primary f-24" data-bs-toggle="tooltip" data-bs-title="Active"></i>
@@ -133,7 +147,6 @@
                                                 </button>
                                             </form>
                                         </td>
-
                                     </tr>
                                     @empty
                                         <tr>

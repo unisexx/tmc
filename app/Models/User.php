@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -83,5 +84,15 @@ class User extends Authenticatable
     public function role()
     {
         return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    /**
+     * ความสัมพันธ์: ผู้ใช้ ↔ หน่วยบริการ (ผ่าน service_unit_users)
+     */
+    public function serviceUnits(): BelongsToMany
+    {
+        return $this->belongsToMany(ServiceUnit::class, 'service_unit_users')
+            ->withPivot(['role', 'start_date', 'end_date', 'is_primary'])
+            ->withTimestamps();
     }
 }

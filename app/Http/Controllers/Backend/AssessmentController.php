@@ -26,36 +26,26 @@ class AssessmentController extends Controller
     ==========================================================*/
     public function index(Request $req)
     {
-        $q = AssessmentStep1::with(['serviceUnit', 'user', 'approver'])->latest('id');
+        $q = AssessmentStep1::with(['user', 'approver'])->latest('id');
 
-        // คำค้นชื่อหน่วยบริการ
+        // คำค้นชื่อหน่วยบริการ/ชื่อผู้ใช้ จากตาราง users
         if ($kw = trim($req->get('q', ''))) {
-            $q->whereHas('serviceUnit', function ($s) use ($kw) {
-                $s->where('unitName', 'like', "%{$kw}%");
+            $q->whereHas('user', function ($u) use ($kw) {
+                $u->where(function ($w) use ($kw) {
+                    $w->where('unitName', 'like', "%{$kw}%")  // ถ้าคุณใช้คอลัมน์นี้
+                        ->orWhere('unit_name', 'like', "%{$kw}%") // หรือคอลัมน์นี้
+                        ->orWhere('name', 'like', "%{$kw}%");     // ชื่อผู้ใช้
+                });
             });
         }
 
-        // กรองปี/รอบ
-        if ($year = $req->get('year')) {
-            $q->where('assess_year', $this->normalizeYearToCE($year));
-        }
-        if ($round = $req->get('round')) {
-            $q->where('assess_round', (int) $round);
-        }
-
-        // กรองระดับ/สถานะ/การอนุมัติ
-        if ($lv = $req->get('level')) {
-            $q->where('level', $lv);
-        }
-        if ($st = $req->get('status')) {
-            $q->where('status', $st);
-        }
-        if ($ap = $req->get('approval')) {
-            $q->where('approval_status', $ap);
-        }
+        if ($year = $req->get('year')) {$q->where('assess_year', $this->normalizeYearToCE($year));}
+        if ($round = $req->get('round')) {$q->where('assess_round', (int) $round);}
+        if ($lv = $req->get('level')) {$q->where('level', $lv);}
+        if ($st = $req->get('status')) {$q->where('status', $st);}
+        if ($ap = $req->get('approval')) {$q->where('approval_status', $ap);}
 
         $rows = $q->paginate(15)->appends($req->query());
-
         return view('backend.assessment.index', compact('rows'));
     }
 

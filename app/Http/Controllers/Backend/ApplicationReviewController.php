@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\ServiceUnit;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -29,7 +32,7 @@ class ApplicationReviewController extends Controller
     {
         $q     = trim($request->get('q', ''));
         $users = User::query()
-            ->with('roles:id,name')
+            ->with(['roles:id,name', 'serviceUnits' => fn($q) => $q->select('service_units.id', 'org_affiliation')])
             ->where('reg_status', '!=', 'อนุมัติ')
             ->when($q !== '', function ($qr) use ($q) {
                 $qr->where(function ($x) use ($q) {
@@ -57,19 +60,32 @@ class ApplicationReviewController extends Controller
     {
         [$data, $pwdPlain] = $this->validatedPayload($request, null);
 
-        // สร้างผู้ใช้
-        $user = User::create($data);
+        // ตัด org_* ออกจาก payload ผู้ใช้
+        $org = $this->extractOrgData($request);
+        unset(
+            $data['org_name'], $data['org_affiliation'], $data['org_affiliation_other'],
+            $data['org_address'], $data['org_tel'], $data['org_lat'], $data['org_lng'],
+            $data['org_working_hours'], $data['org_working_hours_json']
+        );
 
-        // ===== บันทึกสิทธิ์การใช้งาน =====
-        if ($request->filled('role_id')) {
-            $role = Role::find($request->role_id);
-            if ($role) {
-                $user->assignRole($role->name);
+        DB::transaction(function () use ($data, $pwdPlain, $request, $org) {
+            // ผู้ใช้
+            $user = User::create($data);
+
+            // สิทธิ์
+            if ($request->filled('role_id')) {
+                if ($role = Role::find($request->role_id)) {
+                    $user->assignRole($role->name);
+                }
             }
-        }
 
-        // ส่งอีเมลแจ้งบัญชีให้ผู้ใช้ (ตาม TOR ข้อ 4)
-        $this->notifyCredentials($user->email, $user->username, $pwdPlain);
+            // หน่วยบริการ + pivot
+            $unit = $this->upsertServiceUnit($org);
+            $this->attachUnitToUser($user, $unit, 'manager');
+
+            // แจ้งรหัสผ่าน
+            $this->notifyCredentials($user->email, $user->username, $pwdPlain);
+        });
 
         flash_notify('เพิ่มผู้ใช้งานเรียบร้อย', 'success');
         return redirect()->route('backend.application-review.index');
@@ -80,27 +96,42 @@ class ApplicationReviewController extends Controller
      * ====================================================================== */
     public function edit(User $user)
     {
-        return view('backend.application-review.edit', compact('user'));
+        // หน่วยบริการหลัก ถ้าไม่มีให้หยิบอันแรก
+        $unit = $user->serviceUnits()
+            ->wherePivot('is_primary', true)
+            ->first() ?? $user->serviceUnits()->first();
+
+        return view('backend.application-review.edit', compact('user', 'unit'));
     }
 
     public function update(Request $request, User $user)
     {
         [$data, $pwdPlain] = $this->validatedPayload($request, $user);
 
-        $user->update($data);
+        $org = $this->extractOrgData($request);
+        unset(
+            $data['org_name'], $data['org_affiliation'], $data['org_affiliation_other'],
+            $data['org_address'], $data['org_tel'], $data['org_lat'], $data['org_lng'],
+            $data['org_working_hours'], $data['org_working_hours_json']
+        );
 
-        // บันทึกสิทธิ์การใช้งาน
-        if ($request->filled('role_id')) {
-            $role = Role::find($request->role_id);
-            if ($role) {
-                $user->syncRoles([$role->name]);
+        DB::transaction(function () use ($request, $user, $data, $org) {
+            // ผู้ใช้
+            $user->update($data);
+
+            // สิทธิ์
+            if ($request->filled('role_id')) {
+                if ($role = Role::find($request->role_id)) {
+                    $user->syncRoles([$role->name]);
+                }
+            } else {
+                $user->syncRoles([]);
             }
-        } else {
-            $user->syncRoles([]);
-        }
 
-        // ถ้ามีการตั้งรหัสผ่านใหม่ อาจแจ้งอีเมล (เปิดใช้ถ้าต้องการ)
-        // if ($pwdPlain) { $this->notifyCredentials($user->email, $user->username, $pwdPlain); }
+            // หน่วยบริการ + pivot
+            $unit = $this->upsertServiceUnit($org);
+            $this->attachUnitToUser($user, $unit, 'manager');
+        });
 
         flash_notify('อัปเดตข้อมูลผู้ใช้งานเรียบร้อย', 'success');
         return redirect()->route('backend.application-review.index');
@@ -212,14 +243,14 @@ class ApplicationReviewController extends Controller
 
             // 6) ตรวจสอบ/อนุมัติ (เฉพาะ Admin ที่มีสิทธิ์)
             'reg_status'                  => ['nullable', 'in:รอตรวจสอบ,อนุมัติ,ไม่อนุมัติ'],
-            'reg_review_note'             => ['nullable', 'string', 'max:1000', Rule::requiredIf(fn() => $request->input('reg_status') === 'rejected'),
+            'reg_review_note'             => ['nullable', 'string', 'max:1000', Rule::requiredIf(fn() => $request->input('reg_status') === 'ไม่อนุมัติ'),
             ],
             'officer_doc_verified'        => ['nullable', 'in:0,1'],
             'role_id'                     => [
                 'nullable',
                 'integer',
                 Rule::exists('roles', 'id')->where('guard_name', 'web'),
-                Rule::requiredIf(fn() => $request->input('reg_status') === 'approved'),
+                Rule::requiredIf(fn() => $request->input('reg_status') === 'อนุมัติ'),
             ],
 
         ];
@@ -266,7 +297,7 @@ class ApplicationReviewController extends Controller
 
             'pdpa_accept.accepted'                => 'กรุณายอมรับประกาศความเป็นส่วนตัว (PDPA)',
 
-            'role.required'                       => 'กรุณาเลือก :attribute',
+            'role_id.required'                    => 'กรุณาเลือก :attribute',
         ];
 
         // ==== Attributes ====
@@ -313,7 +344,7 @@ class ApplicationReviewController extends Controller
 
             'reg_review_note'                      => 'หมายเหตุ/เหตุผลการพิจารณา กรณีที่ "ไม่อนุมัติ"',
 
-            'role'                                 => 'สิทธิ์การใช้งาน',
+            'role_id'                              => 'สิทธิ์การใช้งาน',
         ];
 
         // ใช้ Validator เพื่อ custom เช็กซัม CID
@@ -533,6 +564,70 @@ class ApplicationReviewController extends Controller
         }
         $check = (11 - ($sum % 11)) % 10;
         return $check === intval($cid[12]);
+    }
+
+    // ดึง/จัดรูป org_* จาก request
+    private function extractOrgData(Request $r): array
+    {
+        return [
+            'org_name'               => trim((string) $r->input('org_name')),
+            'org_affiliation'        => $r->input('org_affiliation'),
+            'org_affiliation_other'  => $r->input('org_affiliation_other'),
+            'org_address'            => $r->input('org_address'),
+            'org_tel'                => $r->input('org_tel'),
+            'org_lat'                => $r->input('org_lat'),
+            'org_lng'                => $r->input('org_lng'),
+            'org_working_hours'      => $r->input('org_working_hours'),
+            'org_working_hours_json' => $this->normalizeWorkingHours($r->input('working_hours', [])),
+        ];
+    }
+
+    // upsert service_units โดยใช่ org_name + org_address เป็น natural key แบบหยาบ
+    private function upsertServiceUnit(array $org): ServiceUnit
+    {
+        $keyName = trim($org['org_name'] ?? '');
+        if ($keyName === '') {
+            throw new \InvalidArgumentException('org_name ต้องไม่ว่าง');
+        }
+        $keyAddr = trim($org['org_address'] ?? '');
+
+        // กันส่งฟิลด์เกิน โดยเลือกเฉพาะคอลัมน์ที่มีจริง
+        $payload = collect($org)->only([
+            'org_name', 'org_affiliation', 'org_affiliation_other',
+            'org_address', 'org_tel', 'org_lat', 'org_lng',
+            'org_working_hours', 'org_working_hours_json',
+        ])->toArray();
+
+        return ServiceUnit::updateOrCreate(
+            ['org_name' => $keyName, 'org_address' => $keyAddr],
+            $payload
+        );
+    }
+
+    // ผูก pivot และตั้ง primary ของ user
+    private function attachUnitToUser(User $user, ServiceUnit $unit, string $role = 'manager'): void
+    {
+        // แนวทาง: ไม่ให้ซ้ำ role ในหน่วยเดียวกัน
+        $user->serviceUnits()->syncWithoutDetaching([
+            $unit->id => [
+                'role'       => $role,
+                'start_date' => now()->toDateString(),
+                'end_date'   => null,
+                'is_primary' => true,
+            ],
+        ]);
+
+        // เคลียร์ primary อื่น แล้วตั้งอันนี้เป็น primary
+        $user->serviceUnits()->updateExistingPivot(
+            $user->serviceUnits()->pluck('service_units.id')->toArray(),
+            ['is_primary' => false]
+        );
+        $user->serviceUnits()->updateExistingPivot($unit->id, ['is_primary' => true]);
+
+        // อัปเดตคอลัมน์อ้างอิงใน users
+        if (Schema::hasColumn('users', 'primary_service_unit_id')) {
+            $user->forceFill(['primary_service_unit_id' => $unit->id])->save();
+        }
     }
 
 }

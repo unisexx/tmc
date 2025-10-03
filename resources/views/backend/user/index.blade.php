@@ -40,9 +40,20 @@
                                 @forelse($users as $i => $u)
                                     @php
                                         $rowNo = method_exists($users, 'firstItem') ? $users->firstItem() + $i : $loop->iteration;
+
+                                        // หน่วยบริการหลักของผู้ใช้
+                                        $unit = $u->serviceUnits()->wherePivot('is_primary', true)->first() ?? $u->serviceUnits()->first();
+
                                         $isActive = (bool) ($u->is_active ?? false);
-                                        $regStatus = $u->reg_status ?? 'pending';
-                                        $docVerified = !empty($u->officer_doc_verified_at);
+
+                                        $regStatusRaw = $u->reg_status ?? 'รอตรวจสอบ';
+                                        $regStatus = match ($regStatusRaw) {
+                                            'อนุมัติ' => 'อนุมัติ',
+                                            'ไม่อนุมัติ' => 'ไม่อนุมัติ',
+                                            'รอตรวจสอบ' => 'รอตรวจสอบ',
+                                            default => 'รอตรวจสอบ',
+                                        };
+
                                         $purposes = is_array($u->reg_purpose) ? $u->reg_purpose : (is_string($u->reg_purpose) && $u->reg_purpose !== '' ? json_decode($u->reg_purpose, true) ?? explode(',', $u->reg_purpose) : []);
                                     @endphp
                                     <tr>
@@ -66,28 +77,42 @@
                                             </div>
                                         </td>
 
-                                        {{-- สังกัด / บทบาท --}}
+                                        {{-- สังกัด / บทบาท จาก service_units --}}
                                         <td class="d-none d-xl-table-cell">
-                                            <div class="truncate-1" title="{{ $u->org_affiliation ?? '-' }}">
-                                                <i class="ti ti-building"></i> {{ $u->org_affiliation ?? '-' }}
-                                            </div>
+                                            {{-- สังกัด / บทบาท --}}
+                                            @if (!empty($unit?->org_affiliation))
+                                                <div class="truncate-1" title="{{ $unit->org_affiliation }}">
+                                                    <i class="ti ti-building"></i>
+                                                    {{ $unit->org_affiliation }}
+                                                </div>
+                                            @endif
 
-                                            {{-- วัตถุประสงค์ที่ลงทะเบียน (purpose) --}}
-                                            <div class="mt-1 d-flex flex-wrap gap-1">
-                                                @forelse($purposes as $pp)
-                                                    <span class="badge bg-light text-dark border">{{ $pp }}</span>
-                                                @empty
-                                                    <span class="text-muted small">-</span>
-                                                @endforelse
-                                            </div>
+                                            {{-- วัตถุประสงค์ที่ลงทะเบียน --}}
+                                            @if (!empty($purposes) && count($purposes))
+                                                <div class="mt-1 d-flex flex-wrap gap-1">
+                                                    @foreach ($purposes as $pp)
+                                                        <span class="badge bg-light text-dark border">{{ $pp }}</span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
 
-                                            {{-- สิทธิ์การใช้งาน (Roles) --}}
+                                            {{-- สิทธิ์การใช้งาน --}}
                                             <div class="mt-1 d-flex flex-wrap gap-1">
-                                                <span class="badge text-bg-primary">
-                                                    {{ optional($u->role)->name ?? '-' }}
+                                                @php
+                                                    $role = optional($u->role);
+                                                    $color = match ($role->id ?? null) {
+                                                        2 => 'danger',
+                                                        3 => 'primary',
+                                                        4, 5 => 'warning',
+                                                        default => 'secondary',
+                                                    };
+                                                @endphp
+                                                <span class="badge text-bg-{{ $color }}">
+                                                    {{ $role->name ?? '-' }}
                                                 </span>
                                             </div>
                                         </td>
+
                                         <td class="d-none d-md-table-cell">{{ $u->username ?? '-' }}</td>
                                         <td class="d-none d-lg-table-cell">{{ $u->contact_mobile ?? '-' }}</td>
 
