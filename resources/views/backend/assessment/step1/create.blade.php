@@ -1,9 +1,9 @@
 {{-- resources/views/backend/assessment/step1/create.blade.php --}}
 @extends('layouts.main')
 
-@section('title', 'พิจารณาสถานะของหน่วยบริการสุขภาพผู้เดินทาง')
-@section('breadcrumb-item', 'แบบประเมินตนเอง')
-@section('breadcrumb-item-active', 'พิจารณาสถานะของหน่วยบริการสุขภาพผู้เดินทาง')
+@section('title', 'การประเมินตนเอง')
+@section('breadcrumb-item', 'หน่วยบริการ')
+@section('breadcrumb-item-active', 'การประเมินตนเอง')
 
 @section('css')
     {{-- ถ้ามี CSS เสริมของหน้า ใส่ได้ที่นี่ --}}

@@ -6,16 +6,14 @@
 
 @section('content')
     @php
-        // ใช้ helper functions ที่เราทำไว้
         $yearCE = fiscalYearCE();
         $roundNow = fiscalRound();
-        $yearOpts = fiscalYearOptionsBE(5); // แสดง 5 ปี (ปรับได้)
+        $yearOpts = fiscalYearOptionsBE(5);
         $filterYear = request('year', $yearCE);
         $filterRound = (int) request('round', $roundNow);
 
-        // map สำหรับแสดงผล
         $levelTxt = ['basic' => 'พื้นฐาน', 'medium' => 'กลาง', 'advanced' => 'สูง'];
-        $levelBg = ['basic' => 'info', 'medium' => 'warning', 'advanced' => 'danger']; // ฟ้า/เหลือง/แดง
+        $levelBg = ['basic' => 'info', 'medium' => 'warning', 'advanced' => 'danger'];
         $statusBg = ['draft' => 'info', 'completed' => 'success'];
         $approvalTxt = ['pending' => 'รอดำเนินการ', 'approved' => 'อนุมัติ', 'rejected' => 'ไม่อนุมัติ'];
         $approvalBg = ['pending' => 'secondary', 'approved' => 'success', 'rejected' => 'danger'];
@@ -26,7 +24,6 @@
             <div class="card">
                 <div class="card-body">
                     <div class="row justify-content-between align-items-center mb-3 g-3">
-                        {{-- ฟอร์มค้นหา (ซ้าย) --}}
                         <div class="col">
                             <form method="GET" action="{{ route('backend.assessment.index') }}" class="d-flex flex-wrap align-items-center gap-2">
                                 <div class="input-group" style="max-width: 260px;">
@@ -52,7 +49,6 @@
                             </form>
                         </div>
 
-                        {{-- ปุ่มเริ่มรอบประเมิน (ขวา) --}}
                         <div class="col-auto">
                             <a href="{{ route('backend.assessment.step1.create') }}" class="btn btn-primary">
                                 <i class="ti ti-plus"></i> เริ่มรอบประเมิน
@@ -78,16 +74,16 @@
                                 @forelse($rows as $i => $row)
                                     <tr>
                                         <td>{{ $rows->firstItem() + $i }}</td>
-                                        <td>{{ ($row->assess_year ?? 0) + 543 }}</td>
-                                        <td>{{ $row->assess_round == 1 ? 'รอบที่ 1' : 'รอบที่ 2' }}</td>
-                                        <td>{{ $row->user->org_name ?? '-' }}</td>
+                                        <td>{{ (int) $row->assess_year + 543 }}</td>
+                                        <td>{{ (int) $row->assess_round === 1 ? 'รอบที่ 1' : 'รอบที่ 2' }}</td>
+                                        <td>{{ optional($row->serviceUnit)->org_name ?? '—' }}</td>
                                         <td>
                                             @php $lv = $row->level; @endphp
                                             <span class="badge bg-{{ $levelBg[$lv] ?? 'secondary' }}">{{ $levelTxt[$lv] ?? '—' }}</span>
                                         </td>
                                         <td>
                                             @php $st = $row->status; @endphp
-                                            <span class="badge bg-{{ $statusBg[$st] ?? 'secondary' }}">{{ strtoupper($st ?? '-') }}</span>
+                                            <span class="badge bg-{{ $statusBg[$st] ?? 'secondary' }}">{{ $st ?? '—' }}</span>
                                         </td>
                                         <td>
                                             @php $ap = $row->approval_status; @endphp

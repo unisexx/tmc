@@ -15,7 +15,7 @@
                         <i class="ti ti-menu-2"></i>
                     </a>
                 </li>
-                <li class="dropdown pc-h-item d-inline-flex d-md-none">
+                {{-- <li class="dropdown pc-h-item d-inline-flex d-md-none">
                     <a class="pc-head-link dropdown-toggle arrow-none m-0" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="false" aria-expanded="false">
                         <i class="ph-duotone ph-magnifying-glass"></i>
                     </a>
@@ -34,7 +34,25 @@
                         <input type="search" class="form-control" placeholder="Search..." />
                         <button class="btn btn-search" style="padding: 0"><kbd>ctrl+k</kbd></button>
                     </form>
-                </li>
+                </li> --}}
+                @php
+                    $units = Auth::user()->serviceUnits ?? collect();
+                @endphp
+
+                @if ($units->isNotEmpty())
+                    <li class="pc-h-item d-none d-md-inline-flex align-items-center ms-3">
+                        <form action="{{ route('backend.service-unit.switch') }}" method="POST" id="formSwitchUnit">
+                            @csrf
+                            <select name="service_unit_id" class="form-select" onchange="document.getElementById('formSwitchUnit').submit();">
+                                @foreach ($units as $su)
+                                    <option value="{{ $su->id }}" @selected(session('current_service_unit_id') == $su->id)>
+                                        {{ $su->org_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </form>
+                    </li>
+                @endif
             </ul>
         </div>
         <!-- [Mobile Media Block end] -->
@@ -386,6 +404,14 @@
                                                 <div>{{ @Auth::user()->org_name }}</div>
                                                 {{-- <a class="link-primary" href="mailto:carson.darrin@company.io">carson.darrin@company.io</a> --}}
                                                 <div class="badge bg-primary">{{ optional(Auth::user()->role)->name ?? '-' }}</div>
+                                                @php
+                                                    $primaryUnit = Auth::user()->serviceUnits()->wherePivot('is_primary', 1)->first();
+                                                @endphp
+                                                @if ($primaryUnit)
+                                                    <div class="mt-1 small text-muted">
+                                                        หน่วยหลัก: {{ $primaryUnit->org_name }}
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
                                     </li>

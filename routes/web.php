@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Backend\ApplicationReviewController;
 use App\Http\Controllers\Backend\AssessmentController;
-use App\Http\Controllers\Backend\AssessmentFillController;
 use App\Http\Controllers\Backend\ContactController;
 use App\Http\Controllers\Backend\CookiePolicyController;
 use App\Http\Controllers\Backend\DashboardController;
@@ -13,6 +12,8 @@ use App\Http\Controllers\Backend\NewsController;
 use App\Http\Controllers\Backend\PrivacyPolicyController;
 use App\Http\Controllers\Backend\ProfileController;
 use App\Http\Controllers\Backend\RoleController;
+use App\Http\Controllers\Backend\SelfAssessmentController;
+use App\Http\Controllers\Backend\ServiceUnitController;
 use App\Http\Controllers\Backend\StatController;
 use App\Http\Controllers\Backend\UploadController;
 use App\Http\Controllers\Backend\UserController;
@@ -32,9 +33,12 @@ Route::middleware(['auth'])->group(function () {
     // ==============================
     Route::prefix('backend')->name('backend.')->group(function () {
         // แก้ไขข้อมูลส่วนตัว
-        Route::resource('profile', \App\Http\Controllers\Backend\ProfileController::class)
-            ->parameters(['profile' => 'user']) // เปลี่ยน {profile} -> {user}
+        Route::resource('profile', ProfileController::class)
+            ->parameters(['profile' => 'user'])
             ->names('profile');
+
+        // switch หน่วยบริการที่ topbar
+        Route::post('service-unit/switch', [ServiceUnitController::class, 'switch'])->name('service-unit.switch');
 
         // static/simple pages
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -64,24 +68,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('cookie-policy', [CookiePolicyController::class, 'edit'])->name('cookie.edit');
         Route::put('cookie-policy', [CookiePolicyController::class, 'update'])->name('cookie.update');
 
-        // // pages ที่มีพารามิเตอร์ (ตัวอย่างหน้าแก้ไขเนื้อหา)
-        // Route::get('/contact/{id}/edit', fn($id) =>
-        //     view('backend.contact.edit', compact('id'))
-        // )->name('contact.edit');
-
-        // Route::get('/privacy-policy/{id}/edit', fn($id) =>
-        //     view('backend.policy.privacy_edit', compact('id'))
-        // )->name('privacy.edit');
-
-        // Route::get('/cookie-policy/{id}/edit', fn($id) =>
-        //     view('backend.policy.cookie_edit', compact('id'))
-        // )->name('cookie.edit');
-
-        // // รายการต่าง ๆ
-        // Route::get('/users', fn() => view('backend.users.index'))->name('users.index');
-        // Route::get('/permissions', fn() => view('backend.permissions.index'))->name('permissions.index');
-        // Route::get('/logs', fn() => view('backend.logs.index'))->name('logs.index');
-
         // ตรวจสอบใบสมัคร
         Route::resource('application-review', ApplicationReviewController::class)
             ->parameters(['application-review' => 'user'])
@@ -96,30 +82,45 @@ Route::middleware(['auth'])->group(function () {
             Route::get('export', [UserController::class, 'export'])->name('export');
         });
 
-        // สิทธิ์การใช้งาน (Roles & Permissions)
+        // สิทธิ์การใช้งาน
         Route::resource('role', RoleController::class);
+        Route::post('role/reorder', [RoleController::class, 'reorder'])->name('role.reorder');
 
         // tinymce uploads
         Route::post('upload/tinymce', [UploadController::class, 'tinymce'])->name('upload.tinymce');
 
         // จำลอง login
-        Route::post('/impersonate/{user}', [ImpersonateController::class, 'start'])->name('impersonate.start');
-        Route::get('/impersonate/stop', [ImpersonateController::class, 'stop'])->name('impersonate.stop');
+        Route::post('impersonate/{user}', [ImpersonateController::class, 'start'])->name('impersonate.start');
+        Route::get('impersonate/stop', [ImpersonateController::class, 'stop'])->name('impersonate.stop');
 
-        // ประเมินตนเอง
+        // ประเมินตนเอง (Step 1)
         Route::get('assessment', [AssessmentController::class, 'index'])->name('assessment.index');
-
-        // Step 1
-        Route::get('assessment/step1/create', [AssessmentController::class, 'create_step1'])
-            ->name('assessment.step1.create');
-        Route::post('assessment/step1', [AssessmentController::class, 'store_step1'])
-            ->name('assessment.step1.store');
-
-        // CRUD หลัก
+        Route::get('assessment/step1/create', [AssessmentController::class, 'create_step1'])->name('assessment.step1.create');
+        Route::post('assessment/step1', [AssessmentController::class, 'store_step1'])->name('assessment.step1.store');
         Route::get('assessment/{id}/edit', [AssessmentController::class, 'edit'])->name('assessment.edit');
-        Route::put('assessment/{id}', [AssessmentController::class, 'update'])->name('assessment.update'); // << เพิ่มบรรทัดนี้
+        Route::put('assessment/{id}', [AssessmentController::class, 'update'])->name('assessment.update');
         Route::delete('assessment/{id}', [AssessmentController::class, 'destroy'])->name('assessment.destroy');
 
+        // ===== SelfAssessmentController (ย้ายเข้า backend) =====
+        Route::prefix('self-assess')->name('self.')->group(function () {
+            Route::get('/', [SelfAssessmentController::class, 'index'])->name('index');
+            Route::get('/create', [SelfAssessmentController::class, 'create'])->name('create');
+            Route::post('/', [SelfAssessmentController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [SelfAssessmentController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [SelfAssessmentController::class, 'update'])->name('update');
+            Route::post('/{id}/submit', [SelfAssessmentController::class, 'submit'])->name('submit');
+            Route::get('/{id}', [SelfAssessmentController::class, 'show'])->name('show');
+            Route::delete('/{id}', [SelfAssessmentController::class, 'destroy'])->name('destroy');
+
+            // ทบทวนโดย สคร./ส่วนกลาง
+            Route::middleware(['can:self.review'])->group(function () {
+                Route::get('/{id}/review', [SelfAssessmentController::class, 'reviewForm'])->name('reviewForm');
+                Route::post('/{id}/review', [SelfAssessmentController::class, 'review'])->name('review');
+                Route::post('/{id}/approve', [SelfAssessmentController::class, 'approve'])->name('approve');
+                Route::post('/{id}/reject', [SelfAssessmentController::class, 'reject'])->name('reject');
+            });
+        });
+        // ===== end SelfAssessment =====
     });
 
     // ==============================

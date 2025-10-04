@@ -15,6 +15,7 @@
         'contacts' => 'ติดต่อ/ช่องทาง',
         'privacy-policy' => 'นโยบายความเป็นส่วนตัว (PDPA)',
         'cookie-policy' => 'นโยบายคุกกี้',
+        'approve-application' => 'ตรวจสอบใบสมัคร',
         'users' => 'ผู้ใช้งาน',
         'roles-permissions' => 'สิทธิ์การใช้งาน',
     ];

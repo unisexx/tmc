@@ -53,7 +53,9 @@ class ApplicationReviewController extends Controller
      * ====================================================================== */
     public function create()
     {
-        return view('backend.application-review.create');
+        $user = new User();
+        $unit = null;
+        return view('backend.application-review.create', compact('user', 'unit'));
     }
 
     public function store(Request $request)

@@ -31,6 +31,13 @@
     </li>
 @endcan
 
+<li class="pc-item">
+    <a href="{{ route('backend.self.index') }}" class="pc-link">
+        <span class="pc-micon"><i class="ph-duotone ph-clipboard-text"></i></span>
+        <span class="pc-mtext">การประเมินตนเอง 6 องค์ประกอบ</span>
+    </a>
+</li>
+
 @can('highlights.view')
     <li class="pc-item">
         <a href="{{ route('backend.hilight.index') }}" class="pc-link">
@@ -109,7 +116,7 @@
 
 
 
-@can('roles-permissions')
+@can('roles-permissions.view')
     <li class="pc-item">
         <a href="{{ route('backend.role.index') }}" class="pc-link">
             <span class="pc-micon"><i class="ph-duotone ph-shield-check"></i></span>

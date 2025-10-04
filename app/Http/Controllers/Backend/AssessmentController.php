@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\AssessmentStep1;
 use App\Models\ServiceUnit;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -26,19 +25,24 @@ class AssessmentController extends Controller
     ==========================================================*/
     public function index(Request $req)
     {
-        $q = AssessmentStep1::with(['user', 'approver'])->latest('id');
+        $unitId = $this->activeServiceUnitId(); // จาก session + ตรวจสิทธิ์
+        if (!$unitId) {
+            return back()->withErrors(['service_unit_id' => 'กรุณาเลือกหน่วยบริการจากเมนูด้านบน']);
+        }
 
-        // คำค้นชื่อหน่วยบริการ/ชื่อผู้ใช้ จากตาราง users
+        $q = AssessmentStep1::with(['serviceUnit', 'user', 'approver'])
+            ->where('service_unit_id', $unitId)
+            ->latest('id');
+
+        // คำค้น: ชื่อหน่วย หรือชื่อผู้ใช้
         if ($kw = trim($req->get('q', ''))) {
-            $q->whereHas('user', function ($u) use ($kw) {
-                $u->where(function ($w) use ($kw) {
-                    $w->where('unitName', 'like', "%{$kw}%")  // ถ้าคุณใช้คอลัมน์นี้
-                        ->orWhere('unit_name', 'like', "%{$kw}%") // หรือคอลัมน์นี้
-                        ->orWhere('name', 'like', "%{$kw}%");     // ชื่อผู้ใช้
-                });
+            $q->where(function ($qq) use ($kw) {
+                $qq->whereHas('serviceUnit', fn($s) => $s->where('org_name', 'like', "%{$kw}%"))
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$kw}%"));
             });
         }
 
+        // ฟิลเตอร์ปี/รอบ/สถานะ
         if ($year = $req->get('year')) {$q->where('assess_year', $this->normalizeYearToCE($year));}
         if ($round = $req->get('round')) {$q->where('assess_round', (int) $round);}
         if ($lv = $req->get('level')) {$q->where('level', $lv);}
@@ -46,6 +50,7 @@ class AssessmentController extends Controller
         if ($ap = $req->get('approval')) {$q->where('approval_status', $ap);}
 
         $rows = $q->paginate(15)->appends($req->query());
+
         return view('backend.assessment.index', compact('rows'));
     }
 
@@ -55,7 +60,14 @@ class AssessmentController extends Controller
     ==========================================================*/
     public function create_step1()
     {
-        return view('backend.assessment.step1.create');
+        $unitId = $this->activeServiceUnitId();
+        if (!$unitId) {
+            return redirect()->route('backend.assessment.index')
+                ->withErrors(['service_unit_id' => 'กรุณาเลือกหน่วยบริการจากเมนูด้านบน']);
+        }
+
+        $serviceUnit = ServiceUnit::find($unitId);
+        return view('backend.assessment.step1.create', compact('serviceUnit'));
     }
 
     /* =========================================================
@@ -66,10 +78,9 @@ class AssessmentController extends Controller
     public function store_step1(Request $req)
     {
         // 1) หา service_unit_id จากผู้ใช้ที่ล็อกอิน (ไม่รับจากฟอร์ม)
-        $serviceUnitId = $this->currentServiceUnitId();
+        $serviceUnitId = $this->activeServiceUnitId();
         if (!$serviceUnitId) {
-            return back()->withErrors(['service_unit_id' => 'บัญชีผู้ใช้นี้ยังไม่ได้ผูกกับหน่วยบริการ'])
-                ->withInput();
+            return back()->withErrors(['service_unit_id' => 'กรุณาเลือกหน่วยบริการก่อนบันทึก'])->withInput();
         }
 
         // 2) Validate ข้อมูล
@@ -78,16 +89,12 @@ class AssessmentController extends Controller
             'assess_round' => ['nullable', 'integer', Rule::in([1, 2])],
             'fiscalYear'   => ['nullable', 'string', 'max:4'],
             'round'        => ['nullable', 'integer', Rule::in([1, 2])],
-
-            // ตัวเลือกแต่ละข้อ (บางข้ออาจไม่ถูกถามตามเส้นทาง จึงเป็น nullable)
             'q1'           => ['required', Rule::in(['have', 'none'])],
             'q2'           => ['nullable', Rule::in(['tm', 'other'])],
             'q31'          => ['nullable', Rule::in(['yes', 'no'])],
             'q32'          => ['nullable', Rule::in(['yes', 'no'])],
             'q4'           => ['nullable', Rule::in(['can', 'cannot'])],
-        ], [
-            'q1.required' => 'กรุณาเลือกข้อ 1',
-        ]);
+        ], ['q1.required' => 'กรุณาเลือกข้อ 1']);
 
         // 3) ปี/รอบ
         $yearCE  = $data['assess_year'] ?? $this->normalizeYearToCE($data['fiscalYear'] ?? null) ?? (int) date('Y');
@@ -96,39 +103,23 @@ class AssessmentController extends Controller
         // 4) คำนวณ level จากคำตอบที่ส่งมา
         $computedLevel = $this->computeLevel($data['q1'] ?? null, $data['q2'] ?? null, $data['q31'] ?? null, $data['q32'] ?? null, $data['q4'] ?? null);
         if (!$computedLevel) {
-            return back()->withErrors(['level' => 'กรุณาตอบแบบประเมินให้ครบตามเงื่อนไขเพื่อสรุประดับ'])
-                ->withInput();
+            return back()->withErrors(['level' => 'กรุณาตอบแบบประเมินให้ครบตามเงื่อนไขเพื่อสรุประดับ'])->withInput();
         }
 
         // 5) บันทึกหรืออัปเดต (กันซ้ำด้วย service_unit_id + ปี + รอบ)
-        $row = AssessmentStep1::updateOrCreate(
-            [
-                'service_unit_id' => (int) $serviceUnitId,
-                'assess_year'     => (int) $yearCE,
-                'assess_round'    => (int) $roundNo,
-            ],
+        AssessmentStep1::updateOrCreate(
+            ['service_unit_id' => $serviceUnitId, 'assess_year' => (int) $yearCE, 'assess_round' => (int) $roundNo],
             [
                 'user_id'         => Auth::id(),
                 'status'          => 'completed',
                 'last_question'   => 'done',
-
-                // เก็บคำตอบทีละข้อ
-                'q1'              => $data['q1'] ?? null,
-                'q2'              => $data['q2'] ?? null,
-                'q31'             => $data['q31'] ?? null,
-                'q32'             => $data['q32'] ?? null,
-                'q4'              => $data['q4'] ?? null,
-
-                // ผลสรุป
+                'q1'              => $data['q1'] ?? null, 'q2'   => $data['q2'] ?? null,
+                'q31'             => $data['q31'] ?? null, 'q32' => $data['q32'] ?? null, 'q4' => $data['q4'] ?? null,
                 'level'           => $computedLevel,
                 'decided_at'      => now(),
-
-                // meta & audit
                 'approval_status' => 'pending',
-                'created_by'      => Auth::id(),
-                'updated_by'      => Auth::id(),
-                'submitted_by'    => Auth::id(),
-                'submitted_at'    => now(),
+                'created_by'      => Auth::id(), 'updated_by'    => Auth::id(),
+                'submitted_by'    => Auth::id(), 'submitted_at'  => now(),
                 'ip_address'      => $req->ip(),
                 'user_agent'      => substr((string) $req->header('User-Agent'), 0, 255),
             ]
@@ -279,40 +270,42 @@ class AssessmentController extends Controller
                 }
 
                 if ($q31 === 'yes') {
-                    if ($q4 === 'can') {
-                        return 'advanced';
-                    }
-
-                    if ($q4 === 'cannot') {
-                        return 'medium';
-                    }
-
+                    return $q4 === 'can' ? 'advanced' : ($q4 === 'cannot' ? 'medium' : null);
                 }
-                return null; // ยังไม่เลือก q31 หรือ q4
-            }
 
+                return null;
+            }
             if ($q2 === 'other') {
-                if ($q32 === 'yes') {
-                    return 'medium';
-                }
-
-                if ($q32 === 'no') {
-                    return 'basic';
-                }
-
-                return null; // ยังไม่เลือก q32
+                return $q32 === 'yes' ? 'medium' : ($q32 === 'no' ? 'basic' : null);
             }
-            return null; // ยังไม่เลือก q2
-        }
 
-        return null; // ยังไม่เลือก q1
+            return null;
+        }
+        return null;
     }
 
-/** ดึง service_unit_id จากผู้ใช้ที่ล็อกอิน */
-    private function currentServiceUnitId(): ?int
+    /* ===== Resolver: หน่วยที่ active จาก session พร้อมตรวจสิทธิ์ ===== */
+    private function activeServiceUnitId(): ?int
     {
-        $user = Auth::user();
-        return optional($user->serviceUnit)->id ?? $user->service_unit_id ?? null;
+        $user      = Auth::user();
+        $sessionId = (int) session('current_service_unit_id');
+
+        if ($sessionId && $user->serviceUnits()->where('service_units.id', $sessionId)->exists()) {
+            return $sessionId;
+        }
+
+        // fallback: primary → หน่วยเดียว → null
+        $primary = $user->serviceUnits()->wherePivot('is_primary', 1)->value('service_units.id');
+        if ($primary) {
+            return (int) $primary;
+        }
+
+        $only = $user->serviceUnits()->limit(2)->pluck('service_units.id');
+        if ($only->count() === 1) {
+            return (int) $only->first();
+        }
+
+        return null;
     }
 
 }

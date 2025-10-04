@@ -6,22 +6,32 @@ use App\Http\Controllers\Controller;
 use App\Support\Permissions as Perms;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
+    // App/Http/Controllers/Backend/RoleController.php
     public function index(Request $request)
     {
-        $roles = Role::query()
+        $reorder = (bool) $request->boolean('reorder');
+
+        $query = Role::query()
             ->when($request->filled('name'), fn($q) =>
                 $q->where('name', 'like', '%' . $request->name . '%')
-            )
-            ->latest()
-            ->paginate(20)
-            ->withQueryString();
+            );
 
-        return view('backend.role.index', compact('roles'));
+        // เรียงตาม ordering ก่อน ถ้าเท่ากันค่อย id ล่าสุด
+        $query->orderByRaw('COALESCE(ordering, 0) ASC')->latest('id');
+
+        if ($reorder) {
+            $roles = $query->get(); // โหมดลาก-วาง ไม่ใช้ paginate
+        } else {
+            $roles = $query->paginate(20)->withQueryString();
+        }
+
+        return view('backend.role.index', compact('roles', 'reorder'));
     }
 
     public function create()
@@ -137,5 +147,26 @@ class RoleController extends Controller
         foreach ($names as $name) {
             Permission::findOrCreate($name, $guard);
         }
+    }
+
+    /**
+     * รับลำดับใหม่จากหน้า index (ลากวาง) แล้วอัปเดตลง DB
+     * payload: { ids: [5, 2, 9, 1, ...] } ตามลำดับบนลงล่าง
+     */
+    public function reorder(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json(['ok' => false, 'message' => 'ไม่พบรายการ'], 422);
+        }
+
+        DB::transaction(function () use ($ids) {
+            foreach ($ids as $index => $id) {
+                Role::whereKey($id)->update(['ordering' => $index + 1]); // เริ่มจาก 1
+            }
+        });
+
+        return response()->json(['ok' => true, 'message' => 'อัปเดตลำดับแล้ว']);
     }
 }
