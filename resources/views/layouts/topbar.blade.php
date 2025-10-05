@@ -35,12 +35,22 @@
                         <button class="btn btn-search" style="padding: 0"><kbd>ctrl+k</kbd></button>
                     </form>
                 </li> --}}
+
+
+
                 @php
-                    $units = Auth::user()->serviceUnits ?? collect();
+                    // ผู้ใช้ + หน่วยงานที่ดูแล
+                    $user = Auth::user();
+                    $units = $user?->serviceUnits ?? collect();
+
+                    // หน่วยปัจจุบัน + ระดับล่าสุดของหน่วยนั้น
+                    $currentUnitId = session('current_service_unit_id');
+                    $latest = $currentUnitId ? \App\Models\AssessmentServiceUnitLevel::where('service_unit_id', $currentUnitId)->orderByDesc('assess_year')->orderByDesc('assess_round')->first() : null;
                 @endphp
 
                 @if ($units->isNotEmpty())
                     <li class="pc-h-item d-none d-md-inline-flex align-items-center ms-3">
+                        {{-- สลับหน่วยงาน --}}
                         <form action="{{ route('backend.service-unit.switch') }}" method="POST" id="formSwitchUnit">
                             @csrf
                             <select name="service_unit_id" class="form-select" onchange="document.getElementById('formSwitchUnit').submit();">
@@ -52,22 +62,20 @@
                             </select>
                         </form>
 
-                        @php
-                            $currentUnitId = session('current_service_unit_id');
-                            $latest = $currentUnitId ? App\Models\AssessmentServiceUnitLevel::where('service_unit_id', $currentUnitId)->latest('assess_year')->latest('assess_round')->first() : null;
-                        @endphp
-
+                        {{-- แสดง badge ระดับ + ปี/รอบ ล่าสุดของหน่วยที่เลือก --}}
                         @if ($latest)
-                            <span class="badge bg-{{ $latest->level_badge_class }} ms-2">
-                                {{ $latest->level_text ?? 'ไม่พบระดับ' }}
-                            </span>
+                            <x-level-badge :level="$latest->level" class="ms-2" />
+
                             <span class="ms-1 text-muted small">
-                                ปี {{ $latest->assess_year ? $latest->assess_year + 543 : '-' }} รอบ {{ $latest->assess_round ?? '-' }}
+                                ปี {{ $latest->assess_year ? $latest->assess_year + 543 : '-' }}
+                                รอบ {{ $latest->assess_round ?? '-' }}
                             </span>
                         @endif
-
                     </li>
                 @endif
+
+
+
 
             </ul>
         </div>

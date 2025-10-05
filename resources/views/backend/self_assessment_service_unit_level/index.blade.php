@@ -65,8 +65,7 @@
                                     <th>รอบ</th>
                                     <th>หน่วยบริการ</th>
                                     <th class="text-center">ระดับ</th>
-                                    {{-- <th>สถานะ</th> --}}
-                                    <th class="text-center">ประเมินตามเกณฑ์<br>6 องค์ประกอบ</th>
+                                    <th>สถานะ</th>
                                     <th class="text-center">การอนุมัติ</th>
                                     <th class="text-end">จัดการ</th>
                                 </tr>
@@ -79,19 +78,21 @@
                                         <td>{{ (int) $row->assess_round === 1 ? 'รอบที่ 1' : 'รอบที่ 2' }}</td>
                                         <td>{{ optional($row->serviceUnit)->org_name ?? '—' }}</td>
                                         <td class="text-center">
-                                            @php $lv = $row->level; @endphp
-                                            <span class="badge bg-{{ $levelBg[$lv] ?? 'secondary' }}">{{ $levelTxt[$lv] ?? '—' }}</span>
+                                            <x-level-badge :level="$row->level" />
                                         </td>
-                                        {{-- <td>
+                                        <td>
                                             @php $st = $row->status; @endphp
                                             <span class="badge bg-{{ $statusBg[$st] ?? 'secondary' }}">{{ $st ?? '—' }}</span>
-                                        </td> --}}
-                                        <td class="text-center"></td>
+                                        </td>
                                         <td class="text-center">
                                             @php $ap = $row->approval_status; @endphp
                                             <span class="badge bg-{{ $approvalBg[$ap] ?? 'secondary' }}">{{ $approvalTxt[$ap] ?? '—' }}</span>
                                         </td>
                                         <td class="text-end">
+                                            <a href="{{ route('backend.self-assessment-service-unit-level.show', $row->id) }}" class="avtar avtar-xs btn-link-primary me-1" data-bs-toggle="tooltip" title="ดูสรุป">
+                                                <i class="ti ti-eye f-20"></i>
+                                            </a>
+
                                             <a href="{{ route('backend.self-assessment-service-unit-level.edit', $row->id) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" title="แก้ไข">
                                                 <i class="ti ti-edit f-20"></i>
                                             </a>

@@ -84,27 +84,31 @@ class AssessmentServiceUnitLevel extends Model
         return $this->belongsTo(User::class, 'submitted_by');
     }
 
+    public function answers()
+    {
+        return $this->hasMany(AssessmentAnswer::class, 'service_unit_level_id');
+    }
+
+    public function form()
+    {
+        return $this->hasOne(AssessmentForm::class, 'service_unit_id', 'service_unit_id')
+            ->whereColumn('assess_year', 'assessment_service_unit_levels.assess_year')
+            ->whereColumn('assess_round', 'assessment_service_unit_levels.assess_round');
+    }
+
     /* ==========================
     | Accessors Helper
     ========================== */
     public function getLevelTextAttribute(): ?string
     {
-        return match ($this->level) {
-            'basic'    => 'ระดับพื้นฐาน',
-            'medium'   => 'ระดับกลาง',
-            'advanced' => 'ระดับสูง',
-            default    => null,
-        };
+        $map = config('assessment.level_text', []);
+        return $map[$this->level] ?? null;
     }
 
     public function getLevelBadgeClassAttribute(): string
     {
-        return match ($this->level) {
-            'basic'    => 'info',    // ฟ้า
-            'medium'   => 'warning', // เหลือง
-            'advanced' => 'danger',  // แดง
-            default    => 'secondary',
-        };
+        $map = config('assessment.level_badge_class', []);
+        return $map[$this->level] ?? 'secondary';
     }
 
     public function getApprovalTextAttribute(): ?string

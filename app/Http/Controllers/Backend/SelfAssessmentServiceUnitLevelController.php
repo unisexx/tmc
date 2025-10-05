@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\AssessmentForm;
 use App\Models\AssessmentServiceUnitLevel;
 use App\Models\ServiceUnit;
 use Illuminate\Http\Request;
@@ -172,8 +173,7 @@ class SelfAssessmentServiceUnitLevelController extends Controller
         // คำนวณ level ใหม่จากคำตอบ
         $computedLevel = $this->computeLevel($data['q1'] ?? null, $data['q2'] ?? null, $data['q31'] ?? null, $data['q32'] ?? null, $data['q4'] ?? null);
         if (!$computedLevel) {
-            return back()->withErrors(['level' => 'กรุณาตอบแบบประเมินให้ครบตามเงื่อนไขเพื่อสรุประดับ'])
-                ->withInput();
+            return back()->withErrors(['level' => 'กรุณาตอบแบบประเมินให้ครบตามเงื่อนไขเพื่อสรุประดับ'])->withInput();
         }
 
         // อัปเดตข้อมูล
@@ -203,29 +203,29 @@ class SelfAssessmentServiceUnitLevelController extends Controller
     /* =========================================================
     | 6) APPROVE : ฟอร์ม/การอนุมัติ
     ==========================================================*/
-    public function approveForm($id)
-    {
-        $row = AssessmentServiceUnitLevel::with(['serviceUnit', 'user'])->findOrFail($id);
-        return view('backend.assessment.approve', compact('row'));
-    }
+    // public function approveForm($id)
+    // {
+    //     $row = AssessmentServiceUnitLevel::with(['serviceUnit', 'user'])->findOrFail($id);
+    //     return view('backend.assessment.approve', compact('row'));
+    // }
 
-    public function approve(Request $req, $id)
-    {
-        $req->validate([
-            'approval_status' => ['required', Rule::in(['approved', 'rejected'])],
-            'approval_remark' => ['nullable', 'string', 'max:1000'],
-        ]);
+    // public function approve(Request $req, $id)
+    // {
+    //     $req->validate([
+    //         'approval_status' => ['required', Rule::in(['approved', 'rejected'])],
+    //         'approval_remark' => ['nullable', 'string', 'max:1000'],
+    //     ]);
 
-        $row                  = AssessmentServiceUnitLevel::findOrFail($id);
-        $row->approval_status = $req->approval_status;
-        $row->approval_remark = $req->approval_remark;
-        $row->approved_by     = Auth::id();
-        $row->approved_at     = now();
-        $row->save();
+    //     $row                  = AssessmentServiceUnitLevel::findOrFail($id);
+    //     $row->approval_status = $req->approval_status;
+    //     $row->approval_remark = $req->approval_remark;
+    //     $row->approved_by     = Auth::id();
+    //     $row->approved_at     = now();
+    //     $row->save();
 
-        flash_notify('บันทึกผลการอนุมัติเรียบร้อยแล้ว', 'success');
-        return redirect()->route('backend.self-assessment-service-unit-level.show', $row->id);
-    }
+    //     flash_notify('บันทึกผลการอนุมัติเรียบร้อยแล้ว', 'success');
+    //     return redirect()->route('backend.self-assessment-service-unit-level.show', $row->id);
+    // }
 
     /* =========================================================
     | 7) DELETE
@@ -314,6 +314,65 @@ class SelfAssessmentServiceUnitLevelController extends Controller
         }
 
         return null;
+    }
+
+    public function show($id)
+    {
+        $unitId = $this->activeServiceUnitId();
+        if (!$unitId) {
+            return redirect()->route('backend.assessment.index')
+                ->withErrors(['service_unit_id' => 'กรุณาเลือกหน่วยบริการจากเมนูด้านบน']);
+        }
+
+        $row = AssessmentServiceUnitLevel::with(['serviceUnit', 'user', 'approver'])
+            ->where('id', $id)->where('service_unit_id', $unitId)->firstOrFail();
+
+        $yearBE = $row->assess_year ? $row->assess_year + 543 : null;
+
+        // โหลด form + answers เฉพาะที่ผูกกับ question และ component
+        $form = AssessmentForm::with([
+            'answers' => fn($q) => $q->whereHas('question.component'),
+            'answers.question.component',
+            'suggestions',
+        ])
+            ->where('service_unit_id', $unitId)
+            ->where('assess_year', $row->assess_year)
+            ->where('assess_round', $row->assess_round)
+            ->first();
+
+        $components = [];
+        if ($form) {
+            foreach ($form->answers as $ans) {
+                $q = $ans->question;
+                if (!$q) {
+                    continue;
+                }
+                // กัน orphan
+                $cmp = $q->component;
+                if (!$cmp) {
+                    continue;
+                }
+                // กัน orphan
+
+                $key = (int) $cmp->no;
+                $components[$key] ??= ['name' => $cmp->name, 'has' => [], 'gaps' => []];
+
+                $label = ($q->code ? "{$q->code}) " : '') . $q->text;
+
+                // ให้ถือว่า "มี" เมื่อ answer_bool === true เท่านั้น
+                $isYes = $ans->answer_bool === true;
+                if ($isYes) {
+                    $components[$key]['has'][] = $label;
+                } else {
+                    $components[$key]['gaps'][] = $label;
+                }
+
+            }
+            ksort($components);
+        }
+
+        return view('backend.self_assessment_service_unit_level.show',
+            compact('row', 'yearBE', 'form', 'components'));
     }
 
 }

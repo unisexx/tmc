@@ -29,32 +29,36 @@
 
     <div class="card-body">
 
-        @php
-            $fy = data_get($summary, 'fiscal_year');
-            $fyTh = is_numeric($fy) ? $fy + 543 : '-';
-        @endphp
-
         <div class="border rounded p-2 mb-3 bg-body-tertiary d-flex flex-wrap align-items-center gap-3">
+            {{-- หน่วยบริการ --}}
             <div class="d-inline-flex align-items-center gap-2">
                 <i class="ph-duotone ph-hospital fs-5"></i>
                 <span class="text-muted">หน่วยบริการ</span>
                 <span class="fw-semibold">{{ $summary['unit_name'] ?? '-' }}</span>
             </div>
+
             <div class="vr"></div>
+
+            {{-- ระดับ --}}
             <div class="d-inline-flex align-items-center gap-2">
                 <i class="ph-duotone ph-medal fs-5"></i>
                 <span class="text-muted">ระดับ</span>
-                <span class="badge bg-{{ $summary['level_badge_class'] ?? 'secondary' }}">
-                    {{ $summary['level_text'] ?? '-' }}
-                </span>
+                <x-level-badge :level="$summary['level'] ?? null" class="ms-1" />
             </div>
+
+
             <div class="vr"></div>
+
+            {{-- ปีงบประมาณ --}}
             <div class="d-inline-flex align-items-center gap-2">
                 <i class="ph-duotone ph-calendar-blank fs-5"></i>
                 <span class="text-muted">ปีงบประมาณ</span>
-                <span class="fw-semibold">{{ $fyTh }}</span>
+                <span class="fw-semibold">{{ $summary['fiscal_year_th'] ?? $summary['fiscal_year'] + 543 }}</span>
             </div>
+
             <div class="vr"></div>
+
+            {{-- รอบ --}}
             <div class="d-inline-flex align-items-center gap-2">
                 <i class="ph-duotone ph-number-circle-one fs-5"></i>
                 <span class="text-muted">รอบ</span>
@@ -63,18 +67,40 @@
         </div>
 
 
-
         <div class="accordion" id="accComp">
             @foreach ($components as $comp)
+                @php
+                    $sections = $sectionsByComp[$comp->id] ?? collect();
+                    $qsAll = $sections->flatMap(fn($sec) => $questionsBySection[$sec->id] ?? collect());
+                    $total = $qsAll->count();
+                    $answered = $qsAll
+                        ->filter(function ($q) use ($answerMap) {
+                            $a = $answerMap[$q->id] ?? null;
+                            return !is_null($a?->answer_bool) || filled($a?->answer_text);
+                        })
+                        ->count();
+                    $percent = $total > 0 ? round(($answered / $total) * 100) : 0;
+                @endphp
+
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="h{{ $comp->id }}">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#c{{ $comp->id }}">
-                            องค์ประกอบที่ {{ $comp->no }}. {{ $comp->name }}
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#c{{ $comp->id }}" aria-expanded="false">
+                            <div class="d-flex align-items-center w-100">
+                                <span>องค์ประกอบที่ {{ $comp->no }}. {{ $comp->name }}</span>
+                                <div class="ms-auto d-flex align-items-center gap-2 text-nowrap me-2">
+                                    <span class="text-muted small">ทำแล้ว {{ $answered }}/{{ $total }}</span>
+                                    <span class="badge {{ $percent == 100 ? 'bg-success' : 'bg-primary' }}">{{ $percent }}%</span>
+                                    <div class="progress" style="height:4px; width:100px;">
+                                        <div class="progress-bar {{ $percent == 100 ? 'bg-success' : 'bg-primary' }}" style="width:{{ $percent }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </button>
                     </h2>
+
                     <div id="c{{ $comp->id }}" class="accordion-collapse collapse" data-bs-parent="#accComp">
                         <div class="accordion-body">
-                            @foreach ($sectionsByComp[$comp->id] ?? collect() as $sec)
+                            @foreach ($sections as $sec)
                                 @php $qs = $questionsBySection[$sec->id] ?? collect(); @endphp
                                 <div class="mb-3">
                                     <div class="fw-semibold mb-1 {{ $qs->isEmpty() ? 'text-secondary' : '' }}">
@@ -91,21 +117,25 @@
                                         @php $ans = $answerMap[$q->id] ?? null; @endphp
                                         <div class="mb-2 ms-3">
                                             <label class="form-label">{{ $q->code ? $q->code . '. ' : '' }}{{ $q->text }}</label>
+
                                             @if ($q->answer_type === 'boolean')
+                                                @php
+                                                    $current = old("answers.$q->id.bool", is_null($ans?->answer_bool) ? null : ($ans->answer_bool ? '1' : '0'));
+                                                @endphp
                                                 <div class="d-flex gap-3">
                                                     <label class="form-check">
-                                                        <input type="radio" class="form-check-input" name="answers[{{ $q->id }}][bool]" value="1" @checked(optional($ans)->answer_bool === true)>
+                                                        <input type="radio" class="form-check-input" name="answers[{{ $q->id }}][bool]" value="1" @checked($current === '1')>
                                                         <span class="form-check-label">มี</span>
                                                     </label>
                                                     <label class="form-check">
-                                                        <input type="radio" class="form-check-input" name="answers[{{ $q->id }}][bool]" value="0" @checked(optional($ans)->answer_bool === false)>
+                                                        <input type="radio" class="form-check-input" name="answers[{{ $q->id }}][bool]" value="0" @checked($current === '0')>
                                                         <span class="form-check-label">ไม่มี</span>
                                                     </label>
                                                 </div>
                                             @elseif ($q->answer_type === 'single')
                                                 @php
                                                     $opts = is_array($q->options) ? $q->options : (json_decode($q->options, true) ?: []);
-                                                    $current = old("answers.$q->id.text", optional($ans)->answer_text);
+                                                    $current = old("answers.$q->id.text", $ans?->answer_text);
                                                 @endphp
                                                 @foreach ($opts as $i => $opt)
                                                     @php $oid = "q{$q->id}_{$i}"; @endphp
@@ -131,14 +161,28 @@
             @endforeach
         </div>
 
-        {{-- ===== ข้อเสนอเพื่อการพัฒนา ===== --}}
         <div class="card mt-3">
             <div class="card-header py-2">
                 <h6 class="mb-0">ข้อเสนอเพื่อการพัฒนา / แผนยกระดับหน่วยบริการ</h6>
             </div>
             <div class="card-body">
                 <div id="suggestionList" class="d-flex flex-column gap-3">
-                    @php $rows = old('suggestions', isset($suggestions) ? $suggestions->toArray() : [[]]); @endphp
+                    @php
+                        $existing = isset($form)
+                            ? $form->suggestions
+                                ->map(
+                                    fn($s) => [
+                                        'id' => $s->id,
+                                        'text' => $s->text,
+                                        'attachment_path' => $s->attachment_path,
+                                    ],
+                                )
+                                ->toArray()
+                            : (isset($suggestions)
+                                ? $suggestions->toArray()
+                                : []);
+                        $rows = old('suggestions', count($existing) ? $existing : [[]]);
+                    @endphp
 
                     @forelse ($rows as $i => $row)
                         <div class="border rounded p-2 suggestion-item">
@@ -167,7 +211,6 @@
                             </div>
                         </div>
                     @empty
-                        {{-- เริ่มต้น 1 แถวว่าง --}}
                         <div class="border rounded p-2 suggestion-item">
                             <div class="mb-2">
                                 <label class="form-label mb-1">ข้อเสนอ/แผน (พิมพ์เป็นข้อ)</label>
@@ -185,29 +228,31 @@
                     @endforelse
                 </div>
 
-                <div class="mt-3">
+                <div class="text-end mt-3">
                     <button type="button" id="btnAddSuggestion" class="btn btn-outline-primary">
                         <i class="ti ti-plus"></i> เพิ่มข้อเสนอ
                     </button>
-                    <div class="form-text mt-2">
-                        รองรับไฟล์ .pdf .doc(x) .xls(x) .png .jpg ขนาดตามที่เซิร์ฟเวอร์อนุญาต
-                    </div>
                 </div>
             </div>
         </div>
 
-        {{-- ปุ่มบันทึก/ยกเลิกคงเดิม --}}
+        {{-- ปรับปุ่มด้านล่าง --}}
         <div class="sticky-action">
-            <button type="submit" class="btn btn-primary">
-                <i class="ti ti-device-floppy"></i> บันทึก
+            <button type="submit" class="btn btn-primary me-2" onclick="document.getElementById('__action').value='save'">
+                <i class="ti ti-device-floppy"></i> บันทึกแบบร่าง
             </button>
+
+            <button type="submit" class="btn btn-success me-2" onclick="if(confirm('ยืนยันการส่งแบบประเมินให้ สคร./สสจ. ใช่หรือไม่')){document.getElementById('__action').value='submit'}else{return false;}">
+                <i class="ti ti-send"></i> ส่งแบบประเมินให้ สคร./สสจ.
+            </button>
+
             <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">
                 <i class="ti ti-arrow-left"></i> กลับขั้นตอนที่ 1
             </a>
         </div>
-
     </div>
 </div>
+
 @push('js')
     <script>
         document.addEventListener('DOMContentLoaded', () => {
