@@ -12,9 +12,9 @@
 
 @section('content')
     <!-- [ Main Content ] start -->
-    <form method="post" action="{{ route('backend.assessment.step1.store') }}" enctype="multipart/form-data">
+    <form method="post" action="{{ route('backend.self-assessment-service-unit-level.store') }}" enctype="multipart/form-data">
         @csrf
-        @include('backend.assessment.step1._form', ['mode' => 'create'])
+        @include('backend.self_assessment_service_unit_level._form', ['mode' => 'create'])
     </form>
     <!-- [ Main Content ] end -->
 @endsection

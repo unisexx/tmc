@@ -24,7 +24,7 @@
 
 @can('assessment.view')
     <li class="pc-item">
-        <a href="{{ route('backend.assessment.index') }}" class="pc-link">
+        <a href="{{ route('backend.self-assessment-service-unit-level.index') }}" class="pc-link">
             <span class="pc-micon"><i class="ph-duotone ph-clipboard-text"></i></span>
             <span class="pc-mtext">การประเมินตนเอง</span>
         </a>

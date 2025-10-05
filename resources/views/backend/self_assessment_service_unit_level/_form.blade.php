@@ -184,7 +184,7 @@
             </div>
             <div class="col-lg-4 text-lg-end">
                 <button id="btnNext" type="submit" class="btn btn-primary btn-lg px-4 fw-semibold" {{ $oldLv ? '' : 'disabled' }}>
-                    ไปขั้นถัดไป <i class="ph-duotone ph-arrow-right"></i>
+                    ไปขั้นถัดไป ประเมินตนเองตามเกณฑ์องค์ประกอบ 6 ด้าน <i class="ph-duotone ph-arrow-right"></i>
                 </button>
             </div>
         </div>

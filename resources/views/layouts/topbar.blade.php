@@ -51,8 +51,24 @@
                                 @endforeach
                             </select>
                         </form>
+
+                        @php
+                            $currentUnitId = session('current_service_unit_id');
+                            $latest = $currentUnitId ? App\Models\AssessmentServiceUnitLevel::where('service_unit_id', $currentUnitId)->latest('assess_year')->latest('assess_round')->first() : null;
+                        @endphp
+
+                        @if ($latest)
+                            <span class="badge bg-{{ $latest->level_badge_class }} ms-2">
+                                {{ $latest->level_text ?? 'ไม่พบระดับ' }}
+                            </span>
+                            <span class="ms-1 text-muted small">
+                                ปี {{ $latest->assess_year ? $latest->assess_year + 543 : '-' }} รอบ {{ $latest->assess_round ?? '-' }}
+                            </span>
+                        @endif
+
                     </li>
                 @endif
+
             </ul>
         </div>
         <!-- [Mobile Media Block end] -->

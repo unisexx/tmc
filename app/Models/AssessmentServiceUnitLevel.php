@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class AssessmentStep1 extends Model
+class AssessmentServiceUnitLevel extends Model
 {
     use HasFactory;
 
-    protected $table = 'assessment_step1';
+    protected $table = 'assessment_service_unit_levels';
 
     protected $fillable = [
         'service_unit_id',

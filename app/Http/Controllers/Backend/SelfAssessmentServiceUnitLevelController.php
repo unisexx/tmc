@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\AssessmentStep1;
+use App\Models\AssessmentServiceUnitLevel;
 use App\Models\ServiceUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
-class AssessmentController extends Controller
+class SelfAssessmentServiceUnitLevelController extends Controller
 {
     public function __construct()
     {
@@ -30,7 +30,7 @@ class AssessmentController extends Controller
             return back()->withErrors(['service_unit_id' => 'กรุณาเลือกหน่วยบริการจากเมนูด้านบน']);
         }
 
-        $q = AssessmentStep1::with(['serviceUnit', 'user', 'approver'])
+        $q = AssessmentServiceUnitLevel::with(['serviceUnit', 'user', 'approver'])
             ->where('service_unit_id', $unitId)
             ->latest('id');
 
@@ -51,14 +51,14 @@ class AssessmentController extends Controller
 
         $rows = $q->paginate(15)->appends($req->query());
 
-        return view('backend.assessment.index', compact('rows'));
+        return view('backend.self_assessment_service_unit_level.index', compact('rows'));
     }
 
     /* =========================================================
     | 2) CREATE (STEP 1) : แบบทำทีละข้อ
     | - เตรียมปี (แสดงเป็น พ.ศ. ในฟอร์ม) และหน่วยบริการของผู้ใช้
     ==========================================================*/
-    public function create_step1()
+    public function create()
     {
         $unitId = $this->activeServiceUnitId();
         if (!$unitId) {
@@ -67,7 +67,7 @@ class AssessmentController extends Controller
         }
 
         $serviceUnit = ServiceUnit::find($unitId);
-        return view('backend.assessment.step1.create', compact('serviceUnit'));
+        return view('backend.self_assessment_service_unit_level.create', compact('serviceUnit'));
     }
 
     /* =========================================================
@@ -75,7 +75,7 @@ class AssessmentController extends Controller
     | - รับ year (พ.ศ./ค.ศ.) + round(1/2) + service_unit_id + level
     | - อัปเดต/สร้างเรคอร์ดตาม Unique (unit+year+round)
     ==========================================================*/
-    public function store_step1(Request $req)
+    public function store(Request $req)
     {
         // 1) หา service_unit_id จากผู้ใช้ที่ล็อกอิน (ไม่รับจากฟอร์ม)
         $serviceUnitId = $this->activeServiceUnitId();
@@ -107,7 +107,7 @@ class AssessmentController extends Controller
         }
 
         // 5) บันทึกหรืออัปเดต (กันซ้ำด้วย service_unit_id + ปี + รอบ)
-        AssessmentStep1::updateOrCreate(
+        $record = AssessmentServiceUnitLevel::updateOrCreate(
             ['service_unit_id' => $serviceUnitId, 'assess_year' => (int) $yearCE, 'assess_round' => (int) $roundNo],
             [
                 'user_id'         => Auth::id(),
@@ -125,7 +125,10 @@ class AssessmentController extends Controller
             ]
         );
 
-        return redirect()->route('backend.assessment.index')->with('success', 'บันทึกผลคัดกรองขั้นที่ 1 สำเร็จ');
+        // return redirect()->route('backend.self-assessment-service-unit-level.index')->with('success', 'บันทึกผลคัดกรองขั้นที่ 1 สำเร็จ');
+        return redirect()
+            ->route('backend.self-assessment-component.create', $record->id)
+            ->with('success', 'บันทึกผลคัดกรองขั้นที่ 1 สำเร็จ กรุณาประเมิน 6 องค์ประกอบ');
     }
 
     /* =========================================================
@@ -135,16 +138,16 @@ class AssessmentController extends Controller
     public function edit($id)
     {
         // โหลดความสัมพันธ์ที่ใช้แสดงผลได้ตามต้องการ
-        $row = AssessmentStep1::with(['serviceUnit', 'user', 'approver'])->findOrFail($id);
+        $row = AssessmentServiceUnitLevel::with(['serviceUnit', 'user', 'approver'])->findOrFail($id);
 
         // หน้า edit ใช้พาร์เชียลเดียวกับ create (_form) โดยให้ mode=edit และส่ง $row
-        return view('backend.assessment.step1.edit', compact('row'));
+        return view('backend.self_assessment_service_unit_level.edit', compact('row'));
     }
 
     // ===== UPDATE : บันทึกการแก้ไขรอบประเมิน (ขั้นที่ 1)
     public function update(Request $req, $id)
     {
-        $row = AssessmentStep1::findOrFail($id);
+        $row = AssessmentServiceUnitLevel::findOrFail($id);
 
         // Validate
         $data = $req->validate([
@@ -189,7 +192,12 @@ class AssessmentController extends Controller
             'updated_by'   => Auth::id(),
         ])->save();
 
-        return redirect()->route('backend.assessment.index')->with('success', 'อัปเดตรอบประเมินขั้นที่ 1 สำเร็จ');
+        // return redirect()->route('backend.self-assessment-service-unit-level.index')->with('success', 'อัปเดตรอบประเมินขั้นที่ 1 สำเร็จ');
+
+        // ไปฟอร์ม 6 องค์ประกอบตามเรคอร์ดที่เพิ่งอัปเดต
+        return redirect()
+            ->route('backend.self-assessment-component.create', $row->id) // route รับ {suLevelId}
+            ->with('success', 'อัปเดตรอบประเมินขั้นที่ 1 สำเร็จ กรุณาประเมิน 6 องค์ประกอบ');
     }
 
     /* =========================================================
@@ -197,7 +205,7 @@ class AssessmentController extends Controller
     ==========================================================*/
     public function approveForm($id)
     {
-        $row = AssessmentStep1::with(['serviceUnit', 'user'])->findOrFail($id);
+        $row = AssessmentServiceUnitLevel::with(['serviceUnit', 'user'])->findOrFail($id);
         return view('backend.assessment.approve', compact('row'));
     }
 
@@ -208,7 +216,7 @@ class AssessmentController extends Controller
             'approval_remark' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $row                  = AssessmentStep1::findOrFail($id);
+        $row                  = AssessmentServiceUnitLevel::findOrFail($id);
         $row->approval_status = $req->approval_status;
         $row->approval_remark = $req->approval_remark;
         $row->approved_by     = Auth::id();
@@ -216,7 +224,7 @@ class AssessmentController extends Controller
         $row->save();
 
         flash_notify('บันทึกผลการอนุมัติเรียบร้อยแล้ว', 'success');
-        return redirect()->route('backend.assessment.show', $row->id);
+        return redirect()->route('backend.self-assessment-service-unit-level.show', $row->id);
     }
 
     /* =========================================================
@@ -224,10 +232,10 @@ class AssessmentController extends Controller
     ==========================================================*/
     public function destroy($id)
     {
-        $row = AssessmentStep1::findOrFail($id);
+        $row = AssessmentServiceUnitLevel::findOrFail($id);
         $row->delete();
         flash_notify('ลบรายการสำเร็จ', 'success');
-        return redirect()->route('backend.assessment.index');
+        return redirect()->route('backend.self-assessment-service-unit-level.index');
     }
 
     /* =========================================================

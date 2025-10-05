@@ -12,12 +12,12 @@
 
 @section('content')
     <!-- [ Main Content ] start -->
-    <form method="post" action="{{ route('backend.assessment.update', $row->id) }}" enctype="multipart/form-data">
+    <form method="post" action="{{ route('backend.self-assessment-service-unit-level.update', $row->id) }}" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
         {{-- ส่งตัวแปรให้พาร์เชียล เพื่อ render ค่าจาก $row และปรับปุ่ม/พฤติกรรมเป็นโหมดแก้ไข --}}
-        @include('backend.assessment.step1._form', [
+        @include('backend.self_assessment_service_unit_level._form', [
             'mode' => 'edit',
             'row' => $row,
         ])

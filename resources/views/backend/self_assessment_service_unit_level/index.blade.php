@@ -25,7 +25,7 @@
                 <div class="card-body">
                     <div class="row justify-content-between align-items-center mb-3 g-3">
                         <div class="col">
-                            <form method="GET" action="{{ route('backend.assessment.index') }}" class="d-flex flex-wrap align-items-center gap-2">
+                            <form method="GET" action="{{ route('backend.self-assessment-service-unit-level.index') }}" class="d-flex flex-wrap align-items-center gap-2">
                                 <div class="input-group" style="max-width: 260px;">
                                     <span class="input-group-text">ปีงบประมาณ</span>
                                     <select name="year" class="form-select">
@@ -50,7 +50,7 @@
                         </div>
 
                         <div class="col-auto">
-                            <a href="{{ route('backend.assessment.step1.create') }}" class="btn btn-primary">
+                            <a href="{{ route('backend.self-assessment-service-unit-level.create') }}" class="btn btn-primary">
                                 <i class="ti ti-plus"></i> เริ่มรอบประเมิน
                             </a>
                         </div>
@@ -64,9 +64,10 @@
                                     <th>ปีงบประมาณ</th>
                                     <th>รอบ</th>
                                     <th>หน่วยบริการ</th>
-                                    <th>ระดับ</th>
-                                    <th>สถานะ</th>
-                                    <th>การอนุมัติ</th>
+                                    <th class="text-center">ระดับ</th>
+                                    {{-- <th>สถานะ</th> --}}
+                                    <th class="text-center">ประเมินตามเกณฑ์<br>6 องค์ประกอบ</th>
+                                    <th class="text-center">การอนุมัติ</th>
                                     <th class="text-end">จัดการ</th>
                                 </tr>
                             </thead>
@@ -77,23 +78,24 @@
                                         <td>{{ (int) $row->assess_year + 543 }}</td>
                                         <td>{{ (int) $row->assess_round === 1 ? 'รอบที่ 1' : 'รอบที่ 2' }}</td>
                                         <td>{{ optional($row->serviceUnit)->org_name ?? '—' }}</td>
-                                        <td>
+                                        <td class="text-center">
                                             @php $lv = $row->level; @endphp
                                             <span class="badge bg-{{ $levelBg[$lv] ?? 'secondary' }}">{{ $levelTxt[$lv] ?? '—' }}</span>
                                         </td>
-                                        <td>
+                                        {{-- <td>
                                             @php $st = $row->status; @endphp
                                             <span class="badge bg-{{ $statusBg[$st] ?? 'secondary' }}">{{ $st ?? '—' }}</span>
-                                        </td>
-                                        <td>
+                                        </td> --}}
+                                        <td class="text-center"></td>
+                                        <td class="text-center">
                                             @php $ap = $row->approval_status; @endphp
                                             <span class="badge bg-{{ $approvalBg[$ap] ?? 'secondary' }}">{{ $approvalTxt[$ap] ?? '—' }}</span>
                                         </td>
                                         <td class="text-end">
-                                            <a href="{{ route('backend.assessment.edit', $row->id) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" title="แก้ไข">
+                                            <a href="{{ route('backend.self-assessment-service-unit-level.edit', $row->id) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" title="แก้ไข">
                                                 <i class="ti ti-edit f-20"></i>
                                             </a>
-                                            <form action="{{ route('backend.assessment.destroy', $row->id) }}" method="POST" class="d-inline" onsubmit="return confirm('ยืนยันการลบรายการนี้หรือไม่? การลบไม่สามารถย้อนกลับได้');">
+                                            <form action="{{ route('backend.self-assessment-service-unit-level.destroy', $row->id) }}" method="POST" class="d-inline" onsubmit="return confirm('ยืนยันการลบรายการนี้หรือไม่? การลบไม่สามารถย้อนกลับได้');">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="avtar avtar-xs btn-link-danger" data-bs-toggle="tooltip" title="ลบ">
                                                     <i class="ti ti-trash f-20"></i>
