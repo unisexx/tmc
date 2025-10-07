@@ -70,3 +70,19 @@ if (!function_exists('fiscalRoundText')) {
         return $round === 1 ? 'รอบที่ 1 (ต.ค. – มี.ค.)' : 'รอบที่ 2 (เม.ย. – ก.ย.)';
     }
 }
+
+if (!function_exists('thFullDate')) {
+    function thFullDate($date)
+    {
+        if (empty($date)) {
+            return '-';
+        }
+
+        $ts     = \Carbon\Carbon::parse($date);
+        $months = [
+            1 => 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+            'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+        ];
+        return $ts->format('j') . ' ' . $months[(int) $ts->format('n')] . ' ' . ($ts->year + 543);
+    }
+}

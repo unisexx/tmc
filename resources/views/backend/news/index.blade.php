@@ -23,7 +23,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>หัวข้อ</th>
-                                    <th>สร้างเมื่อ</th>
+                                    {{-- <th>สร้างเมื่อ</th> --}}
                                     <th class="text-center">สถานะ</th>
                                     <th class="text-end">จัดการ</th>
                                 </tr>
@@ -47,7 +47,7 @@
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="text-nowrap">{{ optional($row->created_at)->format('d/m/Y H:i') }}</td>
+                                        {{-- <td class="text-nowrap">{{ optional($row->created_at)->format('d/m/Y H:i') }}</td> --}}
                                         <td class="text-center">
                                             @if ($row->is_active)
                                                 <i class="ph-duotone ph-check-circle text-primary f-24" data-bs-toggle="tooltip" data-bs-title="เผยแพร่ (Active)"></i>
@@ -56,12 +56,13 @@
                                             @endif
                                         </td>
                                         <td class="text-end">
-                                            <a href="{{ route('backend.news.edit', $row) }}" class="avtar avtar-xs btn-link-secondary" title="แก้ไข">
+                                            <a href="{{ route('backend.news.edit', $row) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
                                                 <i class="ti ti-edit f-20"></i>
                                             </a>
-                                            <form class="d-inline" method="post" action="{{ route('backend.news.destroy', $row) }}" onsubmit="return confirm('ยืนยันการลบ?')">
+
+                                            <form class="d-inline js-delete-form" method="post" action="{{ route('backend.news.destroy', $row) }}" data-title="{{ $row->title }}">
                                                 @csrf @method('delete')
-                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" title="ลบ">
+                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ">
                                                     <i class="ti ti-trash f-20"></i>
                                                 </button>
                                             </form>
@@ -90,7 +91,7 @@
 @endsection
 
 @section('scripts')
-    {{-- เหมือนไฮไลท์: init DataTable (ถ้าใช้พร้อม paginate ของ Laravel อาจไม่จำเป็น) --}}
+    {{-- DataTable (เดิม) --}}
     <script type="module">
         import {
             DataTable
@@ -98,5 +99,49 @@
         if (document.querySelector('#pc-dt-simple')) {
             window.dt = new DataTable("#pc-dt-simple");
         }
+    </script>
+
+    {{-- Tooltip + SweetAlert2 confirm delete --}}
+    <script>
+        (function() {
+            // ✅ เปิดใช้งาน Bootstrap Tooltip
+            document.addEventListener('DOMContentLoaded', function() {
+                const list = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                list.forEach(function(el) {
+                    new bootstrap.Tooltip(el);
+                });
+            });
+
+            // 🧹 ปิด tooltip อัตโนมัติเมื่อกดปุ่ม (กัน tooltip ค้าง)
+            document.addEventListener('click', function(e) {
+                const t = e.target.closest('[data-bs-toggle="tooltip"]');
+                if (t) {
+                    const inst = bootstrap.Tooltip.getInstance(t);
+                    inst && inst.hide();
+                }
+            });
+
+            // 🛑 SweetAlert2: ยืนยันลบ
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (!form.classList.contains('js-delete-form')) return;
+
+                e.preventDefault();
+
+                const title = form.dataset.title || 'รายการนี้';
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยืนยันการลบ?',
+                    html: `ต้องการลบ <b>${title}</b> หรือไม่?<br>การลบเป็นแบบถาวร ไม่สามารถกู้คืนได้`,
+                    showCancelButton: true,
+                    confirmButtonText: 'ลบ',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true,
+                    focusCancel: true
+                }).then(result => {
+                    if (result.isConfirmed) form.submit();
+                });
+            });
+        })();
     </script>
 @endsection

@@ -35,6 +35,17 @@
                 margin: 0;
             }
         }
+
+        /* ให้เส้นกั้น .vr พิมพ์ออกมาได้ชัดเจน */
+        @media print {
+            .vr {
+                width: 1px !important;
+                min-height: 1.25rem !important;
+                background-color: #000 !important;
+                opacity: .2 !important;
+                margin: 0 .5rem !important;
+            }
+        }
     </style>
 @endpush
 
@@ -53,38 +64,64 @@
         </div>
 
         <div class="card-body">
-            {{-- บรรทัดหัวแบบฟอร์ม --}}
-            <div class="row g-3 mb-3">
-                <div class="col-12">
-                    <div class="fw-semibold">
-                        สังกัด: <span class="text-muted">{{ $row->serviceUnit->org_name ?? '-' }}</span>
-                    </div>
+            @php
+                // หน่วยบริการ (ยึดตาม record ถ้ามี, fallback ไปที่หน่วยปัจจุบันใน session)
+                $currentUnitId = session('current_service_unit_id');
+                $currentUnitName = $row->serviceUnit->org_name ?? (optional(Auth::user()?->serviceUnits?->firstWhere('id', $currentUnitId))->org_name ?? '-');
+
+                // ระดับเดิมจาก record
+                $oldLv = $row->level ?? null;
+
+                // ปีงบประมาณ / รอบ (ใช้ค่าที่คุณมีอยู่แล้ว)
+                $yearBE = $yearBE ?? ($row->assess_year ?? fiscalYearCE()) + 543;
+                $roundTxt = isset($row->assess_round) ? fiscalRoundText((int) $row->assess_round) : '-';
+            @endphp
+
+            <div class="border rounded p-2 mb-3 bg-body-tertiary d-flex flex-wrap align-items-center gap-3">
+                <!-- หน่วยบริการ -->
+                <div class="d-inline-flex align-items-center gap-2">
+                    <i class="ph-duotone ph-hospital fs-5"></i>
+                    <span class="text-muted">หน่วยบริการ</span>
+                    <span class="fw-semibold">{{ $currentUnitName }}</span>
                 </div>
-                <div class="col-md-6">
-                    <div>ปีงบประมาณ: <span class="text-muted">{{ $yearBE ?? '-' }}</span></div>
+
+                <div class="vr"></div>
+
+                <!-- ระดับ (ใช้ x-level-badge แบบเดียวกับฟอร์ม) -->
+                <div class="d-inline-flex align-items-center gap-2">
+                    <i class="ph-duotone ph-medal fs-5"></i>
+                    <span class="text-muted">ระดับ</span>
+                    <span id="summaryLevelBadge">
+                        @if ($oldLv)
+                            <x-level-badge :level="$oldLv" class="ms-1" />
+                        @else
+                            <span class="badge bg-secondary ms-1">—</span>
+                        @endif
+                    </span>
                 </div>
-                <div class="col-md-6">
-                    <div>รอบการประเมิน: <span class="text-muted">{{ $row->assess_round ?? '-' }}</span></div>
+
+                <div class="vr"></div>
+
+                <!-- ปีงบประมาณ -->
+                <div class="d-inline-flex align-items-center gap-2">
+                    <i class="ph-duotone ph-calendar-blank fs-5"></i>
+                    <span class="text-muted">ปีงบประมาณ</span>
+                    <span class="fw-semibold">{{ $yearBE }}</span>
                 </div>
-                <div class="col-md-6">
-                    <div>ระดับที่ประเมินได้:
-                        @php
-                            $levelMap = ['basic' => 'ระดับพื้นฐาน', 'medium' => 'ระดับกลาง', 'advanced' => 'ระดับสูง'];
-                        @endphp
-                        <span class="badge bg-info">{{ $levelMap[$row->level] ?? strtoupper($row->level) }}</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div>สถานะ:
-                        @php $st = $row->approval_status; @endphp
-                        <span class="badge {{ $st === 'approved' ? 'bg-success' : ($st === 'rejected' ? 'bg-danger' : 'bg-warning') }}">
-                            {{ $st ?? '-' }}
-                        </span>
-                    </div>
+
+                <div class="vr"></div>
+
+                <!-- รอบ -->
+                <div class="d-inline-flex align-items-center gap-2">
+                    <i class="ph-duotone ph-number-circle-one fs-5"></i>
+                    <span class="text-muted">รอบ</span>
+                    <span class="fw-semibold">{{ $roundTxt }}</span>
                 </div>
             </div>
 
-            {{-- ตารางสรุป 3 คอลัมน์ --}}
+
+
+            {{-- ตารางสรุป 6 องค์ประกอบ (3 คอลัมน์) --}}
             <div class="table-responsive">
                 <table class="table table-bordered table-summary align-middle">
                     <thead class="table-light">
@@ -168,13 +205,19 @@
             </div>
         </div>
 
-        <div class="card-footer text-end">
-            <a href="{{ route('backend.self-assessment-service-unit-level.edit', $row->id) }}" class="btn btn-warning">
-                <i class="ti ti-edit"></i> แก้ไขขั้นที่ 1
-            </a>
-            <a href="{{ route('backend.self-assessment-component.create', $row->id) }}" class="btn btn-primary">
-                <i class="ti ti-list-details"></i> ประเมิน 6 องค์ประกอบ
-            </a>
+        <div class="card-footer d-flex justify-content-end">
+            <div class="btn-toolbar gap-2">
+                <a href="{{ route('backend.self-assessment-service-unit-level.index') }}" class="btn btn-outline-secondary">
+                    <i class="ti ti-arrow-left"></i> ย้อนกลับ
+                </a>
+                <button onclick="window.print()" class="btn btn-primary">
+                    <i class="ti ti-printer"></i> พิมพ์
+                </button>
+                <a href="{{ route('backend.self-assessment-service-unit-level.export-pdf', $row->id) }}" target="_blank" class="btn btn-danger">
+                    <i class="ti ti-file-type-pdf"></i> Export PDF
+                </a>
+            </div>
         </div>
+
     </div>
 @endsection

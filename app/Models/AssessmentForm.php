@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class AssessmentForm extends Model
 {
-    protected $fillable = ['service_unit_id', 'assess_year', 'assess_round', 'level_code', 'status', 'submitted_at', 'reviewer_id', 'reviewed_at', 'review_note'];
-    protected $casts    = ['submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
+    protected $fillable = [
+        'service_unit_id',
+        'assess_year',
+        'assess_round',
+        'level_code',
+    ];
 
     public function serviceUnit()
     {
@@ -24,31 +28,26 @@ class AssessmentForm extends Model
         return $this->hasMany(AssessmentSuggestion::class);
     }
 
-    public function scopeMine($q)
+    // ดึง parent ผ่าน year+round+unit (ตาม relation ที่คุณใช้ใน controller)
+    public function suLevel()
     {
-        return $q->where('service_unit_id', session('current_service_unit_id'));
+        return $this->hasOne(AssessmentServiceUnitLevel::class, 'service_unit_id', 'service_unit_id')
+            ->whereColumn('assessment_service_unit_levels.assess_year', 'assessment_forms.assess_year')
+            ->whereColumn('assessment_service_unit_levels.assess_round', 'assessment_forms.assess_round');
     }
 
-    // แผนที่ชื่อระดับและ badge
-    protected const LEVEL_TEXT = [
-        'basic'    => 'ระดับพื้นฐาน',
-        'medium'   => 'ระดับกลาง',
-        'advanced' => 'ระดับสูง',
-    ];
-    protected const LEVEL_BADGE = [
-        'basic'    => 'info',
-        'medium'   => 'warning',
-        'advanced' => 'success',
+    protected $appends = [
+        'computed_status',
+        'computed_approval_status',
     ];
 
-    // Accessors
-    public function getLevelTextAttribute(): string
+    public function getComputedStatusAttribute()
     {
-        return static::LEVEL_TEXT[$this->level_code] ?? '-';
-    }
+        return $this->suLevel?->status;
+    } // draft|completed
 
-    public function getLevelBadgeClassAttribute(): string
+    public function getComputedApprovalStatusAttribute()
     {
-        return static::LEVEL_BADGE[$this->level_code] ?? 'secondary';
-    }
+        return $this->suLevel?->approval_status;
+    } // pending|...
 }

@@ -77,12 +77,13 @@
                                             @endif
                                         </td>
                                         <td class="text-end">
-                                            <a href="{{ route('backend.hilight.edit', $row) }}" class="avtar avtar-xs btn-link-secondary">
+                                            <a href="{{ route('backend.hilight.edit', $row) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข" aria-label="แก้ไข: {{ $row->title }}">
                                                 <i class="ti ti-edit f-20"></i>
                                             </a>
-                                            <form class="d-inline" method="post" action="{{ route('backend.hilight.destroy', $row) }}" onsubmit="return confirm('ยืนยันการลบ?')">
+
+                                            <form class="d-inline js-delete-form" method="post" action="{{ route('backend.hilight.destroy', $row) }}" data-title="{{ $row->title }}">
                                                 @csrf @method('delete')
-                                                <button class="avtar avtar-xs btn-link-secondary" type="submit">
+                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ" aria-label="ลบ: {{ $row->title }}">
                                                     <i class="ti ti-trash f-20"></i>
                                                 </button>
                                             </form>
@@ -110,7 +111,7 @@
 @endsection
 
 @section('scripts')
-    {{-- โหมดปกติ: ใช้ DataTable ได้ตามเดิม --}}
+    {{-- โหมดปกติ: ใช้ DataTable --}}
     @if (!($reorder ?? false))
         <script type="module">
             import {
@@ -122,6 +123,16 @@
         </script>
     @else
         {{-- โหมดจัดเรียง: ปิด DataTable และเปิด SortableJS --}}
+        <style>
+            .drag-handle {
+                cursor: grab;
+            }
+
+            .sortable-ghost {
+                opacity: .7;
+                background: var(--bs-light-bg-subtle);
+            }
+        </style>
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
         <script>
             (function() {
@@ -133,10 +144,8 @@
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     onEnd: function() {
-                        // เก็บ id ตามลำดับปัจจุบัน
                         const ids = Array.from(tbody.querySelectorAll('tr[data-id]')).map(tr => tr.dataset.id);
 
-                        // ยิงไปอัปเดต
                         fetch("{{ route('backend.hilight.reorder') }}", {
                                 method: "POST",
                                 headers: {
@@ -151,15 +160,70 @@
                             .then(r => r.json())
                             .then(res => {
                                 if (!res.ok) throw new Error(res.message || 'อัปเดตลำดับไม่สำเร็จ');
-                                // แจ้งเตือนสั้นๆ (ถ้ามีระบบ toast อยู่แล้วเรียกใช้แทนได้)
-                                console.log(res.message);
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'บันทึกลำดับใหม่แล้ว',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 1600,
+                                    timerProgressBar: true
+                                });
                             })
                             .catch(err => {
-                                alert(err.message || 'เกิดข้อผิดพลาดในการอัปเดตลำดับ');
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'อัปเดตลำดับไม่สำเร็จ',
+                                    text: err.message || 'กรุณาลองใหม่อีกครั้ง'
+                                });
                             });
                     }
                 });
             })();
         </script>
     @endif
+
+    {{-- ใช้ได้ทั้งสองโหมด: Bootstrap Tooltip + SweetAlert ลบ --}}
+    <script>
+        (function() {
+            // Bootstrap 5 tooltip
+            document.addEventListener('DOMContentLoaded', function() {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.forEach(function(el) {
+                    new bootstrap.Tooltip(el);
+                });
+            });
+
+            // ปิด tooltip เมื่อคลิกปุ่ม เพื่อกันทิ้งค้าง
+            document.addEventListener('click', function(e) {
+                const t = e.target.closest('[data-bs-toggle="tooltip"]');
+                if (t) {
+                    const inst = bootstrap.Tooltip.getInstance(t);
+                    inst && inst.hide();
+                }
+            });
+
+            // SweetAlert2: confirm delete
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (!form.classList.contains('js-delete-form')) return;
+
+                e.preventDefault();
+
+                const title = form.dataset.title || 'รายการนี้';
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยืนยันการลบ?',
+                    html: `ต้องการลบ <b>${title}</b> หรือไม่?<br>การลบเป็นแบบถาวร ไม่สามารถกู้คืนได้`,
+                    showCancelButton: true,
+                    confirmButtonText: 'ลบ',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true,
+                    focusCancel: true
+                }).then(result => {
+                    if (result.isConfirmed) form.submit();
+                });
+            });
+        })();
+    </script>
 @endsection

@@ -378,6 +378,48 @@
                     @enderror
                 </div>
 
+
+                <div class="col-6 col-md-3">
+                    <label class="form-label">บ้านเลขที่</label>
+                    <input type="text" name="org_house_no" class="form-control" value="{{ old('org_house_no', $unit->org_house_no ?? '') }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">หมู่ที่</label>
+                    <input type="text" name="org_moo" class="form-control" value="{{ old('org_moo', $unit->org_moo ?? '') }}">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label">ตรอก/ซอย</label>
+                    <input type="text" name="org_soi" class="form-control" value="{{ old('org_soi', $unit->org_soi ?? '') }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label">ถนน</label>
+                    <input type="text" name="org_road" class="form-control" value="{{ old('org_road', $unit->org_road ?? '') }}">
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <label class="form-label">หมู่บ้าน/อาคาร</label>
+                    <input type="text" name="org_village" class="form-control" value="{{ old('org_village', $unit->org_village ?? '') }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">ชั้น</label>
+                    <input type="text" name="org_floor" class="form-control" value="{{ old('org_floor', $unit->org_floor ?? '') }}">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label">ห้อง</label>
+                    <input type="text" name="org_room" class="form-control" value="{{ old('org_room', $unit->org_room ?? '') }}">
+                </div>
+
+                {!! thGeoSelect('org_', [
+                    'province_code' => old('org_province_code', $unit->org_province_code ?? ''),
+                    'district_code' => old('org_district_code', $unit->org_district_code ?? ''),
+                    'subdistrict_code' => old('org_subdistrict_code', $unit->org_subdistrict_code ?? ''),
+                    'postcode' => old('org_postcode', $unit->org_postcode ?? ''),
+                ]) !!}
+
+
+
+
+
                 <div class="col-12">
                     <div class="d-flex align-items-center gap-2 my-2">
                         <button type="button" id="btn-geocode" class="btn btn-outline-primary btn-sm">

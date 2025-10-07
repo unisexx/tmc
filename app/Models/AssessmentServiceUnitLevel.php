@@ -114,20 +114,34 @@ class AssessmentServiceUnitLevel extends Model
     public function getApprovalTextAttribute(): ?string
     {
         return match ($this->approval_status) {
-            'pending'  => 'รอดำเนินการ',
-            'approved' => 'อนุมัติ',
-            'rejected' => 'ไม่อนุมัติ',
-            default    => null,
+            'pending'   => 'รอดำเนินการ',
+            'reviewing' => 'อยู่ระหว่างการพิจารณา',
+            'returned'  => 'ส่งกลับแก้ไข',
+            'approved'  => 'อนุมัติ',
+            'rejected'  => 'ไม่อนุมัติ',
+            default     => null,
         };
     }
 
     public function getApprovalBadgeClassAttribute(): string
     {
         return match ($this->approval_status) {
-            'pending'  => 'secondary',
-            'approved' => 'success',
-            'rejected' => 'danger',
-            default    => 'secondary',
+            'pending'   => 'secondary',
+            'reviewing' => 'info',
+            'returned'  => 'warning',
+            'approved'  => 'success',
+            'rejected'  => 'danger',
+            default     => 'secondary',
         };
     }
+
+    public function getStatusTextAttribute(): string
+    {
+        return match ($this->status) {
+            'draft'     => 'แบบร่าง',
+            'completed' => 'ส่งแล้ว',
+            default     => '-',
+        };
+    }
+
 }

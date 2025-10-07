@@ -66,16 +66,18 @@
                                         </td>
 
                                         <td class="text-end">
-                                            <a href="{{ route('backend.role.edit', $role) }}" class="avtar avtar-xs btn-link-secondary" title="แก้ไข">
+                                            <a href="{{ route('backend.role.edit', $role) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข" aria-label="แก้ไข: {{ $role->name }}">
                                                 <i class="ti ti-edit f-20"></i>
                                             </a>
-                                            <form class="d-inline" method="post" action="{{ route('backend.role.destroy', $role) }}" onsubmit="return confirm('ยืนยันการลบ?')">
+
+                                            <form class="d-inline js-delete-form" method="post" action="{{ route('backend.role.destroy', $role) }}" data-title="{{ $role->name }}">
                                                 @csrf @method('delete')
-                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" title="ลบ">
+                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ" aria-label="ลบ: {{ $role->name }}">
                                                     <i class="ti ti-trash f-20"></i>
                                                 </button>
                                             </form>
                                         </td>
+
                                     </tr>
                                 @empty
                                     <tr>
@@ -100,6 +102,7 @@
 
 @section('scripts')
     @if (empty($reorder))
+        {{-- โหมดปกติ: DataTable --}}
         <script type="module">
             import {
                 DataTable
@@ -109,14 +112,15 @@
             }
         </script>
     @else
+        {{-- โหมดจัดเรียง: SortableJS --}}
         <style>
+            .drag-handle {
+                cursor: grab;
+            }
+
             .sortable-ghost {
                 opacity: .6;
                 background: #f6f7fb;
-            }
-
-            .drag-handle {
-                cursor: grab;
             }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
@@ -145,13 +149,71 @@
                             .then(r => r.json())
                             .then(res => {
                                 if (!res.ok) throw new Error(res.message || 'อัปเดตลำดับไม่สำเร็จ');
+                                // Toast สำเร็จ
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'บันทึกลำดับใหม่แล้ว',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 1600,
+                                    timerProgressBar: true
+                                });
                             })
                             .catch(err => {
-                                alert(err.message || 'เกิดข้อผิดพลาดในการอัปเดตลำดับ');
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'อัปเดตลำดับไม่สำเร็จ',
+                                    text: err.message || 'กรุณาลองใหม่อีกครั้ง'
+                                });
                             });
                     }
                 });
             })();
         </script>
     @endif
+
+    {{-- ใช้ได้ทั้งสองโหมด: Tooltip + SweetAlert ลบ --}}
+    <script>
+        (function() {
+            // ✅ Bootstrap Tooltip
+            document.addEventListener('DOMContentLoaded', function() {
+                const list = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                list.forEach(function(el) {
+                    new bootstrap.Tooltip(el);
+                });
+            });
+
+            // 🧹 ปิด tooltip เมื่อคลิกปุ่ม (กันค้าง)
+            document.addEventListener('click', function(e) {
+                const t = e.target.closest('[data-bs-toggle="tooltip"]');
+                if (t) {
+                    const inst = bootstrap.Tooltip.getInstance(t);
+                    inst && inst.hide();
+                }
+            });
+
+            // 🛑 SweetAlert2: ยืนยันลบ
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (!form.classList.contains('js-delete-form')) return;
+
+                e.preventDefault();
+
+                const title = form.dataset.title || 'รายการนี้';
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยืนยันการลบ?',
+                    html: `ต้องการลบ <b>${title}</b> หรือไม่?<br>การลบเป็นแบบถาวร ไม่สามารถกู้คืนได้`,
+                    showCancelButton: true,
+                    confirmButtonText: 'ลบ',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true,
+                    focusCancel: true
+                }).then(result => {
+                    if (result.isConfirmed) form.submit();
+                });
+            });
+        })();
+    </script>
 @endsection

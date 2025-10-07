@@ -18,6 +18,9 @@ class ServiceUnitController extends Controller
                 session(['current_service_unit_id' => $id]);
             }
 
-            return back();
+            // return back();
+
+            flash_notify('สลับหน่วยบริการเรียบร้อยแล้ว', 'success');
+            return redirect()->route('backend.dashboard');
     }
 }

@@ -17,6 +17,7 @@ use App\Http\Controllers\Backend\ServiceUnitController;
 use App\Http\Controllers\Backend\StatController;
 use App\Http\Controllers\Backend\UploadController;
 use App\Http\Controllers\Backend\UserController;
+use App\Http\Controllers\GeoApiController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -102,6 +103,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/self-assessments/{suLevelId}/create', [SelfAssessmentComponentController::class, 'create'])->name('self-assessment-component.create');
         Route::post('/self-assessments/{suLevelId}/save', [SelfAssessmentComponentController::class, 'save'])->name('self-assessment-component.save'); // เซฟทับเสมอ
 
+        // export ผลการประเมิน
+        Route::get('self-assessment-service-unit-level/{id}/export-pdf', [SelfAssessmentServiceUnitLevelController::class, 'exportPdf'])->name('self-assessment-service-unit-level.export-pdf');
+
+        // ดาวน์โหลดไฟล์แนบ ที่แนบมากับแบบประเมิน
+        Route::get('attachments/{id}', [SelfAssessmentServiceUnitLevelController::class, 'downloadAttachment'])->name('attachments.download');
+
         // Route::post('{form}/submit', [SelfAssessmentFlowController::class, 'submit'])->name('submit');   // เปลี่ยน status
 
         // ===== SelfAssessmentController (ย้ายเข้า backend) =====
@@ -125,10 +132,20 @@ Route::middleware(['auth'])->group(function () {
         // });
         // ===== end SelfAssessment =====
     });
+});
 
-    // ==============================
-    // Dynamic Routes (ใช้เฉพาะตอน dev)
-    // ==============================
+Route::prefix('geo')->group(function () {
+    Route::get('/provinces', [GeoApiController::class, 'provinces'])->name('geo.provinces');
+    Route::get('/districts', [GeoApiController::class, 'districts'])->name('geo.districts');
+    Route::get('/subdistricts', [GeoApiController::class, 'subdistricts'])->name('geo.subdistricts');
+    Route::get('/postcodes', [GeoApiController::class, 'postcodes'])->name('geo.postcodes');
+});
+
+// ==============================
+// Dynamic Routes (ใช้เฉพาะตอน dev) ของ Light Abel Template (อย่าลืมลบออก)
+// ==============================
+Route::middleware(['auth'])->group(function () {
+    // ... ทั้งหมดของ backend
     if (app()->environment('local')) {
         Route::get('{routeName}/{name?}', [HomeController::class, 'pageView']);
     }

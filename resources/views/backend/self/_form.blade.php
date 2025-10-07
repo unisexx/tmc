@@ -67,6 +67,17 @@
         </div>
 
 
+        <div class="alert alert-primary d-flex align-items-center mb-4 shadow-sm border-0 rounded-3">
+            <i class="ph-duotone ph-clipboard-text fs-4 me-3"></i>
+            <div>
+                โปรดตอบแบบประเมินให้ครบทุกข้อ
+                <br class="d-sm-none">
+                เมื่อทำครบทั้งหมดแล้ว จึงจะสามารถกด <span class="fw-semibold">“ส่งแบบประเมินให้ สคร./สสจ. พิจารณา”</span> ได้
+            </div>
+        </div>
+
+
+
         <div class="accordion" id="accComp">
             @foreach ($components as $comp)
                 @php
@@ -237,19 +248,26 @@
         </div>
 
         {{-- ปรับปุ่มด้านล่าง --}}
-        <div class="sticky-action">
-            <button type="submit" class="btn btn-primary me-2" onclick="document.getElementById('__action').value='save'">
-                <i class="ti ti-device-floppy"></i> บันทึกแบบร่าง
-            </button>
-
-            <button type="submit" class="btn btn-success me-2" onclick="if(confirm('ยืนยันการส่งแบบประเมินให้ สคร./สสจ. ใช่หรือไม่')){document.getElementById('__action').value='submit'}else{return false;}">
-                <i class="ti ti-send"></i> ส่งแบบประเมินให้ สคร./สสจ.
-            </button>
-
-            <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">
-                <i class="ti ti-arrow-left"></i> กลับขั้นตอนที่ 1
+        <div class="sticky-action d-flex justify-content-between align-items-center flex-wrap gap-2">
+            {{-- ปุ่มฝั่งซ้าย --}}
+            <a href="{{ route('backend.self-assessment-service-unit-level.edit', $suLevel->id) }}" class="btn btn-outline-secondary">
+                <i class="ti ti-arrow-left"></i> กลับขั้นตอนที่ 1 พิจารณาสถานะหน่วยบริการ
             </a>
+
+
+
+            {{-- ปุ่มฝั่งขวา --}}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-outline-primary" onclick="document.getElementById('__action').value='save'">
+                    <i class="ti ti-device-floppy"></i> บันทึกแบบร่าง
+                </button>
+
+                <button type="submit" class="btn btn-primary" onclick="if(confirm('ยืนยันการส่งแบบประเมินให้ สคร./สสจ. ใช่หรือไม่')){document.getElementById('__action').value='submit'}else{return false;}">
+                    <i class="ti ti-send"></i> ส่งแบบประเมินให้ สคร./สสจ.
+                </button>
+            </div>
         </div>
+
     </div>
 </div>
 

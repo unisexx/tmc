@@ -11,7 +11,7 @@ return [
 
     // คลาสสีของ Light Able (bg-*)
     'level_badge_class'      => [
-        'basic'    => 'pink-400',   // ชมพู
+        'basic'    => 'pink-300',   // ชมพู
         'medium'   => 'yellow-400', // เหลือง
         'advanced' => 'green-400',  // เขียว
     ],

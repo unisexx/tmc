@@ -143,29 +143,33 @@
 
                                         {{-- การจัดการ --}}
                                         <td class="text-end d-flex justify-content-end gap-1">
-                                            <form action="{{ route('backend.impersonate.start', $u->id) }}" method="POST" onsubmit="return confirm('จำลองเป็น {{ $u->contact_name }} ?')">
+                                            {{-- Impersonate --}}
+                                            <form action="{{ route('backend.impersonate.start', $u->id) }}" method="POST" class="d-inline js-impersonate-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                 @csrf
-                                                <button type="submit" class="avtar avtar-xs btn-link-danger" title="จำลองผู้ใช้">
+                                                <button type="submit" class="avtar avtar-xs btn-link-danger" data-bs-toggle="tooltip" data-bs-title="จำลองผู้ใช้" aria-label="จำลองเป็น {{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                     <i class="ti ti-user-exclamation f-20"></i>
                                                 </button>
                                             </form>
 
-                                            <a href="{{ route('backend.user.edit', $u) }}" class="avtar avtar-xs btn-link-secondary" title="แก้ไข">
+                                            {{-- Edit --}}
+                                            <a href="{{ route('backend.user.edit', $u) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข" aria-label="แก้ไข: {{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                 <i class="ti ti-edit f-20"></i>
                                             </a>
 
-                                            <form action="{{ route('backend.user.destroy', $u) }}" method="POST" class="d-inline" onsubmit="return confirm('ยืนยันการลบผู้ใช้งานนี้?')">
+                                            {{-- Delete --}}
+                                            <form action="{{ route('backend.user.destroy', $u) }}" method="POST" class="d-inline js-delete-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                 @csrf @method('DELETE')
-                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" title="ลบ">
+                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ" aria-label="ลบ: {{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                     <i class="ti ti-trash f-20"></i>
                                                 </button>
                                             </form>
                                         </td>
 
+
                                     </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="9" class="text-center text-muted">— ไม่พบข้อมูล —</td>
+                                            <td colspan="8" class="text-center text-muted">— ไม่พบข้อมูล —</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -189,5 +193,70 @@
             if (document.querySelector('#pc-dt-simple')) {
                 window.dt = new DataTable("#pc-dt-simple");
             }
+        </script>
+
+        <script>
+            (function() {
+                // ✅ เปิดใช้งาน Bootstrap Tooltip
+                document.addEventListener('DOMContentLoaded', function() {
+                    const list = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    list.forEach(function(el) {
+                        new bootstrap.Tooltip(el);
+                    });
+                });
+
+                // 🧹 ปิด tooltip เมื่อคลิกปุ่ม (กันค้าง)
+                document.addEventListener('click', function(e) {
+                    const t = e.target.closest('[data-bs-toggle="tooltip"]');
+                    if (t) {
+                        const inst = bootstrap.Tooltip.getInstance(t);
+                        inst && inst.hide();
+                    }
+                });
+
+                // 🧑‍🚀 SweetAlert2: ยืนยัน "จำลองผู้ใช้"
+                document.addEventListener('submit', function(e) {
+                    const form = e.target;
+                    if (!form.classList.contains('js-impersonate-form')) return;
+
+                    e.preventDefault();
+                    const title = form.dataset.title || 'ผู้ใช้รายนี้';
+
+                    Swal.fire({
+                        icon: 'question',
+                        title: 'ยืนยันการจำลองผู้ใช้?',
+                        html: `คุณต้องการ <b>จำลองเป็น ${title}</b> ใช่ไหม`,
+                        showCancelButton: true,
+                        confirmButtonText: 'ยืนยัน',
+                        cancelButtonText: 'ยกเลิก',
+                        reverseButtons: true,
+                        focusCancel: true
+                    }).then(res => {
+                        if (res.isConfirmed) form.submit();
+                    });
+                });
+
+                // 🗑️ SweetAlert2: ยืนยัน "ลบผู้ใช้"
+                document.addEventListener('submit', function(e) {
+                    const form = e.target;
+                    if (!form.classList.contains('js-delete-form')) return;
+
+                    e.preventDefault();
+                    const title = form.dataset.title || 'ผู้ใช้รายนี้';
+
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'ยืนยันการลบ?',
+                        html: `ต้องการลบ <b>${title}</b> หรือไม่?<br>การลบเป็นแบบถาวร ไม่สามารถกู้คืนได้`,
+                        showCancelButton: true,
+                        confirmButtonText: 'ลบ',
+                        cancelButtonText: 'ยกเลิก',
+                        reverseButtons: true,
+                        focusCancel: true
+                    }).then(res => {
+                        if (res.isConfirmed) form.submit();
+                    });
+                });
+            })();
         </script>
     @endsection
