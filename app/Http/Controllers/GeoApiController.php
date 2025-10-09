@@ -119,4 +119,30 @@ class GeoApiController extends Controller
         ]);
     }
 
+    /**
+     * คืนพิกัดศูนย์กลางของตำบลจากรหัสตำบล
+     * GET /geo/subdistrict-center?code=100101
+     * response: { code, title, lat, lng }
+     */
+    public function subdistrictCenter(Request $req)
+    {
+        $code = (int) $req->query('code');
+        abort_unless($code > 0, 400, 'invalid subdistrict code');
+
+        $s = Subdistrict::query()
+            ->select(['code', 'title', 'lat_center', 'lng_center'])
+            ->where('code', $code)
+            ->first();
+
+        abort_unless($s, 404, 'subdistrict not found');
+        abort_unless(!is_null($s->lat_center) && !is_null($s->lng_center), 404, 'no center coord');
+
+        return [
+            'code'  => (int) $s->code,
+            'title' => $s->title,
+            'lat'   => (float) $s->lat_center,
+            'lng'   => (float) $s->lng_center,
+        ];
+    }
+
 }

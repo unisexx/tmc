@@ -14,6 +14,7 @@ use App\Http\Controllers\Backend\RoleController;
 use App\Http\Controllers\Backend\SelfAssessmentComponentController;
 use App\Http\Controllers\Backend\SelfAssessmentServiceUnitLevelController;
 use App\Http\Controllers\Backend\ServiceUnitController;
+use App\Http\Controllers\Backend\ServiceUnitProfileController;
 use App\Http\Controllers\Backend\StatController;
 use App\Http\Controllers\Backend\UploadController;
 use App\Http\Controllers\Backend\UserController;
@@ -87,6 +88,12 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('role', RoleController::class);
         Route::post('role/reorder', [RoleController::class, 'reorder'])->name('role.reorder');
 
+        // แก้ไขหน่วยบริการที่ตัวเองรับผิดชอบ
+        Route::get('/service-unit/profile', [ServiceUnitProfileController::class, 'edit'])
+            ->name('service-unit.edit');
+        Route::put('/service-unit/profile', [ServiceUnitProfileController::class, 'update'])
+            ->name('service-unit.update');
+
         // tinymce uploads
         Route::post('upload/tinymce', [UploadController::class, 'tinymce'])->name('upload.tinymce');
 
@@ -139,6 +146,7 @@ Route::prefix('geo')->group(function () {
     Route::get('/districts', [GeoApiController::class, 'districts'])->name('geo.districts');
     Route::get('/subdistricts', [GeoApiController::class, 'subdistricts'])->name('geo.subdistricts');
     Route::get('/postcodes', [GeoApiController::class, 'postcodes'])->name('geo.postcodes');
+    Route::get('/subdistrict-center', [GeoApiController::class, 'subdistrictCenter'])->name('geo.subdistrict-center');
 });
 
 // ==============================

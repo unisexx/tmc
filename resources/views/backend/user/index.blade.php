@@ -31,7 +31,7 @@
                                     <th class="d-none d-xl-table-cell">สังกัด / บทบาท</th>
                                     <th class="d-none d-md-table-cell">Username</th>
                                     <th class="d-none d-lg-table-cell">โทรศัพท์</th>
-                                    <th class="text-center d-none d-lg-table-cell">สถานะลงทะเบียน</th>
+                                    <th class="text-center d-none d-lg-table-cell">สิทธิ์การใช้งาน</th>
                                     <th class="text-center">สถานะระบบ</th>
                                     <th class="text-end">การจัดการ</th>
                                 </tr>
@@ -40,99 +40,63 @@
                                 @forelse($users as $i => $u)
                                     @php
                                         $rowNo = method_exists($users, 'firstItem') ? $users->firstItem() + $i : $loop->iteration;
-
-                                        // หน่วยบริการหลักของผู้ใช้
                                         $unit = $u->serviceUnits()->wherePivot('is_primary', true)->first() ?? $u->serviceUnits()->first();
-
                                         $isActive = (bool) ($u->is_active ?? false);
-
-                                        $regStatusRaw = $u->reg_status ?? 'รอตรวจสอบ';
-                                        $regStatus = match ($regStatusRaw) {
-                                            'อนุมัติ' => 'อนุมัติ',
-                                            'ไม่อนุมัติ' => 'ไม่อนุมัติ',
-                                            'รอตรวจสอบ' => 'รอตรวจสอบ',
-                                            default => 'รอตรวจสอบ',
-                                        };
-
-                                        $purposes = is_array($u->reg_purpose) ? $u->reg_purpose : (is_string($u->reg_purpose) && $u->reg_purpose !== '' ? json_decode($u->reg_purpose, true) ?? explode(',', $u->reg_purpose) : []);
+                                        $purposes = $u->reg_purpose_labels_with_color ?? [];
+                                        $hasP = $u->hasPurpose('P');
+                                        $hasR = $u->hasPurpose('R');
                                     @endphp
                                     <tr>
                                         <td>{{ $rowNo }}</td>
 
-                                        {{-- ผู้ใช้งาน (รูป/ชื่อ/อีเมล) --}}
+                                        {{-- ผู้ใช้งาน --}}
                                         <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="flex-shrink-0">
-                                                    @php $initial = mb_substr($u->contact_name ?: ($u->name ?? 'U'), 0, 1); @endphp
-                                                    @if (!empty($u->avatar_path))
-                                                        <img src="{{ asset('storage/' . $u->avatar_path) }}" alt="avatar" class="wid-80 rounded">
-                                                    @else
-                                                        <div class="avatar">{{ $initial }}</div>
-                                                    @endif
-                                                </div>
-                                                <div class="flex-grow-1 ms-3">
-                                                    <h6 class="mb-0 truncate-1" title="{{ $u->contact_name ?? '-' }}">{{ $u->contact_name ?? '-' }}</h6>
-                                                    <small class="text-muted d-block truncate-1" title="{{ $u->email ?? '-' }}">{{ $u->email ?? '-' }}</small>
-                                                </div>
-                                            </div>
+                                            <h6 class="mb-0 truncate-1" title="{{ $u->contact_name ?? '-' }}">{{ $u->contact_name ?? '-' }}</h6>
+                                            <small class="text-muted d-block truncate-1" title="{{ $u->email ?? '-' }}">{{ $u->email ?? '-' }}</small>
                                         </td>
 
-                                        {{-- สังกัด / บทบาท จาก service_units --}}
+                                        {{-- สังกัด / บทบาท --}}
                                         <td class="d-none d-xl-table-cell">
-                                            {{-- สังกัด / บทบาท --}}
+                                            {{-- วัตถุประสงค์ที่ลงทะเบียน --}}
+                                            <div class="mt-1 d-flex flex-wrap gap-1">
+                                                @forelse($purposes as $pp)
+                                                    <span class="badge {{ $pp['class'] }}">{{ $pp['label'] }}</span>
+                                                @empty
+                                                    <span class="text-muted small">-</span>
+                                                @endforelse
+                                            </div>
                                             @if (!empty($unit?->org_affiliation))
-                                                <div class="truncate-1" title="{{ $unit->org_affiliation }}">
-                                                    <i class="ti ti-building"></i>
+                                                <div class="small text-muted mt-1 truncate-1" title="{{ $unit->org_affiliation }}">
+                                                    <i class="ph-duotone ph-hospital"></i>
                                                     {{ $unit->org_affiliation }}
                                                 </div>
                                             @endif
-
-                                            {{-- วัตถุประสงค์ที่ลงทะเบียน --}}
-                                            @if (!empty($purposes) && count($purposes))
-                                                <div class="mt-1 d-flex flex-wrap gap-1">
-                                                    @foreach ($purposes as $pp)
-                                                        <span class="badge bg-light text-dark border">{{ $pp }}</span>
-                                                    @endforeach
+                                            {{-- จังหวัด/สคร. --}}
+                                            @if ($hasP && $u->superviseProvince)
+                                                <div class="small text-muted mt-1 truncate-1" title="จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}">
+                                                    <i class="ph-duotone ph-map-pin"></i>
+                                                    จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}
                                                 </div>
                                             @endif
-
-                                            {{-- สิทธิ์การใช้งาน --}}
-                                            <div class="mt-1 d-flex flex-wrap gap-1">
-                                                @php
-                                                    $role = optional($u->role);
-                                                    $color = match ($role->id ?? null) {
-                                                        2 => 'danger',
-                                                        3 => 'primary',
-                                                        4, 5 => 'warning',
-                                                        default => 'secondary',
-                                                    };
-                                                @endphp
-                                                <span class="badge text-bg-{{ $color }}">
-                                                    {{ $role->name ?? '-' }}
-                                                </span>
-                                            </div>
+                                            @if ($hasR && $u->superviseRegion)
+                                                <div class="small text-muted mt-1 truncate-1" title="สคร.: {{ $u->superviseRegion->short_title }}">
+                                                    <i class="ph-duotone ph-map-pin-area"></i>
+                                                    สคร.: {{ $u->superviseRegion->short_title }}
+                                                </div>
+                                            @endif
                                         </td>
 
                                         <td class="d-none d-md-table-cell">{{ $u->username ?? '-' }}</td>
                                         <td class="d-none d-lg-table-cell">{{ $u->contact_mobile ?? '-' }}</td>
 
-                                        {{-- สถานะลงทะเบียน --}}
+                                        {{-- ✅ เปลี่ยนเป็นสิทธิ์การใช้งาน --}}
                                         <td class="text-center d-none d-lg-table-cell">
-                                            @switch($regStatus)
-                                                @case('อนุมัติ')
-                                                    <span class="badge text-bg-primary">อนุมัติ</span>
-                                                @break
-
-                                                @case('ไม่อนุมัติ')
-                                                    <span class="badge text-bg-danger">ไม่อนุมัติ</span>
-                                                @break
-
-                                                @default
-                                                    <span class="badge bg-secondary-subtle text-secondary border">รอตรวจสอบ</span>
-                                            @endswitch
+                                            <span class="badge {{ $u->role_badge_class }}">
+                                                {{ $u->role->name ?? '-' }}
+                                            </span>
                                         </td>
 
-                                        {{-- สถานะระบบ (is_active) --}}
+                                        {{-- สถานะระบบ --}}
                                         <td class="text-center">
                                             @if ($isActive)
                                                 <i class="ph-duotone ph-check-circle text-primary f-24" data-bs-toggle="tooltip" data-bs-title="Active"></i>
@@ -143,120 +107,109 @@
 
                                         {{-- การจัดการ --}}
                                         <td class="text-end d-flex justify-content-end gap-1">
-                                            {{-- Impersonate --}}
                                             <form action="{{ route('backend.impersonate.start', $u->id) }}" method="POST" class="d-inline js-impersonate-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                 @csrf
-                                                <button type="submit" class="avtar avtar-xs btn-link-danger" data-bs-toggle="tooltip" data-bs-title="จำลองผู้ใช้" aria-label="จำลองเป็น {{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
+                                                <button type="submit" class="avtar avtar-xs btn-link-danger" data-bs-toggle="tooltip" data-bs-title="จำลองผู้ใช้">
                                                     <i class="ti ti-user-exclamation f-20"></i>
                                                 </button>
                                             </form>
 
-                                            {{-- Edit --}}
-                                            <a href="{{ route('backend.user.edit', $u) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข" aria-label="แก้ไข: {{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
+                                            <a href="{{ route('backend.user.edit', $u) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
                                                 <i class="ti ti-edit f-20"></i>
                                             </a>
 
-                                            {{-- Delete --}}
                                             <form action="{{ route('backend.user.destroy', $u) }}" method="POST" class="d-inline js-delete-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                 @csrf @method('DELETE')
-                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ" aria-label="ลบ: {{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
+                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ">
                                                     <i class="ti ti-trash f-20"></i>
                                                 </button>
                                             </form>
                                         </td>
-
-
                                     </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="8" class="text-center text-muted">— ไม่พบข้อมูล —</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted">— ไม่พบข้อมูล —</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
 
-                        <div class="mt-3">
-                            {{ $users->links() }}
-                        </div>
+                    <div class="mt-3">
+                        {{ $users->links() }}
                     </div>
                 </div>
             </div>
         </div>
-    @endsection
+    </div>
+@endsection
 
-    @section('scripts')
-        <script type="module">
-            import {
-                DataTable
-            } from "/build/js/plugins/module.js";
-            if (document.querySelector('#pc-dt-simple')) {
-                window.dt = new DataTable("#pc-dt-simple");
-            }
-        </script>
+@section('scripts')
+    <script type="module">
+        import {
+            DataTable
+        } from "/build/js/plugins/module.js";
+        if (document.querySelector('#pc-dt-simple')) {
+            window.dt = new DataTable("#pc-dt-simple");
+        }
+    </script>
 
-        <script>
-            (function() {
-                // ✅ เปิดใช้งาน Bootstrap Tooltip
-                document.addEventListener('DOMContentLoaded', function() {
-                    const list = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                    list.forEach(function(el) {
-                        new bootstrap.Tooltip(el);
-                    });
+    <script>
+        (function() {
+            document.addEventListener('DOMContentLoaded', function() {
+                const list = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                list.forEach(function(el) {
+                    new bootstrap.Tooltip(el);
                 });
+            });
 
-                // 🧹 ปิด tooltip เมื่อคลิกปุ่ม (กันค้าง)
-                document.addEventListener('click', function(e) {
-                    const t = e.target.closest('[data-bs-toggle="tooltip"]');
-                    if (t) {
-                        const inst = bootstrap.Tooltip.getInstance(t);
-                        inst && inst.hide();
-                    }
+            document.addEventListener('click', function(e) {
+                const t = e.target.closest('[data-bs-toggle="tooltip"]');
+                if (t) {
+                    const inst = bootstrap.Tooltip.getInstance(t);
+                    inst && inst.hide();
+                }
+            });
+
+            // ✅ SweetAlert2: จำลองผู้ใช้
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (!form.classList.contains('js-impersonate-form')) return;
+                e.preventDefault();
+                const title = form.dataset.title || 'ผู้ใช้รายนี้';
+                Swal.fire({
+                    icon: 'question',
+                    title: 'ยืนยันการจำลองผู้ใช้?',
+                    html: `คุณต้องการ <b>จำลองเป็น ${title}</b> ใช่ไหม`,
+                    showCancelButton: true,
+                    confirmButtonText: 'ยืนยัน',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true,
+                    focusCancel: true
+                }).then(res => {
+                    if (res.isConfirmed) form.submit();
                 });
+            });
 
-                // 🧑‍🚀 SweetAlert2: ยืนยัน "จำลองผู้ใช้"
-                document.addEventListener('submit', function(e) {
-                    const form = e.target;
-                    if (!form.classList.contains('js-impersonate-form')) return;
-
-                    e.preventDefault();
-                    const title = form.dataset.title || 'ผู้ใช้รายนี้';
-
-                    Swal.fire({
-                        icon: 'question',
-                        title: 'ยืนยันการจำลองผู้ใช้?',
-                        html: `คุณต้องการ <b>จำลองเป็น ${title}</b> ใช่ไหม`,
-                        showCancelButton: true,
-                        confirmButtonText: 'ยืนยัน',
-                        cancelButtonText: 'ยกเลิก',
-                        reverseButtons: true,
-                        focusCancel: true
-                    }).then(res => {
-                        if (res.isConfirmed) form.submit();
-                    });
+            // 🗑️ SweetAlert2: ยืนยัน "ลบผู้ใช้"
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (!form.classList.contains('js-delete-form')) return;
+                e.preventDefault();
+                const title = form.dataset.title || 'ผู้ใช้รายนี้';
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ยืนยันการลบ?',
+                    html: `ต้องการลบ <b>${title}</b> หรือไม่?<br>การลบเป็นแบบถาวร ไม่สามารถกู้คืนได้`,
+                    showCancelButton: true,
+                    confirmButtonText: 'ลบ',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true,
+                    focusCancel: true
+                }).then(res => {
+                    if (res.isConfirmed) form.submit();
                 });
-
-                // 🗑️ SweetAlert2: ยืนยัน "ลบผู้ใช้"
-                document.addEventListener('submit', function(e) {
-                    const form = e.target;
-                    if (!form.classList.contains('js-delete-form')) return;
-
-                    e.preventDefault();
-                    const title = form.dataset.title || 'ผู้ใช้รายนี้';
-
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'ยืนยันการลบ?',
-                        html: `ต้องการลบ <b>${title}</b> หรือไม่?<br>การลบเป็นแบบถาวร ไม่สามารถกู้คืนได้`,
-                        showCancelButton: true,
-                        confirmButtonText: 'ลบ',
-                        cancelButtonText: 'ยกเลิก',
-                        reverseButtons: true,
-                        focusCancel: true
-                    }).then(res => {
-                        if (res.isConfirmed) form.submit();
-                    });
-                });
-            })();
-        </script>
-    @endsection
+            });
+        })();
+    </script>
+@endsection

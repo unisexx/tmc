@@ -38,86 +38,68 @@
                                 @forelse($users as $i => $u)
                                     @php
                                         $rowNo = method_exists($users, 'firstItem') ? $users->firstItem() + $i : $loop->iteration;
-
-                                        // หน่วยบริการหลักของผู้ใช้
                                         $unit = $u->serviceUnits()->wherePivot('is_primary', true)->first() ?? $u->serviceUnits()->first();
-
                                         $isActive = (bool) ($u->is_active ?? false);
-
-                                        $regStatusRaw = $u->reg_status ?? 'รอตรวจสอบ';
-                                        $regStatus = match ($regStatusRaw) {
-                                            'อนุมัติ' => 'อนุมัติ',
-                                            'ไม่อนุมัติ' => 'ไม่อนุมัติ',
-                                            'รอตรวจสอบ' => 'รอตรวจสอบ',
-                                            default => 'รอตรวจสอบ',
-                                        };
-
-                                        $purposes = is_array($u->reg_purpose) ? $u->reg_purpose : (is_string($u->reg_purpose) && $u->reg_purpose !== '' ? json_decode($u->reg_purpose, true) ?? explode(',', $u->reg_purpose) : []);
+                                        $purposes = $u->reg_purpose_labels_with_color ?? [];
                                     @endphp
                                     <tr>
                                         <td>{{ $rowNo }}</td>
-
                                         {{-- ผู้ใช้งาน (รูป/ชื่อ/อีเมล) --}}
                                         <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="flex-shrink-0">
-                                                    @php $initial = mb_substr($u->contact_name ?: ($u->name ?? 'U'), 0, 1); @endphp
-                                                    @if (!empty($u->avatar_path))
-                                                        <img src="{{ asset('storage/' . $u->avatar_path) }}" alt="avatar" class="wid-80 rounded">
-                                                    @else
-                                                        <div class="avatar">{{ $initial }}</div>
-                                                    @endif
-                                                </div>
-                                                <div class="flex-grow-1 ms-3">
-                                                    <h6 class="mb-0 truncate-1" title="{{ $u->contact_name ?? '-' }}">{{ $u->contact_name ?? '-' }}</h6>
-                                                    <small class="text-muted d-block truncate-1" title="{{ $u->email ?? '-' }}">{{ $u->email ?? '-' }}</small>
-                                                </div>
-                                            </div>
+                                            <h6 class="mb-0 truncate-1" title="{{ $u->contact_name ?? '-' }}">{{ $u->contact_name ?? '-' }}</h6>
+                                            <small class="text-muted d-block truncate-1" title="{{ $u->email ?? '-' }}">{{ $u->email ?? '-' }}</small>
                                         </td>
 
                                         {{-- สังกัด / บทบาท จาก service_units --}}
                                         <td class="d-none d-xl-table-cell">
-                                            <div class="truncate-1" title="{{ $unit?->org_affiliation ?? '-' }}">
-                                                <i class="ti ti-building"></i>
-                                                {{ $unit?->org_affiliation ?? '-' }}
-                                            </div>
-
                                             {{-- วัตถุประสงค์ที่ลงทะเบียน --}}
                                             <div class="mt-1 d-flex flex-wrap gap-1">
                                                 @forelse($purposes as $pp)
-                                                    <span class="badge bg-light text-dark border">{{ $pp }}</span>
+                                                    <span class="badge {{ $pp['class'] }}">{{ $pp['label'] }}</span>
                                                 @empty
                                                     <span class="text-muted small">-</span>
                                                 @endforelse
                                             </div>
 
-                                            {{-- สิทธิ์การใช้งาน --}}
-                                            <div class="mt-1 d-flex flex-wrap gap-1">
-                                                <span class="badge text-bg-primary">
-                                                    {{ optional($u->role)->name ?? '-' }}
-                                                </span>
-                                            </div>
-                                        </td>
 
+                                            {{-- สังกัดหน่วยบริการ (ถ้ามี) --}}
+                                            @if (!empty($unit?->org_affiliation))
+                                                <div class="small text-muted truncate-1 mt-1" title="{{ $unit->org_affiliation }}">
+                                                    <i class="ti ti-building"></i>
+                                                    {{ $unit->org_affiliation }}
+                                                </div>
+                                            @endif
+
+                                            {{-- จังหวัด / สคร. ตามวัตถุประสงค์ --}}
+                                            @php
+                                                $hasP = $u->hasPurpose('P');
+                                                $hasR = $u->hasPurpose('R');
+                                            @endphp
+
+                                            {{-- จังหวัดที่สังกัด (ผู้กำกับฯ ระดับจังหวัด: P) --}}
+                                            @if ($hasP && $u->superviseProvince)
+                                                <div class="small text-muted mt-1 truncate-1" title="จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}">
+                                                    <i class="ti ti-map-pin"></i>
+                                                    จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}
+                                                </div>
+                                            @endif
+
+                                            {{-- สคร. ที่สังกัด (ผู้กำกับฯ ระดับเขต: R) --}}
+                                            @if ($hasR && $u->superviseRegion)
+                                                <div class="small text-muted mt-1 truncate-1" title="สคร.: {{ $u->superviseRegion->short_title }}">
+                                                    <i class="ti ti-building-community"></i>
+                                                    สคร.: {{ $u->superviseRegion->short_title }}
+                                                </div>
+                                            @endif
+                                        </td>
                                         <td class="d-none d-md-table-cell">{{ $u->username ?? '-' }}</td>
                                         <td class="d-none d-lg-table-cell">{{ $u->contact_mobile ?? '-' }}</td>
-
                                         {{-- สถานะลงทะเบียน --}}
                                         <td class="text-center d-none d-lg-table-cell">
-                                            @switch($regStatus)
-                                                @case('approved')
-                                                    <span class="badge text-bg-primary">อนุมัติ</span>
-                                                @break
-
-                                                @case('rejected')
-                                                    <span class="badge text-bg-danger">ไม่อนุมัติ</span>
-                                                @break
-
-                                                @default
-                                                    <span class="badge bg-secondary-subtle text-secondary border">รอตรวจสอบ</span>
-                                            @endswitch
+                                            <span class="badge {{ $u->reg_status_badge_class }}">
+                                                {{ $u->reg_status_text }}
+                                            </span>
                                         </td>
-
                                         {{-- สถานะระบบ --}}
                                         <td class="text-center">
                                             @if ($isActive)
@@ -148,31 +130,31 @@
                                             </form>
                                         </td>
                                     </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="9" class="text-center text-muted">— ไม่พบข้อมูล —</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
+                                @empty
+                                    <tr>
+                                        <td colspan="9" class="text-center text-muted">— ไม่พบข้อมูล —</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
 
-                        <div class="mt-3">
-                            {{ $users->links() }}
-                        </div>
+                    <div class="mt-3">
+                        {{ $users->links() }}
                     </div>
                 </div>
             </div>
         </div>
-    @endsection
+    </div>
+@endsection
 
-    @section('scripts')
-        <script type="module">
-            import {
-                DataTable
-            } from "/build/js/plugins/module.js";
-            if (document.querySelector('#pc-dt-simple')) {
-                window.dt = new DataTable("#pc-dt-simple");
-            }
-        </script>
-    @endsection
+@section('scripts')
+    <script type="module">
+        import {
+            DataTable
+        } from "/build/js/plugins/module.js";
+        if (document.querySelector('#pc-dt-simple')) {
+            window.dt = new DataTable("#pc-dt-simple");
+        }
+    </script>
+@endsection

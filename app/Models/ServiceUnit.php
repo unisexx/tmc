@@ -22,6 +22,10 @@ class ServiceUnit extends Model
         'org_lng',
         'org_working_hours',
         'org_working_hours_json',
+        'org_province_code',
+        'org_district_code',
+        'org_subdistrict_code',
+        'org_postcode',
     ];
 
     protected $casts = [

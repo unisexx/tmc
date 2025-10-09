@@ -25,11 +25,6 @@
         <div class="card pc-user-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        {{-- <img src="{{ URL::asset('build/images/user/avatar-1.jpg') }}" alt="user-image" class="user-avtar wid-45 rounded-circle"> --}}
-                        @php $initial = mb_substr(Auth::user()->contact_name ?: (Auth::user()->contact_name ?? 'U'), 0, 1); @endphp
-                        <div class="avatar">{{ $initial }}</div>
-                    </div>
                     <div class="flex-grow-1 ms-3">
                         <div class="dropdown">
                             <a href="#" class="arrow-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" data-bs-offset="0,20">

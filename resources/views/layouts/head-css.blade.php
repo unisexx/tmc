@@ -2,7 +2,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <!-- [phosphor Icons] https://phosphoricons.com/ -->
-<link rel="stylesheet" href="{{ URL::asset('build/fonts/phosphor/duotone/style.css') }}" />
+{{-- <link rel="stylesheet" href="{{ URL::asset('build/fonts/phosphor/duotone/style.css') }}" /> --}}
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+
 <!-- [Tabler Icons] https://tablericons.com -->
 <link rel="stylesheet" href="{{ URL::asset('build/fonts/tabler-icons.min.css') }}">
 <!-- [Feather Icons] https://feathericons.com -->

@@ -58,42 +58,72 @@
 
 
 <div class="row g-3">
-
     {{-- ====================== ข้อมูลการลงทะเบียน (TOR) ====================== --}}
     <h5>1. วัตถุประสงค์การลงทะเบียน</h5>
 
+    {{-- ===================== REG PURPOSE + SUPERVISE SELECTS ===================== --}}
     <div class="col-md-12">
         <label class="form-label d-block required" id="field-{{ \Illuminate\Support\Str::slug('reg_purpose') }}">ในฐานะ</label>
         @php
-            $purposes = ['หน่วยบริการสุขภาพผู้เดินทาง', 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)', 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)'];
+            // 1) ค่าตัวเลือก (label ภาษาไทย)
+            $purposeLabels = ['หน่วยบริการสุขภาพผู้เดินทาง', 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)', 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)'];
+
+            // 2) mapping รหัส -> label (กรณีฐานข้อมูลเก็บรหัส)
+            $purposeCodeToLabel = [
+                'T' => 'หน่วยบริการสุขภาพผู้เดินทาง',
+                'P' => 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
+                'R' => 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
+            ];
+
+            // 3) ดึงค่าที่เลือกจาก old() ก่อน, ถ้าไม่มีให้ใช้ของ user
             $selectedPurposes = old('reg_purpose', $user->reg_purpose ?? []);
+
+            // แปลง selected ให้เป็น array เสมอ
             if (is_string($selectedPurposes)) {
+                // กรณีเป็น JSON string หรือ CSV string
                 $selectedPurposes = json_decode($selectedPurposes, true) ?? explode(',', $selectedPurposes);
             }
+            $selectedPurposes = array_filter((array) $selectedPurposes, fn($x) => $x !== null && $x !== '');
 
+            // 4) ถ้ามีรหัส (T,P,R) ให้ map กลับเป็น label ไทย เพื่อใช้เช็ค checked/แสดง UI
+            $selectedLabels = collect($selectedPurposes)
+                ->map(function ($v) use ($purposeCodeToLabel) {
+                    $v = trim((string) $v);
+                    return $purposeCodeToLabel[$v] ?? $v; // ถ้าไม่ใช่รหัส ให้ถือว่าเป็น label เดิม
+                })
+                ->values()
+                ->all();
+
+            // province & region ค่าเดิม
             $oldProvince = old('reg_supervise_province_code', $user->reg_supervise_province_code ?? null);
             $oldRegion = old('reg_supervise_region_id', $user->reg_supervise_region_id ?? null);
+
+            // flag สำหรับกำหนดการโชว์ตั้งต้น (กันหน้า "กะพริบ")
+            $isProv = in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)', $selectedLabels, true);
+            $isReg = in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)', $selectedLabels, true);
         @endphp
 
-        @foreach ($purposes as $option)
+        {{-- Checkboxes --}}
+        @foreach ($purposeLabels as $index => $option)
             <div class="form-check">
-                <input class="form-check-input reg-purpose" type="checkbox" name="reg_purpose[]" id="reg_purpose_{{ $loop->index }}" value="{{ $option }}" {{ in_array($option, $selectedPurposes) ? 'checked' : '' }}>
-                <label class="form-check-label" for="reg_purpose_{{ $loop->index }}">{{ $option }}</label>
+                <input class="form-check-input reg-purpose" type="checkbox" name="reg_purpose[]" id="reg_purpose_{{ $index }}" value="{{ $option }}" {{-- ติ๊กถูกตาม old()/edit --}} {{ in_array($option, $selectedLabels, true) ? 'checked' : '' }} {{-- เสริม data-code เพื่อ JS จะได้ robust ถ้าต้องสลับมาเก็บเป็นรหัส --}} @php
+$dataCode = array_search($option, $purposeCodeToLabel, true) ?: ''; @endphp data-code="{{ $dataCode }}">
+                <label class="form-check-label" for="reg_purpose_{{ $index }}">{{ $option }}</label>
             </div>
         @endforeach
+
         @error('reg_purpose')
             <div class="invalid-feedback d-block">{{ $message }}</div>
         @enderror
     </div>
 
     {{-- ========== สสจ. → เลือกจังหวัด ========== --}}
-    <div class="col-md-6 d-none" id="wrap_supervise_province">
+    <div class="col-md-6 {{ $isProv ? '' : 'd-none' }}" id="wrap_supervise_province">
         <label for="reg_supervise_province_code" class="form-label required">
             เลือกจังหวัด (สำหรับบทบาทผู้กำกับดูแลระดับจังหวัด - สสจ.)
         </label>
         <select id="reg_supervise_province_code" name="reg_supervise_province_code" class="form-select" data-placeholder="--- เลือกจังหวัดของท่าน ---">
             @php
-                // ดึงจาก Blade (ถ้ายังไม่ได้ดึงมาก่อน)
                 $provinces = $provinces ?? \App\Models\Province::select('CODE', 'TITLE')->orderBy('TITLE')->get();
                 $oldProvince = old('reg_supervise_province_code', $user->reg_supervise_province_code ?? null);
             @endphp
@@ -110,7 +140,7 @@
     </div>
 
     {{-- ========== สคร. → เลือกเขตสุขภาพ ========== --}}
-    <div class="col-md-6 d-none" id="wrap_supervise_region">
+    <div class="col-md-6 {{ $isReg ? '' : 'd-none' }}" id="wrap_supervise_region">
         <label for="reg_supervise_region_id" class="form-label required">
             เลือกเขตสุขภาพ (สำหรับบทบาทผู้กำกับดูแลระดับเขต - สคร.)
         </label>
@@ -130,36 +160,34 @@
             <div class="invalid-feedback d-block">{{ $message }}</div>
         @enderror
     </div>
+
     @push('js')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // --- init Choices ปกติ ---
-                const provinceChoices = new Choices('#reg_supervise_province_code', {
-                    searchEnabled: true,
-                    itemSelectText: '',
-                    shouldSort: false
-                    // อย่าใส่ classNames.containerOuter เป็น string ที่มีช่องว่าง
-                });
+                // --- init Choices ---
+                const provinceSelect = document.querySelector('#reg_supervise_province_code');
+                const regionSelect = document.querySelector('#reg_supervise_region_id');
 
-                const regionChoices = new Choices('#reg_supervise_region_id', {
-                    searchEnabled: true,
-                    itemSelectText: '',
-                    shouldSort: false
-                });
+                let provinceChoices = null;
+                let regionChoices = null;
 
-                // --- เติมคลาสเสริมให้ container ภายหลัง ---
-                // วิธี 1: อิงจาก input id
-                document.querySelector('#reg_supervise_province_code')
-                    .closest('.choices')
-                    ?.classList.add('choices--lightable');
+                if (window.Choices) {
+                    provinceChoices = new Choices('#reg_supervise_province_code', {
+                        searchEnabled: true,
+                        itemSelectText: '',
+                        shouldSort: false
+                    });
+                    regionChoices = new Choices('#reg_supervise_region_id', {
+                        searchEnabled: true,
+                        itemSelectText: '',
+                        shouldSort: false
+                    });
 
-                document.querySelector('#reg_supervise_region_id')
-                    .closest('.choices')
-                    ?.classList.add('choices--lightable');
+                    provinceSelect.closest('.choices')?.classList.add('choices--lightable');
+                    regionSelect.closest('.choices')?.classList.add('choices--lightable');
+                }
 
-                // ===== Checkbox สสจ./สคร. (exclusive) + โชว์/ซ่อน select =====
-                const cbProv = document.getElementById('reg_purpose_1'); // สสจ.
-                const cbRegion = document.getElementById('reg_purpose_2'); // สคร.
+                // Helper
                 const wrapProv = document.getElementById('wrap_supervise_province');
                 const wrapReg = document.getElementById('wrap_supervise_region');
 
@@ -171,46 +199,62 @@
                     el.classList.add('d-none');
                 }
 
-                function clearChoices(instance) {
-                    // ล้างค่าเลือก (ไม่ลบ options)
+                function clearChoices(instance, selectEl) {
+                    if (!instance) { // fallback เมื่อไม่มี Choices
+                        if (selectEl) selectEl.value = '';
+                        return;
+                    }
                     instance.removeActiveItems();
-                    instance.setChoiceByValue(''); // เผื่อมี option ว่าง
+                    instance.setChoiceByValue('');
                 }
+
+                // Checkbox elements
+                const cbService = document.querySelector('#reg_purpose_0'); // หน่วยบริการฯ (ไม่ exclusive)
+                const cbProv = document.querySelector('#reg_purpose_1'); // สสจ.
+                const cbRegion = document.querySelector('#reg_purpose_2'); // สคร.
 
                 function toggleExclusive() {
-                    // กันเลือกซ้อน
-                    if (cbProv.checked) {
-                        cbRegion.checked = false;
-                        cbRegion.disabled = true;
-                        show(wrapProv);
-                        hide(wrapReg);
-                        clearChoices(regionChoices);
-                    } else {
-                        cbRegion.disabled = false;
-                        hide(wrapProv);
-                        clearChoices(provinceChoices);
-                    }
-
-                    if (cbRegion.checked) {
-                        cbProv.checked = false;
-                        cbProv.disabled = true;
-                        show(wrapReg);
-                        hide(wrapProv);
-                        clearChoices(provinceChoices);
-                    } else {
-                        cbProv.disabled = false;
-                        if (!cbProv.checked) {
+                    // สสจ. vs สคร. exclusive กัน
+                    if (cbProv && cbRegion) {
+                        if (cbProv.checked) {
+                            cbRegion.checked = false;
+                            cbRegion.disabled = true;
+                            show(wrapProv);
                             hide(wrapReg);
-                            clearChoices(regionChoices);
+                            clearChoices(regionChoices, regionSelect);
+                        } else {
+                            cbRegion.disabled = false;
+                            // ซ่อนเลือกจังหวัดเมื่อไม่ใช้งาน
+                            hide(wrapProv);
+                            clearChoices(provinceChoices, provinceSelect);
+                        }
+
+                        if (cbRegion.checked) {
+                            cbProv.checked = false;
+                            cbProv.disabled = true;
+                            show(wrapReg);
+                            hide(wrapProv);
+                            clearChoices(provinceChoices, provinceSelect);
+                        } else {
+                            cbProv.disabled = false;
+                            if (!cbProv.checked) {
+                                hide(wrapReg);
+                                clearChoices(regionChoices, regionSelect);
+                            }
                         }
                     }
+                    // หมายเหตุ: cbService ไม่มีผลกับการโชว์ select (ตาม business rule ปัจจุบัน)
                 }
 
+                // เรียกครั้งแรก (รองรับกรณี old()/edit)
                 toggleExclusive();
+
+                // Bind change
                 [cbProv, cbRegion].forEach(el => el && el.addEventListener('change', toggleExclusive));
             });
         </script>
     @endpush
+
 
     {{-- ซ่อน/แสดง section 2 ถ้าเลือก สสจ./สคร. --}}
     @push('js')
@@ -378,37 +422,6 @@
                     @enderror
                 </div>
 
-
-                <div class="col-6 col-md-3">
-                    <label class="form-label">บ้านเลขที่</label>
-                    <input type="text" name="org_house_no" class="form-control" value="{{ old('org_house_no', $unit->org_house_no ?? '') }}">
-                </div>
-                <div class="col-6 col-md-2">
-                    <label class="form-label">หมู่ที่</label>
-                    <input type="text" name="org_moo" class="form-control" value="{{ old('org_moo', $unit->org_moo ?? '') }}">
-                </div>
-                <div class="col-12 col-md-3">
-                    <label class="form-label">ตรอก/ซอย</label>
-                    <input type="text" name="org_soi" class="form-control" value="{{ old('org_soi', $unit->org_soi ?? '') }}">
-                </div>
-                <div class="col-12 col-md-4">
-                    <label class="form-label">ถนน</label>
-                    <input type="text" name="org_road" class="form-control" value="{{ old('org_road', $unit->org_road ?? '') }}">
-                </div>
-
-                <div class="col-12 col-md-4">
-                    <label class="form-label">หมู่บ้าน/อาคาร</label>
-                    <input type="text" name="org_village" class="form-control" value="{{ old('org_village', $unit->org_village ?? '') }}">
-                </div>
-                <div class="col-6 col-md-2">
-                    <label class="form-label">ชั้น</label>
-                    <input type="text" name="org_floor" class="form-control" value="{{ old('org_floor', $unit->org_floor ?? '') }}">
-                </div>
-                <div class="col-6 col-md-2">
-                    <label class="form-label">ห้อง</label>
-                    <input type="text" name="org_room" class="form-control" value="{{ old('org_room', $unit->org_room ?? '') }}">
-                </div>
-
                 {!! thGeoSelect('org_', [
                     'province_code' => old('org_province_code', $unit->org_province_code ?? ''),
                     'district_code' => old('org_district_code', $unit->org_district_code ?? ''),
@@ -416,14 +429,13 @@
                     'postcode' => old('org_postcode', $unit->org_postcode ?? ''),
                 ]) !!}
 
-
-
-
-
                 <div class="col-12">
                     <div class="d-flex align-items-center gap-2 my-2">
                         <button type="button" id="btn-geocode" class="btn btn-outline-primary btn-sm">
                             ค้นหาพิกัดจากที่อยู่
+                        </button>
+                        <button type="button" id="btn-from-subdistrict" class="btn btn-outline-success btn-sm">
+                            ใช้พิกัดจากตำบล
                         </button>
                         <button type="button" id="btn-center-marker" class="btn btn-outline-secondary btn-sm">
                             จัดกึ่งกลางที่หมุด
@@ -616,277 +628,326 @@
                                 if (e.key.toLowerCase() === 'c') centerToMarker();
                             });
 
+                            // ดึงรหัสตำบลจาก select ของ chain-select (id ควรเป็น org_subdistrict_code)
+                            // อ้าง select ตำบลแบบปลอดภัย (id ของ geo-select เป็นไดนามิก)
+                            const subdistrictSelect =
+                                document.querySelector('select[name="org_subdistrict_code"]') ||
+                                document.querySelector('[id^="geo_"] select[id$="_subdistrict"]');
+
+                            const btnFromSub = document.getElementById('btn-from-subdistrict');
+
+                            async function moveToSubdistrictCenter() {
+                                const code = subdistrictSelect?.value;
+                                if (!code) {
+                                    alert('กรุณาเลือกตำบลก่อน');
+                                    subdistrictSelect?.focus();
+                                    return;
+                                }
+                                try {
+                                    const url = new URL('{{ route('geo.subdistrict-center') }}', window.location.origin);
+                                    url.searchParams.set('code', code);
+                                    const res = await fetch(url.toString(), {
+                                        headers: {
+                                            'Accept': 'application/json'
+                                        }
+                                    });
+                                    if (!res.ok) throw new Error(await res.text());
+                                    const data = await res.json();
+
+                                    // เลเวลซูมตอนกดปุ่ม (ปรับได้ตามชอบ)
+                                    setCoord(data.lat, data.lng, 12);
+                                } catch (e) {
+                                    console.error(e);
+                                    alert('ไม่พบพิกัดศูนย์กลางของตำบลนี้ หรือเกิดข้อผิดพลาดในการดึงข้อมูล');
+                                }
+                            }
+
+                            btnFromSub?.addEventListener('click', moveToSubdistrictCenter);
+
+
+                            // ช่วยอำนวยความสะดวก: ถ้าเปลี่ยนตำบล และยังไม่มีค่า lat/lng ในฟอร์ม ให้เลื่อนหมุดให้อัตโนมัติ
+                            // subdistrictSelect?.addEventListener('change', () => {
+                            //     const latEmpty = !latEl.value || isNaN(parseFloat(latEl.value));
+                            //     const lngEmpty = !lngEl.value || isNaN(parseFloat(lngEl.value));
+                            //     if (latEmpty || lngEmpty) moveToSubdistrictCenter();
+                            // });
+
+
                         });
                     </script>
                 @endpush
 
 
-
-
-
+                {{-- ===================== วัน-เวลาทำการ ===================== --}}
                 @php
-                    $dayOptions = [
-                        'mon' => 'จันทร์',
-                        'tue' => 'อังคาร',
-                        'wed' => 'พุธ',
-                        'thu' => 'พฤหัสบดี',
-                        'fri' => 'ศุกร์',
-                        'sat' => 'เสาร์',
-                        'sun' => 'อาทิตย์',
-                    ];
-                    $existing = old('working_hours', $unit->org_working_hours_json ?? []);
+                    // รับค่าจาก old() ถ้ามี, ไม่งั้นใช้ของ $unit
+                    $whRaw = old('working_hours_json', $unit->org_working_hours_json ?? []);
+
+                    // บังคับให้เป็นสตริง JSON เสมอ (กันเคส array จาก cast)
+                    $initWorkingHours = is_string($whRaw) ? $whRaw : json_encode($whRaw, JSON_UNESCAPED_UNICODE);
                 @endphp
 
+
                 <div class="col-12">
-                    <label class="form-label">วัน-เวลาทำการ</label>
+                    <label class="form-label fw-semibold">วัน-เวลาทำการ</label>
 
-                    {{-- รายการช่วงวัน–เวลา (จะถูกเติมด้วย JS) --}}
-                    <div id="wh-rows" class="vstack gap-2"></div>
+                    <!-- ตารางเวลาเปิด-ปิดแบบลากเมาส์ -->
+                    <div class="card mb-3">
+                        <div class="card-header d-flex align-items-center justify-content-between py-2">
+                            <h6 class="mb-0">กำหนดเวลาเปิด-ปิดของแต่ละวัน</h6>
+                            <small class="text-muted">ลากเมาส์เลือกช่วงเวลาเป็นสีเขียว (เปิดทำการ)</small>
+                        </div>
+                        <div class="card-body p-2">
 
-                    <div class="mt-2 d-flex flex-wrap gap-2">
-                        <button type="button" id="btnAddWh" class="btn btn-outline-primary btn-sm">
-                            <i class="ti ti-plus"></i> เพิ่มช่วงวัน–เวลา
-                        </button>
-                    </div>
+                            <input type="hidden" id="working_hours_json" name="working_hours_json" value="{{ $initWorkingHours }}">
 
-                    {{-- ตัวช่วยกรอกเร็ว (Batch) --}}
-                    <div class="mt-3 border border-info rounded p-3 bg-info-subtle">
-                        <div class="row g-2 align-items-end">
-                            <div class="col-12 mb-2">
-                                <h6 class="text-dark mb-0">
-                                    <i class="ti ti-bolt me-1"></i> ตัวช่วยกรอกแบบรวดเร็ว
-                                </h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm align-middle mb-0" id="working-grid">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="min-width:150px;">วัน</th>
+                                            <!-- ส่วนหัวเวลาเติมด้วย JS -->
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- แถววันเติมด้วย JS -->
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="col-md-2">
-                                <label class="form-label mb-0">เริ่ม</label>
-                                <input type="text" id="batchStart" class="form-control" placeholder="เช่น 08:30">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label mb-0">สิ้นสุด</label>
-                                <input type="text" id="batchEnd" class="form-control" placeholder="เช่น 16:30">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label mb-0">หมายเหตุ</label>
-                                <input type="text" id="batchNote" class="form-control" placeholder="ถ้ามี">
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-check mt-4">
-                                    <input class="form-check-input" type="checkbox" id="batchClosed">
-                                    <label class="form-check-label" for="batchClosed">ปิดให้บริการทั้งวัน</label>
+
+                            <div class="mt-3">
+                                <div class="alert alert-secondary py-2 small mb-2">
+                                    วิธีใช้: คลิกหรือลากเมาส์บนช่องเวลาเพื่อเลือกเปิดทำการ (สีเขียว) |
+                                    ดับเบิลคลิกเพื่อเลือก/ยกเลิกทั้งวัน |
+                                    ปุ่ม “ล้างวันนี้” จะลบเฉพาะวันนั้น
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="batchClear">
-                                    <label class="form-check-label" for="batchClear">ล้างรายการเดิมก่อนเติม</label>
-                                </div>
-                                <div class="d-grid d-md-flex gap-2 mt-2">
-                                    <button type="button" id="btnFillAllDays" class="btn btn-secondary btn-sm">เติมทุกวัน</button>
-                                    <button type="button" id="btnFillWeekdays" class="btn btn-secondary btn-sm">เติมเฉพาะจันทร์–ศุกร์</button>
-                                </div>
+                                <pre class="bg-light border rounded small p-2 mb-0" id="working-hours-preview" style="white-space:pre-wrap;"></pre>
                             </div>
                         </div>
-                        <small class="text-muted d-block mt-2">
-                            เลือกช่วงเวลา/หมายเหตุครั้งเดียวแล้วกดปุ่ม ระบบจะสร้างแถวอัตโนมัติ (ถ้าเลือก “ปิดให้บริการทั้งวัน” จะไม่ใช้เวลา)
-                        </small>
                     </div>
 
-                    <small class="text-muted d-block mt-2">
-                        เพิ่มหลายแถวได้ (วันเดียวกันได้หลายช่วง) • ใช้ช่อง “ปิดให้บริการ” สำหรับวันที่ปิดทั้งวัน
-                    </small>
-
-                    {{-- ข้อความอิสระเพิ่มเติม (ถ้าต้องการเก็บบันทึก/คำอธิบาย) --}}
-                    <div class="mt-3">
-                        <label for="org_working_hours" class="form-label">คำอธิบายเพิ่มเติม (ไม่บังคับ)</label>
-                        <textarea name="org_working_hours" id="org_working_hours" rows="2" class="form-control">{{ old('org_working_hours', $unit->org_working_hours_text ?? '') }}</textarea>
-                    </div>
+                    @error('working_hours_json')
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
                 </div>
 
-                {{-- Template แถวเดี่ยว --}}
-                <template id="wh-row-tpl">
-                    <div class="card p-2 border rounded wh-row">
-                        <div class="row g-2 align-items-end">
-                            <div class="col-md-3">
-                                <label class="form-label mb-0">วัน</label>
-                                <select class="form-select wh-day" name="">
-                                    @foreach ($dayOptions as $k => $v)
-                                        <option value="{{ $k }}">{{ $v }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label mb-0">เริ่ม</label>
-                                {{-- เปลี่ยนเป็น text เพื่อใช้ Flatpickr --}}
-                                <input type="text" class="form-control wh-start" name="">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label mb-0">สิ้นสุด</label>
-                                <input type="text" class="form-control wh-end" name="">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label mb-0">หมายเหตุ</label>
-                                <input type="text" class="form-control wh-note" name="" placeholder="ถ้ามี">
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-check mt-4">
-                                    <input class="form-check-input wh-closed" type="checkbox" name="">
-                                    <label class="form-check-label">ปิดให้บริการ</label>
-                                </div>
-                            </div>
+                @push('css')
+                    <style>
+                        .slot.selected {
+                            background: var(--bs-success-bg-subtle);
+                            outline: 2px solid rgba(var(--bs-success-rgb), .5);
+                        }
 
-                            <div class="col-12 d-flex justify-content-end">
-                                <button type="button" class="btn btn-outline-danger btn-sm wh-remove">
-                                    <i class="ti ti-x"></i> ลบช่วงนี้
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </template>
+                        .slot {
+                            user-select: none;
+                            cursor: crosshair;
+                            min-width: 72px;
+                            text-align: center;
+                            font-variant-numeric: tabular-nums;
+                        }
+
+                        #working-grid tbody th.dayname {
+                            position: sticky;
+                            left: 0;
+                            background: var(--bs-body-bg);
+                            z-index: 1;
+                            width: 150px;
+                        }
+
+                        #working-grid thead th {
+                            position: sticky;
+                            top: 0;
+                            z-index: 2;
+                        }
+                    </style>
+                @endpush
 
                 @push('js')
                     <script>
-                        (function() {
-                            const container = document.getElementById('wh-rows');
-                            const tpl = document.getElementById('wh-row-tpl').content;
-                            const addBtn = document.getElementById('btnAddWh');
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const startHour = 7,
+                                endHour = 22;
+                            const hours = Array.from({
+                                length: endHour - startHour + 1
+                            }, (_, i) => startHour + i);
+                            const days = [{
+                                    key: 'mon',
+                                    label: 'จันทร์'
+                                },
+                                {
+                                    key: 'tue',
+                                    label: 'อังคาร'
+                                },
+                                {
+                                    key: 'wed',
+                                    label: 'พุธ'
+                                },
+                                {
+                                    key: 'thu',
+                                    label: 'พฤหัสบดี'
+                                },
+                                {
+                                    key: 'fri',
+                                    label: 'ศุกร์'
+                                },
+                                {
+                                    key: 'sat',
+                                    label: 'เสาร์'
+                                },
+                                {
+                                    key: 'sun',
+                                    label: 'อาทิตย์'
+                                },
+                            ];
 
-                            // Batch controls
-                            const batchStart = document.getElementById('batchStart');
-                            const batchEnd = document.getElementById('batchEnd');
-                            const batchNote = document.getElementById('batchNote');
-                            const batchClosed = document.getElementById('batchClosed');
-                            const batchClear = document.getElementById('batchClear');
-                            const btnFillAll = document.getElementById('btnFillAllDays');
-                            const btnFillWeek = document.getElementById('btnFillWeekdays');
+                            const schedule = Object.fromEntries(days.map(d => [d.key, new Set()]));
+                            const table = document.getElementById('working-grid');
+                            const theadRow = table.querySelector('thead tr');
+                            const tbody = table.querySelector('tbody');
 
-                            const DAYS_ALL = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-                            const DAYS_WEEK = ['mon', 'tue', 'wed', 'thu', 'fri'];
+                            // ===== สร้างหัวคอลัมน์เวลา =====
+                            for (const h of hours) {
+                                const th = document.createElement('th');
+                                th.className = 'text-center';
+                                th.textContent = h.toString().padStart(2, '0') + ':00';
+                                theadRow.appendChild(th);
+                            }
 
-                            let idx = 0;
+                            let dragging = false,
+                                dragMode = 'select',
+                                dragDayKey = null;
 
-                            // ===== ตัวเลือก timepicker กลาง (24 ชม.) =====
-                            const timeOpts = {
-                                enableTime: true,
-                                noCalendar: true,
-                                dateFormat: 'H:i', // แสดง/ส่งค่าเป็น HH:mm
-                                time_24hr: true,
-                                minuteIncrement: 5,
-                                allowInput: true,
-                                disableMobile: true
+                            const makeSlot = (dayKey, hour) => {
+                                const td = document.createElement('td');
+                                td.className = 'slot';
+                                td.dataset.day = dayKey;
+                                td.dataset.hour = String(hour);
+
+                                const updateVisual = () => td.classList.toggle('selected', schedule[dayKey].has(hour));
+                                updateVisual();
+
+                                td.addEventListener('mousedown', e => {
+                                    e.preventDefault();
+                                    dragging = true;
+                                    dragDayKey = dayKey;
+                                    const selected = schedule[dayKey].has(hour);
+                                    dragMode = selected ? 'unselect' : 'select';
+                                    if (dragMode === 'select') schedule[dayKey].add(hour);
+                                    else schedule[dayKey].delete(hour);
+                                    updateVisual();
+                                    updateOutputs();
+                                });
+
+                                td.addEventListener('mouseenter', () => {
+                                    if (!dragging || dragDayKey !== dayKey) return;
+                                    if (dragMode === 'select') schedule[dayKey].add(hour);
+                                    else schedule[dayKey].delete(hour);
+                                    updateVisual();
+                                });
+
+                                document.addEventListener('mouseup', () => {
+                                    if (dragging) {
+                                        dragging = false;
+                                        dragDayKey = null;
+                                        updateOutputs();
+                                    }
+                                });
+
+                                td.addEventListener('dblclick', () => {
+                                    const allOn = schedule[dayKey].size === hours.length;
+                                    schedule[dayKey].clear();
+                                    if (!allOn) hours.forEach(h => schedule[dayKey].add(h));
+                                    rowUpdateVisual(dayKey);
+                                    updateOutputs();
+                                });
+
+                                return td;
                             };
 
-                            // ผูก timepicker กับ Batch
-                            flatpickr(batchStart, timeOpts);
-                            flatpickr(batchEnd, timeOpts);
-
-                            // ฟังก์ชันผูก timepicker กับแถวใหม่
-                            window.initWhTimePickers = function(rowEl) {
-                                flatpickr(rowEl.querySelector('.wh-start'), timeOpts);
-                                flatpickr(rowEl.querySelector('.wh-end'), timeOpts);
-                            };
-
-                            function addRow(rowData = null) {
-                                const node = document.importNode(tpl, true);
-                                const row = node.querySelector('.wh-row');
-
-                                const day = row.querySelector('.wh-day');
-                                const start = row.querySelector('.wh-start');
-                                const end = row.querySelector('.wh-end');
-                                const note = row.querySelector('.wh-note');
-                                const closed = row.querySelector('.wh-closed');
-
-                                day.name = `working_hours[${idx}][day]`;
-                                start.name = `working_hours[${idx}][start]`;
-                                end.name = `working_hours[${idx}][end]`;
-                                note.name = `working_hours[${idx}][note]`;
-                                closed.name = `working_hours[${idx}][closed]`;
-
-                                if (rowData) {
-                                    if (rowData.day) day.value = rowData.day;
-                                    if (rowData.start) start.value = rowData.start; // ควรเป็นรูปแบบ HH:mm
-                                    if (rowData.end) end.value = rowData.end;
-                                    if (rowData.note) note.value = rowData.note;
-                                    if (rowData.closed) {
-                                        closed.checked = true;
-                                    }
-                                }
-
-                                // แปะลง DOM ก่อน แล้วค่อยผูก Flatpickr
-                                container.appendChild(row);
-                                window.initWhTimePickers(row);
-
-                                // ถ้า closed ให้ disable และเคลียร์ด้วย
-                                toggleClosed(row, closed.checked);
-
-                                closed.addEventListener('change', (e) => toggleClosed(row, e.target.checked));
-                                row.querySelector('.wh-remove').addEventListener('click', () => row.remove());
-
-                                idx++;
+                            for (const d of days) {
+                                const tr = document.createElement('tr');
+                                const th = document.createElement('th');
+                                th.className = 'dayname';
+                                th.innerHTML = `<div class="d-flex justify-content-between align-items-center">
+      <span>${d.label}</span>
+      <button type="button" class="btn btn-outline-danger btn-xs py-0 px-1" data-clear-day="${d.key}">ล้างวันนี้</button>
+    </div>`;
+                                tr.appendChild(th);
+                                for (const h of hours) tr.appendChild(makeSlot(d.key, h));
+                                tbody.appendChild(tr);
                             }
 
-                            function toggleClosed(row, isClosed) {
-                                const start = row.querySelector('.wh-start');
-                                const end = row.querySelector('.wh-end');
+                            tbody.addEventListener('click', e => {
+                                const btn = e.target.closest('button[data-clear-day]');
+                                if (!btn) return;
+                                const key = btn.dataset.clearDay;
+                                schedule[key].clear();
+                                rowUpdateVisual(key);
+                                updateOutputs();
+                            });
 
-                                start.disabled = end.disabled = isClosed;
-
-                                // เคลียร์ค่าทั้ง input และอินสแตนซ์ flatpickr ถ้ามี
-                                const fps = start._flatpickr;
-                                const fpe = end._flatpickr;
-                                if (isClosed) {
-                                    if (fps) fps.clear();
-                                    else start.value = '';
-                                    if (fpe) fpe.clear();
-                                    else end.value = '';
-                                }
-                            }
-
-                            addBtn.addEventListener('click', () => addRow());
-
-                            // โหลดข้อมูลเดิมจาก PHP
-                            const existing = @json($existing);
-                            if (Array.isArray(existing) && existing.length) {
-                                existing.forEach(r => addRow(r));
-                            } else {
-                                addRow();
-                            }
-
-                            // ===== Batch Fill =====
-                            function fillDays(days) {
-                                const isClosed = batchClosed.checked;
-                                const startVal = batchStart.value || '';
-                                const endVal = batchEnd.value || '';
-                                const noteVal = batchNote.value || '';
-
-                                if (!isClosed) {
-                                    // เทียบรูปแบบ HH:mm ได้ตรง ๆ
-                                    if (!startVal || !endVal || endVal <= startVal) {
-                                        alert('กรุณาใส่เวลาเริ่ม/สิ้นสุดให้ถูกต้อง (สิ้นสุดต้องมากกว่าเริ่ม)');
-                                        return;
-                                    }
-                                }
-
-                                if (batchClear && batchClear.checked) {
-                                    container.innerHTML = '';
-                                    idx = 0;
-                                }
-
-                                days.forEach(d => {
-                                    addRow({
-                                        day: d,
-                                        closed: isClosed,
-                                        start: isClosed ? null : startVal,
-                                        end: isClosed ? null : endVal,
-                                        note: noteVal || null
-                                    });
+                            function rowUpdateVisual(dayKey) {
+                                tbody.querySelectorAll(`td.slot[data-day="${dayKey}"]`).forEach(td => {
+                                    const h = parseInt(td.dataset.hour);
+                                    td.classList.toggle('selected', schedule[dayKey].has(h));
                                 });
                             }
 
-                            btnFillAll?.addEventListener('click', () => fillDays(DAYS_ALL));
-                            btnFillWeek?.addEventListener('click', () => fillDays(DAYS_WEEK));
-                        })();
+                            function compressRanges(setHours) {
+                                if (!setHours.size) return [];
+                                const list = Array.from(setHours).sort((a, b) => a - b);
+                                const ranges = [];
+                                let s = list[0],
+                                    p = list[0];
+                                for (let i = 1; i < list.length; i++) {
+                                    const c = list[i];
+                                    if (c === p + 1) {
+                                        p = c;
+                                        continue;
+                                    }
+                                    ranges.push([s, p + 1]);
+                                    s = p = c;
+                                }
+                                ranges.push([s, p + 1]);
+                                return ranges.map(([a, b]) => `${a.toString().padStart(2,'0')}:00-${b.toString().padStart(2,'0')}:00`);
+                            }
+
+                            function updateOutputs() {
+                                const obj = {};
+                                for (const d of days) obj[d.key] = compressRanges(schedule[d.key]);
+                                document.getElementById('working_hours_json').value = JSON.stringify(obj);
+                                renderPreview(obj);
+                            }
+
+                            function renderPreview(obj) {
+                                const map = Object.fromEntries(days.map(d => [d.key, d.label]));
+                                const lines = Object.keys(obj).map(k => `${map[k]} : ${obj[k].length?obj[k].join(', '):'— ปิดทำการ —'}`);
+                                document.getElementById('working-hours-preview').textContent = lines.join('\n');
+                            }
+
+                            // ===== ค่าเริ่มต้นจากฐานข้อมูล (ถ้ามี) =====
+                            try {
+                                const init = JSON.parse(document.getElementById('working_hours_json').value || '{}');
+                                for (const d of days) {
+                                    const ranges = init?.[d.key] ?? [];
+                                    schedule[d.key].clear();
+                                    for (const r of ranges) {
+                                        const [a, b] = r.split('-');
+                                        const ah = parseInt(a);
+                                        const bh = parseInt(b);
+                                        for (let h = ah; h < bh; h++) schedule[d.key].add(h);
+                                    }
+                                    rowUpdateVisual(d.key);
+                                }
+                            } catch (e) {
+                                console.warn('init hours parse error', e);
+                            }
+
+                            updateOutputs();
+                        });
                     </script>
                 @endpush
+
 
             </div>
             <hr class="my-4">
@@ -1155,7 +1216,7 @@
                     $allRoles = Spatie\Permission\Models\Role::query()
                         ->whereRaw('LOWER(name) not like ?', ['%admin%'])
                         ->where('guard_name', 'web')
-                        ->orderBy('name')
+                        ->orderBy('ordering', 'asc')
                         ->get(['id', 'name']);
                     $currentRole = isset($user) ? optional($user->getRoleNames()->first()) : null;
                 @endphp

@@ -22,6 +22,13 @@
     </li>
 @endcan
 
+<li class="pc-item">
+    <a href="{{ route('backend.service-unit.edit') }}" class="pc-link">
+        <span class="pc-micon"><i class="ph-duotone ph-hospital"></i></span>
+        <span class="pc-mtext">ข้อมูลหน่วยบริการ</span>
+    </a>
+</li>
+
 @can('assessment.view')
     <li class="pc-item">
         <a href="{{ route('backend.self-assessment-service-unit-level.index') }}" class="pc-link">
@@ -94,15 +101,17 @@
 
 
 {{-- เมนูตรวจสอบใบสมัคร --}}
-<li class="pc-item">
-    <a class="pc-link" href="{{ route('backend.application-review.index') }}">
-        <span class="pc-micon"><i class="ph-duotone ph-identification-card"></i></span>
-        <span class="pc-mtext" data-i18n="ตรวจสอบใบสมัคร">ตรวจสอบใบสมัคร</span>
-        @if (!empty($pendingApplicationCount) && $pendingApplicationCount > 0)
-            <span class="pc-badge">{{ $pendingApplicationCount }}</span>
-        @endif
-    </a>
-</li>
+@can('approve-application.view')
+    <li class="pc-item">
+        <a class="pc-link" href="{{ route('backend.application-review.index') }}">
+            <span class="pc-micon"><i class="ph-duotone ph-identification-card"></i></span>
+            <span class="pc-mtext" data-i18n="ตรวจสอบใบสมัคร">ตรวจสอบใบสมัคร</span>
+            @if (!empty($pendingApplicationCount) && $pendingApplicationCount > 0)
+                <span class="pc-badge">{{ $pendingApplicationCount }}</span>
+            @endif
+        </a>
+    </li>
+@endcan
 
 @can('users.view')
     {{-- เมนูผู้ใช้งาน --}}

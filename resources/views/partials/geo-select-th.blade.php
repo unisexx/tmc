@@ -1,3 +1,4 @@
+{{-- resources\views\partials\geo-select-th.blade.php --}}
 @php
     $provName = $namePrefix . 'province_code';
     $distName = $namePrefix . 'district_code';

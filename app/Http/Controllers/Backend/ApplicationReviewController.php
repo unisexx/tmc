@@ -62,15 +62,19 @@ class ApplicationReviewController extends Controller
     {
         [$data, $pwdPlain] = $this->validatedPayload($request, null);
 
-        // ตัด org_* ออกจาก payload ผู้ใช้
+        // ค่าองค์กร
         $org = $this->extractOrgData($request);
         unset(
             $data['org_name'], $data['org_affiliation'], $data['org_affiliation_other'],
             $data['org_address'], $data['org_tel'], $data['org_lat'], $data['org_lng'],
-            $data['org_working_hours'], $data['org_working_hours_json']
+            $data['org_working_hours'], $data['org_working_hours_json'],
+            $data['org_province_code'], $data['org_district_code'],
+            $data['org_subdistrict_code'], $data['org_postcode']
         );
 
-        DB::transaction(function () use ($data, $pwdPlain, $request, $org) {
+        $isServiceUnit = in_array('หน่วยบริการสุขภาพผู้เดินทาง', (array) $request->input('reg_purpose', []), true);
+
+        DB::transaction(function () use ($data, $pwdPlain, $request, $org, $isServiceUnit) {
             // ผู้ใช้
             $user = User::create($data);
 
@@ -81,9 +85,11 @@ class ApplicationReviewController extends Controller
                 }
             }
 
-            // หน่วยบริการ + pivot
-            $unit = $this->upsertServiceUnit($org);
-            $this->attachUnitToUser($user, $unit, 'manager');
+            // หน่วยบริการ + pivot เฉพาะเมื่อเป็น "หน่วยบริการ"
+            if ($isServiceUnit) {
+                $unit = $this->upsertServiceUnit($org);
+                $this->attachUnitToUser($user, $unit, 'manager');
+            }
 
             // แจ้งรหัสผ่าน
             $this->notifyCredentials($user->email, $user->username, $pwdPlain);
@@ -114,10 +120,14 @@ class ApplicationReviewController extends Controller
         unset(
             $data['org_name'], $data['org_affiliation'], $data['org_affiliation_other'],
             $data['org_address'], $data['org_tel'], $data['org_lat'], $data['org_lng'],
-            $data['org_working_hours'], $data['org_working_hours_json']
+            $data['org_working_hours'], $data['org_working_hours_json'],
+            $data['org_province_code'], $data['org_district_code'],
+            $data['org_subdistrict_code'], $data['org_postcode']
         );
 
-        DB::transaction(function () use ($request, $user, $data, $org) {
+        $isServiceUnit = in_array('หน่วยบริการสุขภาพผู้เดินทาง', (array) $request->input('reg_purpose', []), true);
+
+        DB::transaction(function () use ($request, $user, $data, $org, $isServiceUnit) {
             // ผู้ใช้
             $user->update($data);
 
@@ -130,9 +140,11 @@ class ApplicationReviewController extends Controller
                 $user->syncRoles([]);
             }
 
-            // หน่วยบริการ + pivot
-            $unit = $this->upsertServiceUnit($org);
-            $this->attachUnitToUser($user, $unit, 'manager');
+            // หน่วยบริการ + pivot เฉพาะเมื่อเป็น "หน่วยบริการ"
+            if ($isServiceUnit) {
+                $unit = $this->upsertServiceUnit($org);
+                $this->attachUnitToUser($user, $unit, 'manager');
+            }
         });
 
         flash_notify('อัปเดตข้อมูลผู้ใช้งานเรียบร้อย', 'success');
@@ -176,46 +188,62 @@ class ApplicationReviewController extends Controller
             'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ',
         ];
 
-        // ==== Validate หลัก ====
+        // === flag: ต้องกรอกส่วนหน่วยบริการหรือไม่ ===
+        $isServiceUnit = in_array(
+            'หน่วยบริการสุขภาพผู้เดินทาง',
+            (array) $request->input('reg_purpose', []),
+            true
+        );
+
+        // ===== Validate หลัก =====
         $rules = [
             // 1) วัตถุประสงค์
             'reg_purpose'                 => ['required', 'array', 'max:3'],
             'reg_purpose.*'               => ['string', Rule::in($purposeWhitelist)],
 
-            // required เงื่อนไข
+            // เงื่อนไขตามบทบาทกำกับดูแล
             'reg_supervise_province_code' => [
                 'nullable', 'string', 'max:10',
                 Rule::requiredIf(function () use ($request) {
-                    return in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
-                        (array) $request->input('reg_purpose', []), true);
+                    return in_array(
+                        'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
+                        (array) $request->input('reg_purpose', []),
+                        true
+                    );
                 }),
             ],
             'reg_supervise_region_id'     => [
                 'nullable', 'integer',
                 Rule::requiredIf(function () use ($request) {
-                    return in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
-                        (array) $request->input('reg_purpose', []), true);
+                    return in_array(
+                        'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
+                        (array) $request->input('reg_purpose', []),
+                        true
+                    );
                 }),
             ],
 
-            // 2) หน่วยบริการ/หน่วยงาน
-            'org_name'                    => ['required', 'string', 'max:255'],
-            'org_affiliation'             => ['required', 'string', Rule::in($affWhitelist)],
-            'org_affiliation_other'       => ['nullable', 'string', 'max:255',
-                Rule::requiredIf(fn() => $request->input('org_affiliation') === 'อื่น ๆ')],
-            'org_tel'                     => ['required', 'string', 'max:60'],
-            'org_address'                 => ['required', 'string', 'max:1000'],
+            // 2) หน่วยบริการ/หน่วยงาน — required เฉพาะเมื่อ $isServiceUnit = true
+            'org_name'                    => [$isServiceUnit ? 'required' : 'nullable', 'string', 'max:255'],
+            'org_affiliation'             => [$isServiceUnit ? 'required' : 'nullable', 'string', Rule::in($affWhitelist)],
+            'org_affiliation_other'       => [
+                'nullable', 'string', 'max:255',
+                Rule::requiredIf(fn() => $isServiceUnit && $request->input('org_affiliation') === 'อื่น ๆ'),
+            ],
+            'org_tel'                     => [$isServiceUnit ? 'required' : 'nullable', 'string', 'max:60'],
+            'org_address'                 => [$isServiceUnit ? 'required' : 'nullable', 'string', 'max:1000'],
             'org_lat'                     => ['nullable', 'numeric', 'between:-90,90'],
             'org_lng'                     => ['nullable', 'numeric', 'between:-180,180'],
 
-            // เวลาทำการ
+            // รหัสพื้นที่ — required เฉพาะเมื่อเป็นหน่วยบริการ
+            'org_province_code'           => [$isServiceUnit ? 'required' : 'nullable', 'string', 'size:2', Rule::exists('province', 'code')],
+            'org_district_code'           => [$isServiceUnit ? 'required' : 'nullable', 'string', 'size:4', Rule::exists('district', 'code')],
+            'org_subdistrict_code'        => [$isServiceUnit ? 'required' : 'nullable', 'string', 'size:6', Rule::exists('subdistrict', 'code')],
+            'org_postcode'                => [$isServiceUnit ? 'required' : 'nullable', 'string', 'size:5'],
+
+            // เวลาทำการ (กริดลากเลือก) — required เฉพาะเมื่อเป็นหน่วยบริการ
             'org_working_hours'           => ['nullable', 'string', 'max:1000'],
-            'working_hours'               => ['nullable', 'array'],
-            'working_hours.*.day'         => ['required_with:working_hours', 'in:mon,tue,wed,thu,fri,sat,sun'],
-            'working_hours.*.start'       => ['nullable', 'date_format:H:i'],
-            'working_hours.*.end'         => ['nullable', 'date_format:H:i', 'after:working_hours.*.start'],
-            'working_hours.*.note'        => ['nullable', 'string', 'max:255'],
-            'working_hours.*.closed'      => ['nullable'],
+            'working_hours_json'          => [$isServiceUnit ? 'required' : 'nullable', 'string'],
 
             // 3) ผู้ลงทะเบียน
             'contact_cid'                 => ['required', 'regex:/^\d{13}$/', Rule::unique('users', 'contact_cid')->ignore($current?->id)],
@@ -223,41 +251,27 @@ class ApplicationReviewController extends Controller
             'contact_position'            => ['required', 'string', 'max:255'],
             'contact_mobile'              => ['required', 'string', 'max:60'],
             'email'                       => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($current?->id)],
-            'officer_doc'                 => [
-                $current ? 'sometimes' : 'required',
-                'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120',
-            ],
+            'officer_doc'                 => [$current ? 'sometimes' : 'required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'remove_officer_doc'          => ['nullable', 'boolean'],
 
             // 4) บัญชีผู้ใช้
             'username'                    => ['required', 'string', 'max:60', Rule::unique('users', 'username')->ignore($current?->id)],
-            'password'                    => [
-                $current ? 'nullable' : 'required',
-                'string', 'min:8', 'confirmed',
-            ],
-            'password_confirmation'       => [
-                $current ? 'nullable' : 'required',
-                'same:password', 'required_with:password',
-            ],
+            'password'                    => [$current ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
+            'password_confirmation'       => [$current ? 'nullable' : 'required', 'same:password', 'required_with:password'],
 
             // 5) PDPA
             'pdpa_accept'                 => ['accepted', 'boolean'],
 
-            // 6) ตรวจสอบ/อนุมัติ (เฉพาะ Admin ที่มีสิทธิ์)
+            // 6) ตรวจสอบ/อนุมัติ
             'reg_status'                  => ['nullable', 'in:รอตรวจสอบ,อนุมัติ,ไม่อนุมัติ'],
-            'reg_review_note'             => ['nullable', 'string', 'max:1000', Rule::requiredIf(fn() => $request->input('reg_status') === 'ไม่อนุมัติ'),
-            ],
+            'reg_review_note'             => ['nullable', 'string', 'max:1000',
+                Rule::requiredIf(fn() => $request->input('reg_status') === 'ไม่อนุมัติ')],
             'officer_doc_verified'        => ['nullable', 'in:0,1'],
-            'role_id'                     => [
-                'nullable',
-                'integer',
+            'role_id'                     => ['nullable', 'integer',
                 Rule::exists('roles', 'id')->where('guard_name', 'web'),
-                Rule::requiredIf(fn() => $request->input('reg_status') === 'อนุมัติ'),
-            ],
-
+                Rule::requiredIf(fn() => $request->input('reg_status') === 'อนุมัติ')],
         ];
 
-        // ==== Messages ====
         $messages = [
             'required'                            => 'กรุณากรอก :attribute',
             'required_with'                       => 'กรุณากรอก :attribute ให้ครบถ้วน',
@@ -269,19 +283,14 @@ class ApplicationReviewController extends Controller
             'integer'                             => ':attribute ต้องเป็นตัวเลขจำนวนเต็ม',
             'numeric'                             => ':attribute ต้องเป็นตัวเลข',
             'between'                             => ':attribute ต้องอยู่ระหว่าง :min ถึง :max',
-            'date_format'                         => ':attribute ต้องอยู่ในรูปแบบเวลา HH:MM',
-            'after'                               => ':attribute ต้องมากกว่าเวลาเริ่ม',
             'mimes'                               => ':attribute ต้องเป็นไฟล์ประเภท: :values',
             'max.file'                            => 'ขนาดไฟล์ :attribute ต้องไม่เกิน :max กิโลไบต์',
 
             'reg_purpose.required'                => 'กรุณาเลือก "ในฐานะ" อย่างน้อย 1 ตัวเลือก',
             'reg_purpose.*.in'                    => 'ตัวเลือกใน "ในฐานะ" ไม่ถูกต้อง',
 
-            'working_hours.*.day.required_with'   => 'กรุณาเลือกวันในช่วงวัน-เวลาทำการ',
-            'working_hours.*.day.in'              => 'ค่าวันในช่วงวัน-เวลาทำการไม่ถูกต้อง',
-            'working_hours.*.start.date_format'   => 'เวลาเริ่มต้องอยู่ในรูปแบบ HH:MM',
-            'working_hours.*.end.date_format'     => 'เวลาสิ้นสุดต้องอยู่ในรูปแบบ HH:MM',
-            'working_hours.*.end.after'           => 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม',
+            'working_hours_json.required'         => 'กรุณากำหนดวัน-เวลาทำการ',
+            'working_hours_json.string'           => 'รูปแบบข้อมูลวัน-เวลาทำการไม่ถูกต้อง',
 
             'contact_cid.required'                => 'กรุณากรอกเลขบัตรประชาชน',
             'contact_cid.regex'                   => 'เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก',
@@ -298,11 +307,9 @@ class ApplicationReviewController extends Controller
             'password_confirmation.same'          => 'ยืนยันรหัสผ่านไม่ตรงกับรหัสผ่าน',
 
             'pdpa_accept.accepted'                => 'กรุณายอมรับประกาศความเป็นส่วนตัว (PDPA)',
-
             'role_id.required'                    => 'กรุณาเลือก :attribute',
         ];
 
-        // ==== Attributes ====
         $attributes = [
             'reg_purpose'                          => 'ในฐานะ',
             'reg_purpose.*'                        => 'ในฐานะ',
@@ -320,16 +327,15 @@ class ApplicationReviewController extends Controller
             'org_affiliation_other'                => 'โปรดระบุสังกัด',
             'org_address'                          => 'ที่อยู่หน่วยงาน',
             'org_tel'                              => 'หมายเลขโทรศัพท์',
-
             'org_lat'                              => 'Latitude',
             'org_lng'                              => 'Longitude',
+            'org_province_code'                    => 'จังหวัด',
+            'org_district_code'                    => 'อำเภอ',
+            'org_subdistrict_code'                 => 'ตำบล',
+            'org_postcode'                         => 'รหัสไปรษณีย์',
 
             'org_working_hours'                    => 'คำอธิบายเวลาทำการ',
-            'working_hours'                        => 'วัน-เวลาทำการ',
-            'working_hours.*.day'                  => 'วัน',
-            'working_hours.*.start'                => 'เวลาเริ่ม',
-            'working_hours.*.end'                  => 'เวลาสิ้นสุด',
-            'working_hours.*.note'                 => 'หมายเหตุ',
+            'working_hours_json'                   => 'วัน-เวลาทำการ',
 
             'contact_cid'                          => 'เลขบัตรประจำตัวประชาชน',
             'contact_name'                         => 'ชื่อ-สกุลผู้ลงทะเบียน',
@@ -341,22 +347,26 @@ class ApplicationReviewController extends Controller
 
             'password'                             => 'รหัสผ่าน',
             'password_confirmation'                => 'ยืนยันรหัสผ่าน',
-
             'pdpa_accept'                          => 'การยอมรับ PDPA',
-
             'reg_review_note'                      => 'หมายเหตุ/เหตุผลการพิจารณา กรณีที่ "ไม่อนุมัติ"',
-
             'role_id'                              => 'สิทธิ์การใช้งาน',
         ];
 
-        // ใช้ Validator เพื่อ custom เช็กซัม CID
         $validator = Validator::make($request->all(), $rules, $messages, $attributes);
 
-        $validator->after(function ($v) use ($request) {
-            // เก็บเฉพาะตัวเลข + ตรวจเช็กซัม
+        $validator->after(function ($v) use ($request, $isServiceUnit) {
+            // เช็กซัมบัตรประชาชน
             $cid = preg_replace('/\D/', '', (string) $request->input('contact_cid'));
             if ($cid && !$this->isValidThaiCitizenId($cid)) {
                 $v->errors()->add('contact_cid', 'เลขบัตรประชาชนไม่ถูกต้อง (เช็กซัมไม่ผ่าน)');
+            }
+
+            // ตรวจ JSON เวลาทำการ เฉพาะเคสหน่วยบริการ
+            if ($isServiceUnit) {
+                [$ok, $err] = $this->validateWorkingGridJson($request->input('working_hours_json'));
+                if (!$ok) {
+                    $v->errors()->add('working_hours_json', $err ?: 'ข้อมูลวัน-เวลาทำการไม่ถูกต้อง');
+                }
             }
         });
 
@@ -365,14 +375,12 @@ class ApplicationReviewController extends Controller
         // ปรับ contact_cid ให้เหลือตัวเลขก่อนบันทึก
         $data['contact_cid'] = preg_replace('/\D/', '', (string) ($data['contact_cid'] ?? ''));
 
-        // ==== Username/Password ====
+        // ===== Username/Password =====
         $passwordPlain = null;
         if (!$current) {
-            // create: ต้องมี password (required + confirmed)
             $passwordPlain    = $data['password'];
             $data['password'] = Hash::make($data['password']);
         } else {
-            // update: ใส่ค่อยเปลี่ยน
             if (!empty($data['password'])) {
                 $passwordPlain    = $data['password'];
                 $data['password'] = Hash::make($data['password']);
@@ -381,28 +389,39 @@ class ApplicationReviewController extends Controller
             }
         }
 
-        // ==== Normalize reg_purpose ====
-        if (!isset($data['reg_purpose'])) {
-            $data['reg_purpose'] = [];
-        }
+        // ===== Normalize reg_purpose + ฟิลด์กำกับดูแล =====
+        // ค่าที่ผู้ใช้ติ๊กมาจากฟอร์ม (เป็น array ของข้อความ)
+        $selectedPurposes = (array) $request->input('reg_purpose', []);
 
-        $cbProvince = in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)', $data['reg_purpose'] ?? [], true);
-        $cbRegion   = in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)', $data['reg_purpose'] ?? [], true);
+        // flag สำหรับการ validate/เคลียร์ฟิลด์กำกับดูแล
+        $cbProvince = in_array(
+            'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
+            $selectedPurposes,
+            true
+        );
+        $cbRegion = in_array(
+            'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
+            $selectedPurposes,
+            true
+        );
 
+        // แปลงไปเป็นรหัสแล้วบันทึกลง data (สตริง เช่น "T,P")
+        $data['reg_purpose'] = $this->mapPurposeToCodes($selectedPurposes);
+
+        // จัดการค่า field กำกับดูแลตาม flag จากตัวเลือกดิบ
         if ($cbProvince && !$cbRegion) {
             $data['reg_supervise_region_id'] = null;
         } elseif ($cbRegion && !$cbProvince) {
             $data['reg_supervise_province_code'] = null;
-        }
-        if (!$cbProvince && !$cbRegion) {
+        } elseif (!$cbProvince && !$cbRegion) {
             $data['reg_supervise_province_code'] = null;
             $data['reg_supervise_region_id']     = null;
         }
 
-        // ==== เวลาทำการโครงสร้าง ====
-        $data['org_working_hours_json'] = $this->normalizeWorkingHours($request->input('working_hours', []));
+        // เวลาทำการ: แปลง JSON เฉพาะเมื่อส่งมา (หรือเป็นหน่วยบริการ)
+        $data['org_working_hours_json'] = $this->parseWorkingGridJson($request->input('working_hours_json'));
 
-        // ==== อัปโหลดไฟล์เอกสารเจ้าหน้าที่ ====
+        // อัปโหลดไฟล์เอกสารเจ้าหน้าที่
         if ($request->boolean('remove_officer_doc') && $current) {
             if ($current->officer_doc_path && Storage::disk('public')->exists($current->officer_doc_path)) {
                 Storage::disk('public')->delete($current->officer_doc_path);
@@ -418,114 +437,111 @@ class ApplicationReviewController extends Controller
             $data['officer_doc_verified_by'] = null;
         }
 
-        // ==== PDPA ====
+        // PDPA
         if ($request->boolean('pdpa_accept')) {
             $data['pdpa_accepted_at'] = Carbon::now();
             $data['pdpa_version']     = $data['pdpa_version'] ?? 'v1.0';
         }
 
-        // ===== ส่วน Admin: ตรวจสอบเอกสารเจ้าหน้าที่ =====
+        // ตรวจเอกสารเจ้าหน้าที่ (verify)
         if ($request->filled('officer_doc_verified')) {
             if ($request->input('officer_doc_verified') === '1') {
                 $data['officer_doc_verified_at'] = Carbon::now();
                 $data['officer_doc_verified_by'] = $request->user()?->id;
             } else {
-                // เลือก "ยังไม่ตรวจสอบ" -> เคลียร์ค่า
                 $data['officer_doc_verified_at'] = null;
                 $data['officer_doc_verified_by'] = null;
             }
         }
 
-        // ===== ส่วน Admin: อนุมัติ/ไม่อนุมัติ =====
+        // อนุมัติ/ไม่อนุมัติ
         if ($request->filled('reg_status')) {
             $data['reg_status'] = $request->input('reg_status');
 
             if ($data['reg_status'] === 'อนุมัติ') {
-                // (ถ้ามี business rule ตรวจไฟล์/verify เอกสาร คงไว้ตามเดิม)
                 $data['approved_at'] = Carbon::now();
                 $data['approved_by'] = $request->user()?->id;
-
-                // ✅ อนุมัติ -> เปิดใช้งาน
-                $data['is_active'] = 1;
+                $data['is_active']   = 1;
             } else {
-                // pending / rejected
                 $data['approved_at'] = null;
                 $data['approved_by'] = null;
-
-                // ✅ อื่น ๆ -> ปิดใช้งาน
-                $data['is_active'] = 0;
+                $data['is_active']   = 0;
             }
         }
 
-        // ===== ค่าตั้งต้น is_active กรณีไม่ได้ส่ง reg_status มา =====
         if (!array_key_exists('is_active', $data)) {
-            $effectiveStatus   = $data['reg_status'] ?? ($current->reg_status ?? 'pending');
-            $data['is_active'] = $effectiveStatus === 'approved' ? 1 : 0;
+            $effectiveStatus   = $data['reg_status'] ?? ($current->reg_status ?? 'รอตรวจสอบ');
+            $data['is_active'] = $effectiveStatus === 'อนุมัติ' ? 1 : 0;
         }
 
-        // เก็บหมายเหตุพิจารณา (ถ้ามี)
         if ($request->filled('reg_review_note')) {
             $data['reg_review_note'] = trim((string) $request->input('reg_review_note'));
         }
 
-        // --- ปรับ name = contact_name ---
+        // name = contact_name
         if (!empty($data['contact_name'])) {
             $data['name'] = trim((string) $data['contact_name']);
         } elseif ($current) {
-            // เผื่อกรณีฟิลด์หายไปในบางฟอร์ม ให้อนุรักษ์ค่าเดิมไว้
             $data['name'] = $current->name;
         }
 
-        unset($data['officer_doc'], $data['remove_officer_doc'], $data['pdpa_accept']);
+        // ทำความสะอาด payload
+        unset($data['officer_doc'], $data['remove_officer_doc'], $data['pdpa_accept'], $data['working_hours_json']);
 
         return [$data, $passwordPlain];
     }
 
-    /**
-     * แปลง array จากฟอร์ม working_hours → array โครงสร้างสะอาด สำหรับบันทึกใน org_working_hours_json
-     */
-    private function normalizeWorkingHours(array $rows): array
+    /** ตรวจรูปแบบ JSON จากกริด: คืน [bool ok, string|null error] */
+    private function validateWorkingGridJson(?string $json): array
     {
-        $out = [];
-        foreach ($rows as $r) {
-            if (!is_array($r)) {
-                continue;
-            }
+        if ($json === null || $json === '') {
+            return [false, 'กรุณากำหนดวัน-เวลาทำการ'];
+        }
 
-            $day    = $r['day'] ?? null;
-            $start  = $r['start'] ?? null;
-            $end    = $r['end'] ?? null;
-            $note   = trim($r['note'] ?? '');
-            $closed = !empty($r['closed']); // checkbox
+        try {
+            $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $e) {
+            return [false, 'รูปแบบ JSON ไม่ถูกต้อง'];
+        }
 
-            // ข้ามแถวที่ไม่มี day
-            if (!$day) {
-                continue;
+        $days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        foreach ($days as $d) {
+            if (!array_key_exists($d, $data) || !is_array($data[$d])) {
+                return [false, "รูปแบบข้อมูลของวัน {$d} ไม่ถูกต้อง"];
             }
+            foreach ($data[$d] as $rng) {
+                if (!is_string($rng) || !preg_match('/^\d{2}:\d{2}-\d{2}:\d{2}$/', $rng)) {
+                    return [false, "ช่วงเวลาในวัน {$d} ต้องอยู่ในรูปแบบ HH:MM-HH:MM"];
+                }
+                [$a, $b] = explode('-', $rng, 2);
+                if ($b <= $a) {
+                    return [false, "เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม (วัน {$d})"];
+                }
 
-            // ถ้า closed = true ไม่ต้องมีเวลา
-            if ($closed) {
-                $out[] = [
-                    'day'    => $day,
-                    'closed' => true,
-                    'start'  => null,
-                    'end'    => null,
-                    'note'   => $note ?: null,
-                ];
-                continue;
             }
+        }
+        return [true, null];
+    }
 
-            // กรณีเปิดให้บริการ ต้องมีเวลา start/end ที่ถูกต้อง
-            if ($start && $end && $end > $start) {
-                $out[] = [
-                    'day'    => $day,
-                    'closed' => false,
-                    'start'  => $start,
-                    'end'    => $end,
-                    'note'   => $note ?: null,
-                ];
+/** แปลง JSON string → array (คีย์วันครบเสมอ) */
+    private function parseWorkingGridJson(?string $json): array
+    {
+        $days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        $out  = array_fill_keys($days, []);
+        if (!$json) {
+            return $out;
+        }
+
+        try {
+            $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+            foreach ($days as $d) {
+                $out[$d] = array_values(array_filter(
+                    (array) ($data[$d] ?? []),
+                    fn($x) => is_string($x) && preg_match('/^\d{2}:\d{2}-\d{2}:\d{2}$/', $x)
+                ));
             }
-            // ถ้าเวลาไม่ครบ/ไม่ถูกต้อง -> ทิ้งแถว (เพื่อความสะอาดของข้อมูล)
+        } catch (\Throwable $e) {
+            // ถ้า parse ไม่ได้ ให้คืนค่าว่างทั้งสัปดาห์
         }
         return $out;
     }
@@ -579,8 +595,12 @@ class ApplicationReviewController extends Controller
             'org_tel'                => $r->input('org_tel'),
             'org_lat'                => $r->input('org_lat'),
             'org_lng'                => $r->input('org_lng'),
+            'org_province_code'      => $r->input('org_province_code'),
+            'org_district_code'      => $r->input('org_district_code'),
+            'org_subdistrict_code'   => $r->input('org_subdistrict_code'),
+            'org_postcode'           => $r->input('org_postcode'),
             'org_working_hours'      => $r->input('org_working_hours'),
-            'org_working_hours_json' => $this->normalizeWorkingHours($r->input('working_hours', [])),
+            'org_working_hours_json' => $this->parseWorkingGridJson($r->input('working_hours_json')),
         ];
     }
 
@@ -595,9 +615,19 @@ class ApplicationReviewController extends Controller
 
         // กันส่งฟิลด์เกิน โดยเลือกเฉพาะคอลัมน์ที่มีจริง
         $payload = collect($org)->only([
-            'org_name', 'org_affiliation', 'org_affiliation_other',
-            'org_address', 'org_tel', 'org_lat', 'org_lng',
-            'org_working_hours', 'org_working_hours_json',
+            'org_name',
+            'org_affiliation',
+            'org_affiliation_other',
+            'org_address',
+            'org_tel',
+            'org_lat',
+            'org_lng',
+            'org_province_code',
+            'org_district_code',
+            'org_subdistrict_code',
+            'org_postcode',
+            'org_working_hours',
+            'org_working_hours_json',
         ])->toArray();
 
         return ServiceUnit::updateOrCreate(
@@ -630,6 +660,21 @@ class ApplicationReviewController extends Controller
         if (Schema::hasColumn('users', 'primary_service_unit_id')) {
             $user->forceFill(['primary_service_unit_id' => $unit->id])->save();
         }
+    }
+
+    private function mapPurposeToCodes(array $purposes): string
+    {
+        $map = [
+            'หน่วยบริการสุขภาพผู้เดินทาง'                                => 'T',
+            'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)' => 'P',
+            'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)'     => 'R',
+        ];
+
+        return collect($purposes)
+            ->map(fn($x) => $map[$x] ?? null)
+            ->filter()
+            ->unique()
+            ->implode(','); // ตัวอย่าง: "T,P"
     }
 
 }

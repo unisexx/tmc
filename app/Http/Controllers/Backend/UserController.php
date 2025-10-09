@@ -27,7 +27,7 @@ class UserController extends Controller
     {
         $q     = trim($request->get('q', ''));
         $users = User::query()
-            ->with(['roles:id,name', 'serviceUnits' => fn($q) => $q->select('service_units.id', 'org_affiliation')])
+            ->with(['role', 'serviceUnits' => fn($q) => $q->withPivot('is_primary'), 'superviseProvince', 'superviseRegion'])
             ->whereNotNull('role_id')
             ->when($q !== '', function ($qr) use ($q) {
                 $qr->where(function ($x) use ($q) {

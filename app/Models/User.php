@@ -95,4 +95,140 @@ class User extends Authenticatable
             ->withPivot(['role', 'start_date', 'end_date', 'is_primary'])
             ->withTimestamps();
     }
+
+    public function getRegPurposeLabelsAttribute(): array
+    {
+        $map = [
+            'T' => 'หน่วยบริการสุขภาพผู้เดินทาง',
+            'P' => 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
+            'R' => 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
+        ];
+
+        return collect(explode(',', (string) $this->reg_purpose))
+            ->map(fn($code) => $map[$code] ?? $code)
+            ->all();
+    }
+
+    // app/Models/User.php
+
+    public function getRegPurposeLabelsWithColorAttribute(): array
+    {
+        // แปลง reg_purpose เป็น array ของ code
+        $codes = $this->reg_purpose_codes ?? [];
+
+        $map = [
+            'T' => ['label' => 'หน่วยบริการสุขภาพผู้เดินทาง', 'class' => 'text-bg-success text-dark'],
+            'P' => ['label' => 'ผู้กำกับดูแลระดับจังหวัด (สสจ.)', 'class' => 'text-bg-warning text-dark'],
+            'R' => ['label' => 'ผู้กำกับดูแลระดับเขต (สคร.)', 'class' => 'text-bg-info text-dark'],
+        ];
+
+        $result = [];
+        foreach ($codes as $code) {
+            if (isset($map[$code])) {
+                $result[] = $map[$code];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * จังหวัดที่กำกับดูแล (ใช้เมื่อ reg_purpose มี 'P')
+     * FK: users.reg_supervise_province_code -> province.code
+     */
+    public function superviseProvince()
+    {
+        return $this->belongsTo(Province::class, 'reg_supervise_province_code', 'code');
+    }
+
+    /**
+     * สคร. ที่กำกับดูแล (ใช้เมื่อ reg_purpose มี 'R')
+     * FK: users.reg_supervise_region_id -> health_regions.id
+     */
+    public function superviseRegion()
+    {
+        return $this->belongsTo(HealthRegion::class, 'reg_supervise_region_id', 'id');
+    }
+
+    /**
+     * แปลงค่า reg_purpose ให้เป็นอาร์เรย์โค้ดแบบยืดหยุ่น (รองรับ JSON, CSV, ตัวอักษรเดี่ยว)
+     * ตัวอย่างผลลัพธ์: ['T'], ['P'], ['R'], หรือหลายค่าเช่น ['P','R']
+     */
+    public function getRegPurposeCodesAttribute(): array
+    {
+        $v = $this->attributes['reg_purpose'] ?? null;
+
+        if (is_array($v)) {
+            return array_values(array_filter(array_map('trim', $v)));
+        }
+
+        if (is_string($v)) {
+            // ลอง JSON ก่อน
+            $j = json_decode($v, true);
+            if (is_array($j)) {
+                return array_values(array_filter(array_map('trim', $j)));
+            }
+            // เผื่อบันทึกเป็นตัวอักษรเดี่ยวหรือ CSV
+            $v = trim($v, " \t\n\r\0\x0B[]\"'");
+            if ($v === '') {
+                return [];
+            }
+
+            return array_values(array_filter(array_map('trim', explode(',', $v))));
+        }
+
+        return [];
+    }
+
+    /**
+     * เช็คว่ามี purpose code นั้น ๆ ไหม (เช่น 'P' หรือ 'R')
+     */
+    public function hasPurpose(string $code): bool
+    {
+        return in_array(strtoupper($code), $this->reg_purpose_codes ?? [], true);
+    }
+
+    /**
+     * คืนข้อความสถานะลงทะเบียน (ภาษาไทย)
+     */
+    public function getRegStatusTextAttribute(): string
+    {
+        $raw = $this->attributes['reg_status'] ?? null;
+
+        return match ($raw) {
+            'อนุมัติ', 'approved'    => 'อนุมัติ',
+            'ไม่อนุมัติ', 'rejected' => 'ไม่อนุมัติ',
+            'รอตรวจสอบ', 'pending', null => 'รอตรวจสอบ',
+            default => 'รอตรวจสอบ',
+        };
+    }
+
+    /**
+     * คืนคลาส badge สำหรับสถานะลงทะเบียน
+     */
+    public function getRegStatusBadgeClassAttribute(): string
+    {
+        return match ($this->reg_status_text) {
+            'อนุมัติ'    => 'text-bg-primary',
+            'ไม่อนุมัติ' => 'text-bg-danger',
+            default      => 'text-bg-warning text-dark',
+        };
+    }
+
+    /**
+     * คลาส badge สำหรับ Role ของผู้ใช้
+     * ใช้คู่กับ Bootstrap/Light Able เช่น: text-bg-primary / text-bg-warning
+     */
+    public function getRoleBadgeClassAttribute(): string
+    {
+        $id = $this->role?->id;
+
+        return match ($id) {
+            2       => 'text-bg-danger',
+            3       => 'text-bg-primary',
+            4, 5 => 'text-bg-warning',
+            default => 'text-bg-secondary',
+        };
+    }
+
 }
