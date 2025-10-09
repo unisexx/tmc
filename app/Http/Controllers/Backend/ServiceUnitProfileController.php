@@ -15,7 +15,7 @@ class ServiceUnitProfileController extends Controller
         $unit = $this->resolveCurrentServiceUnit($request);
 
         if (!$unit) {
-            flash_notify('บัญชีนี้ยังไม่ได้ผูกกับหน่วยบริการ', 'warning');
+            flash_notify('กรุณาเลือกหน่วยบริการจากเมนูด้านบน', 'warning');
             return redirect()->back();
         }
 

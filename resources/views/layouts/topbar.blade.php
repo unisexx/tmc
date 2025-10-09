@@ -17,33 +17,53 @@
                 </li>
 
                 @php
-                    // ผู้ใช้ + หน่วยงานที่ดูแล
-                    $user = Auth::user();
-                    $units = $user?->serviceUnits ?? collect();
 
-                    // หน่วยปัจจุบัน + ระดับล่าสุดของหน่วยนั้น
+                    $user = Auth::user();
+                    $isAdmin = $user?->isAdmin() ?? false;
+
+                    // แอดมินเห็นทุกหน่วย / อื่นๆ เห็นเฉพาะของตน
+                    $units = $isAdmin ? App\Models\ServiceUnit::orderBy('org_name')->get() : $user?->serviceUnits ?? collect();
+
+                    // ค่า session ปัจจุบัน (แอดมินจะไม่บังคับตั้งค่าอัตโนมัติ)
                     $currentUnitId = session('current_service_unit_id');
+
+                    // ผู้ใช้ทั่วไป: ถ้ายังไม่มี session ให้ตั้งค่าเป็นหน่วยแรกที่มี
+                    if (!$isAdmin && !$currentUnitId) {
+                        $firstId = $units->first()->id ?? null;
+                        if ($firstId) {
+                            session(['current_service_unit_id' => $firstId]);
+                            $currentUnitId = $firstId;
+                        }
+                    }
+
+                    // ดึงระดับล่าสุดของหน่วยปัจจุบัน (เฉพาะกรณีเลือกหน่วย)
                     $latest = $currentUnitId ? \App\Models\AssessmentServiceUnitLevel::where('service_unit_id', $currentUnitId)->orderByDesc('assess_year')->orderByDesc('assess_round')->first() : null;
                 @endphp
 
-                @if ($units->isNotEmpty())
+                @if ($units->isNotEmpty() || $isAdmin)
                     <li class="pc-h-item d-none d-md-inline-flex align-items-center ms-3">
                         {{-- สลับหน่วยงาน --}}
                         <form action="{{ route('backend.service-unit.switch') }}" method="POST" id="formSwitchUnit">
                             @csrf
                             <select name="service_unit_id" class="form-select" onchange="document.getElementById('formSwitchUnit').submit();">
+                                @if ($isAdmin)
+                                    {{-- ตัวเลือกภาพรวม (ไม่ผูกหน่วย) สำหรับแอดมิน --}}
+                                    <option value="" @selected(empty($currentUnitId))>
+                                        — ภาพรวม (ไม่เลือกหน่วยบริการ) —
+                                    </option>
+                                @endif
+
                                 @foreach ($units as $su)
-                                    <option value="{{ $su->id }}" @selected(session('current_service_unit_id') == $su->id)>
+                                    <option value="{{ $su->id }}" @selected((int) $currentUnitId === (int) $su->id)>
                                         {{ $su->org_name }}
                                     </option>
                                 @endforeach
                             </select>
                         </form>
 
-                        {{-- แสดง badge ระดับ + ปี/รอบ ล่าสุดของหน่วยที่เลือก --}}
+                        {{-- แสดง badge ระดับ + ปี/รอบ เฉพาะเมื่อเลือกหน่วย --}}
                         @if ($latest)
                             <x-level-badge :level="$latest->level" class="ms-2" />
-
                             <span class="ms-1 text-muted small">
                                 ปี {{ $latest->assess_year ? $latest->assess_year + 543 : '-' }}
                                 รอบ {{ $latest->assess_round ?? '-' }}
@@ -51,6 +71,8 @@
                         @endif
                     </li>
                 @endif
+
+
 
 
 
@@ -77,8 +99,9 @@
                                             <div class="flex-grow-1 mx-3">
                                                 <h5 class="mb-0">{{ Auth::user()->contact_name }}</h5>
                                                 <div>{{ @Auth::user()->org_name }}</div>
-                                                {{-- <a class="link-primary" href="mailto:carson.darrin@company.io">carson.darrin@company.io</a> --}}
-                                                <div class="badge bg-primary">{{ optional(Auth::user()->role)->name ?? '-' }}</div>
+                                                <span class="badge {{ Auth::user()->role_badge_class }}">
+                                                    {{ Auth::user()->role->name ?? '-' }}
+                                                </span>
                                                 @php
                                                     $primaryUnit = Auth::user()->serviceUnits()->wherePivot('is_primary', 1)->first();
                                                 @endphp

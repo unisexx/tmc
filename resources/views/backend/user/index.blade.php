@@ -57,34 +57,62 @@
 
                                         {{-- สังกัด / บทบาท --}}
                                         <td class="d-none d-xl-table-cell">
-                                            {{-- วัตถุประสงค์ที่ลงทะเบียน --}}
-                                            <div class="mt-1 d-flex flex-wrap gap-1">
-                                                @forelse($purposes as $pp)
-                                                    <span class="badge {{ $pp['class'] }}">{{ $pp['label'] }}</span>
-                                                @empty
-                                                    <span class="text-muted small">-</span>
-                                                @endforelse
+                                            <div class="row align-items-start">
+                                                {{-- ถ้ามี purposes ให้แสดงไอคอนเรียงต่อกัน --}}
+                                                @if (!empty($purposes))
+                                                    <div class="col-auto pe-0 d-flex align-items-start gap-1 flex-wrap">
+                                                        @foreach ($purposes as $pp)
+                                                            @php
+                                                                // กำหนด icon และสีพื้นหลังตามประเภท
+                                                                $label = $pp['label'] ?? '';
+                                                                [$icon, $bgClass] = match (true) {
+                                                                    str_contains($label, 'สคร') => ['ph-map-pin-area', 'btn-light-success'],
+                                                                    str_contains($label, 'สสจ') => ['ph-map-pin', 'btn-light-warning'],
+                                                                    str_contains($label, 'หน่วยบริการ') => ['ph-hospital', 'btn-light-primary'],
+                                                                    default => ['ph-user', 'btn-light-secondary'],
+                                                                };
+                                                            @endphp
+                                                            <div class="avtar avtar-s {{ $bgClass }}">
+                                                                <i class="ph-duotone {{ $icon }} f-18"></i>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+
+                                                {{-- เนื้อหาทางขวา --}}
+                                                <div class="col">
+                                                    {{-- วัตถุประสงค์ที่ลงทะเบียน --}}
+                                                    <div class="mb-1 d-flex flex-wrap gap-1">
+                                                        @forelse($purposes as $pp)
+                                                            <span class="badge {{ $pp['class'] }}">{{ $pp['label'] }}</span>
+                                                        @empty
+                                                            <span class="text-muted small">-</span>
+                                                        @endforelse
+                                                    </div>
+
+                                                    {{-- สังกัดหน่วยงาน --}}
+                                                    @if (!empty($unit?->org_affiliation))
+                                                        <div class="small text-muted truncate-1" title="{{ $unit->org_affiliation }}">
+                                                            {{ $unit->org_affiliation }}
+                                                        </div>
+                                                    @endif
+
+                                                    {{-- จังหวัด/สคร. --}}
+                                                    @if ($hasP && $u->superviseProvince)
+                                                        <div class="small text-muted truncate-1" title="จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}">
+                                                            จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}
+                                                        </div>
+                                                    @endif
+
+                                                    @if ($hasR && $u->superviseRegion)
+                                                        <div class="small text-muted truncate-1" title="สคร.: {{ $u->superviseRegion->short_title }}">
+                                                            สคร.: {{ $u->superviseRegion->short_title }}
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             </div>
-                                            @if (!empty($unit?->org_affiliation))
-                                                <div class="small text-muted mt-1 truncate-1" title="{{ $unit->org_affiliation }}">
-                                                    <i class="ph-duotone ph-hospital"></i>
-                                                    {{ $unit->org_affiliation }}
-                                                </div>
-                                            @endif
-                                            {{-- จังหวัด/สคร. --}}
-                                            @if ($hasP && $u->superviseProvince)
-                                                <div class="small text-muted mt-1 truncate-1" title="จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}">
-                                                    <i class="ph-duotone ph-map-pin"></i>
-                                                    จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}
-                                                </div>
-                                            @endif
-                                            @if ($hasR && $u->superviseRegion)
-                                                <div class="small text-muted mt-1 truncate-1" title="สคร.: {{ $u->superviseRegion->short_title }}">
-                                                    <i class="ph-duotone ph-map-pin-area"></i>
-                                                    สคร.: {{ $u->superviseRegion->short_title }}
-                                                </div>
-                                            @endif
                                         </td>
+
 
                                         <td class="d-none d-md-table-cell">{{ $u->username ?? '-' }}</td>
                                         <td class="d-none d-lg-table-cell">{{ $u->contact_mobile ?? '-' }}</td>

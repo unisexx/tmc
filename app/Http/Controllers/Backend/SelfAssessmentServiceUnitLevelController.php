@@ -28,8 +28,15 @@ class SelfAssessmentServiceUnitLevelController extends Controller
     public function index(Request $req)
     {
         $unitId = $this->activeServiceUnitId();
+
         if (!$unitId) {
-            return back()->withErrors(['service_unit_id' => 'กรุณาเลือกหน่วยบริการจากเมนูด้านบน']);
+            // เหมือนตัวอย่าง edit(): แจ้งเตือนและย้อนกลับ
+            flash_notify('กรุณาเลือกหน่วยบริการจากเมนูด้านบน', 'warning');
+
+            // เผื่อกรณีไม่มี referer ให้กลับไป dashboard
+            return url()->previous()
+                ? redirect()->back()
+                : redirect()->route('backend.dashboard');
         }
 
         $q = AssessmentServiceUnitLevel::with(['serviceUnit', 'user', 'approver'])
@@ -63,6 +70,35 @@ class SelfAssessmentServiceUnitLevelController extends Controller
         if (!$unitId) {
             return redirect()->route('backend.assessment.index')
                 ->withErrors(['service_unit_id' => 'กรุณาเลือกหน่วยบริการจากเมนูด้านบน']);
+        }
+
+        /* ⬇️ คำนวณ "รอบปัจจุบัน" */
+        $yearCE  = $this->currentFiscalYearCE(); // ปีงบประมาณ (ค.ศ.)
+        $roundNo = $this->currentAssessRound();  // รอบที่ 1 หรือ 2
+
+        // ⬇️ กันซ้ำ: ถ้ามีแบบประเมินปี/รอบปัจจุบันอยู่แล้ว ไม่ให้สร้างใหม่
+        $existing = AssessmentServiceUnitLevel::where('service_unit_id', $unitId)
+            ->where('assess_year', $yearCE)
+            ->where('assess_round', $roundNo)
+            ->latest('id')
+            ->first();
+
+        if ($existing) {
+            // แจ้งเตือนแบบ sweetalert แล้วพากลับไปหน้าแก้ไข/สรุป ที่มีอยู่เดิม
+            $yearBE = $yearCE + 543;
+            flash_confirm(
+                "หน่วยบริการนี้ได้ทำแบบประเมิน ปีงบ {$yearBE} รอบที่ {$roundNo} แล้ว",
+                'warning',
+                ['subText' => 'ท่านยังสามารถกดแก้ไขรายการประเมินนั้นได้ จนกว่าจะกดส่งให้ สคร./สสจ. ตรวจสอบ']
+            );
+            return url()->previous()
+                ? redirect()->back()
+                : redirect()->route('backend.self-assessment-service-unit-level.index');
+
+            // จะพากลับไปหน้าแก้ไขขั้นที่ 1 ที่มีอยู่ หรือจะไปหน้า Component ก็ได้
+            // return redirect()->route('backend.self-assessment-service-unit-level.edit', $existing->id);
+            // หรือถ้าต้องการพาไป Step2 เลย ให้ใช้:
+            // return redirect()->route('backend.self-assessment-component.create', $existing->id);
         }
 
         $serviceUnit = ServiceUnit::find($unitId);
@@ -239,10 +275,26 @@ class SelfAssessmentServiceUnitLevelController extends Controller
         $user      = Auth::user();
         $sessionId = (int) session('current_service_unit_id');
 
-        if ($sessionId && $user->serviceUnits()->where('service_units.id', $sessionId)->exists()) {
-            return $sessionId;
+        // ถ้ามี session แล้ว
+        if ($sessionId) {
+            // แอดมิน: ใช้หน่วยจาก session ได้ทุกหน่วย (ถ้ามีอยู่จริง)
+            if ($user->isAdmin()) {
+                return ServiceUnit::whereKey($sessionId)->exists() ? $sessionId : null;
+            }
+
+            // ผู้ใช้ทั่วไป: ต้องเป็นหน่วยของตนเอง
+            if ($user->serviceUnits()->where('service_units.id', $sessionId)->exists()) {
+                return $sessionId;
+            }
         }
 
+        // ยังไม่มี session หรือใช้ไม่ได้
+        if ($user->isAdmin()) {
+            // สำหรับแอดมิน: ไม่ auto ผูกหน่วยให้ เลือกจาก select ด้านบนก่อน
+            return null;
+        }
+
+        // ผู้ใช้ทั่วไป: ลองหน่วย primary → หน่วยแรก → ไม่พบ
         $primary = $user->serviceUnits()->wherePivot('is_primary', 1)->value('service_units.id');
         if ($primary) {
             return (int) $primary;
@@ -385,6 +437,38 @@ class SelfAssessmentServiceUnitLevelController extends Controller
         return response()->file(Storage::disk('public')->path($sg->attachment_path));
         // หรือใช้ download() ถ้าต้องการให้ browser บังคับโหลด
         // return Storage::disk('public')->download($sg->attachment_path);
+    }
+
+    private function canAccessUnitId(int $unitId): bool
+    {
+        $user = Auth::user();
+
+        // แอดมิน: เข้าถึงได้ทุกหน่วย (ต้องมีอยู่จริง)
+        if ($user->isAdmin()) {
+            return ServiceUnit::whereKey($unitId)->exists();
+        }
+
+        // ผู้ใช้ทั่วไป: ต้องเป็นหน่วยที่ตนเองสังกัด
+        return $user->serviceUnits()->where('service_units.id', $unitId)->exists();
+    }
+
+    /* =========================================================
+    | Helpers (เติม 2 ฟังก์ชันนี้ในส่วน Helpers)
+    ==========================================================*/
+    private function currentFiscalYearCE(): int
+    {
+        // ปีงบประมาณไทย: ต.ค.–ก.ย. (เดือน 10–12 นับเป็นปีถัดไปแบบ ค.ศ.)
+        $y = (int) date('Y');
+        $m = (int) date('n');
+        return $m >= 10 ? $y + 1 : $y;
+    }
+
+    private function currentAssessRound(): int
+    {
+        // นิยามรอบตัวอย่าง:
+        // รอบที่ 1 = ต.ค.–มี.ค. | รอบที่ 2 = เม.ย.–ก.ย.
+        $m = (int) date('n');
+        return ($m >= 10 || $m <= 3) ? 1 : 2;
     }
 
 }

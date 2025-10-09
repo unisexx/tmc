@@ -2,37 +2,11 @@
 @php
     use App\Support\Permissions;
 
+    /** @var array<int,string> $rolePermissions */
     $rolePermissions = (array) old('permissions', $rolePermissions ?? []);
-
-    $moduleLabels = [
-        'dashboard' => 'แดชบอร์ด',
-        'visitor-stats' => 'สถิติผู้เข้าชม',
-        'assessment' => 'การประเมินตนเอง',
-        'approve-assessment' => 'อนุมัติผลการประเมิน',
-        'highlights' => 'ไฮไลท์',
-        'news' => 'ข่าว',
-        'faqs' => 'คำถามที่พบบ่อย',
-        'contacts' => 'ติดต่อ/ช่องทาง',
-        'privacy-policy' => 'นโยบายความเป็นส่วนตัว (PDPA)',
-        'cookie-policy' => 'นโยบายคุกกี้',
-        'approve-application' => 'ตรวจสอบใบสมัคร',
-        'users' => 'ผู้ใช้งาน',
-        'roles-permissions' => 'สิทธิ์การใช้งาน',
-    ];
-
-    $actionLabels = [
-        'view' => 'ดู',
-        'create' => 'เพิ่ม',
-        'update' => 'แก้ไข',
-        'delete' => 'ลบ',
-        'publish' => 'เผยแพร่',
-        'export' => 'ส่งออก',
-        'reset-password' => 'รีเซ็ตรหัสผ่าน',
-        'assign' => 'กำหนดสิทธิ์',
-    ];
 @endphp
 
-{{-- ====== ฟอร์ม ====== --}}
+{{-- ====== ฟอร์มข้อมูลสิทธิ์ ====== --}}
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <label class="form-label">ชื่อสิทธิ์การใช้งาน <span class="text-danger">*</span></label>
@@ -75,15 +49,17 @@
                     $isModuleAllChecked = count(array_intersect($modulePerms, $rolePermissions)) === count($modulePerms);
                 @endphp
                 <tr>
-                    <td class="fw-medium">{{ $moduleLabels[$module] ?? $module }}</td>
+                    <td class="fw-medium">
+                        {{ Permissions::moduleLabel($module) }}
+                    </td>
                     <td>
                         <div class="d-flex flex-wrap gap-3">
                             @foreach ($actions as $action)
                                 @php $perm = "{$module}.{$action}"; @endphp
                                 <div class="form-check">
-                                    <input class="form-check-input perm-checkbox" type="checkbox" id="perm_{{ $module }}_{{ $action }}" name="permissions[]" value="{{ $perm }}" data-module="{{ $module }}" @checked(in_array($perm, $rolePermissions))>
+                                    <input class="form-check-input perm-checkbox" type="checkbox" id="perm_{{ $module }}_{{ $action }}" name="permissions[]" value="{{ $perm }}" data-module="{{ $module }}" @checked(in_array($perm, $rolePermissions, true))>
                                     <label class="form-check-label" for="perm_{{ $module }}_{{ $action }}">
-                                        {{ $actionLabels[$action] ?? $action }}
+                                        {{ Permissions::actionLabel($action) }}
                                     </label>
                                 </div>
                             @endforeach
@@ -103,7 +79,7 @@
     </table>
 </div>
 
-{{-- ปุ่ม --}}
+{{-- ปุ่มบันทึก --}}
 <div class="col-12 d-flex gap-2 justify-content-end pt-2">
     <a href="{{ route('backend.role.index') }}" class="btn btn-light">
         <i class="ti ti-arrow-left"></i> ย้อนกลับ
@@ -134,6 +110,7 @@
                     const module = e.target.dataset.module;
                     document.querySelectorAll(`.perm-checkbox[data-module="${module}"]`)
                         .forEach(cb => cb.checked = e.target.checked);
+                    syncModuleToggles();
                 });
             });
 

@@ -117,9 +117,9 @@ class User extends Authenticatable
         $codes = $this->reg_purpose_codes ?? [];
 
         $map = [
-            'T' => ['label' => 'หน่วยบริการสุขภาพผู้เดินทาง', 'class' => 'text-bg-success text-dark'],
-            'P' => ['label' => 'ผู้กำกับดูแลระดับจังหวัด (สสจ.)', 'class' => 'text-bg-warning text-dark'],
-            'R' => ['label' => 'ผู้กำกับดูแลระดับเขต (สคร.)', 'class' => 'text-bg-info text-dark'],
+            'T' => ['label' => 'หน่วยบริการสุขภาพผู้เดินทาง', 'class' => 'badge bg-light-secondary'],
+            'P' => ['label' => 'ผู้กำกับดูแลระดับจังหวัด (สสจ.)', 'class' => 'badge bg-light-secondary'],
+            'R' => ['label' => 'ผู้กำกับดูแลระดับเขต (สคร.)', 'class' => 'badge bg-light-secondary'],
         ];
 
         $result = [];
@@ -229,6 +229,15 @@ class User extends Authenticatable
             4, 5 => 'text-bg-warning',
             default => 'text-bg-secondary',
         };
+    }
+
+    public function isAdmin(): bool
+    {
+        // ถ้าใช้ Spatie\Permission
+        return $this->hasRole('Admin');
+
+        // หรือถ้าใช้การตรวจด้วยสิทธิ์เฉพาะเจาะจง
+        // return $this->roles()->where('name', 'Admin')->exists();
     }
 
 }

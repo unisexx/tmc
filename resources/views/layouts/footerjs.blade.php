@@ -102,8 +102,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             const n = @json(session('notify'));
             const type = (n.type || 'success').toLowerCase();
+            const opts = n.options || {};
+            const isConfirm = !!opts.confirm;
 
-            // map ประเภท → คลาสสีของ Bootstrap
             const bgMap = {
                 success: 'bg-success',
                 error: 'bg-danger',
@@ -113,36 +114,52 @@
                 question: 'bg-primary'
             };
 
-            Swal.fire({
+            // ค่าพื้นฐานของ Swal
+            const baseConfig = {
                 icon: type === 'danger' ? 'error' : type,
                 title: n.message || '',
-                showConfirmButton: false,
-                timer: n.timeout || 3000,
-                timerProgressBar: true,
                 customClass: {
                     popup: 'flash-notify-toast'
-                },
-
-                // ใส่คลาสสีของ Bootstrap ให้ progress bar เมื่อ alert เปิด
-                didOpen: () => {
-                    const bar = Swal.getTimerProgressBar();
-                    if (bar) {
-                        bar.classList.add(bgMap[type] || 'bg-primary', 'swal-timer-thick');
-                    }
                 }
-            });
+            };
+
+            if (isConfirm) {
+                // โหมดยืนยัน: แสดงปุ่มและไม่ตั้ง timer
+                Swal.fire({
+                    ...baseConfig,
+                    text: opts.subText || '', // ✅ เพิ่มข้อความรอง
+                    showConfirmButton: true,
+                    confirmButtonText: opts.confirmText || 'ตกลง',
+                    showCancelButton: !!opts.showCancel,
+                    cancelButtonText: opts.cancelText || 'ยกเลิก',
+                    allowOutsideClick: opts.allowOutsideClick ?? false,
+                    focusConfirm: opts.focusConfirm ?? true,
+                });
+            } else {
+                // โหมดเดิม (toast อัตโนมัติ)
+                Swal.fire({
+                    ...baseConfig,
+                    showConfirmButton: false,
+                    timer: n.timeout || 3000,
+                    timerProgressBar: true,
+                    didOpen: () => {
+                        const bar = Swal.getTimerProgressBar();
+                        if (bar) {
+                            bar.classList.add(bgMap[type] || 'bg-primary', 'swal-timer-thick');
+                        }
+                    }
+                });
+            }
         });
     </script>
 @endif
 
 <style>
-    /* ปรับความหนา/ทรง ของ progress bar (เลือกได้) */
     .swal2-timer-progress-bar.swal-timer-thick {
         height: 4px !important;
         border-radius: 999px;
     }
 
-    /* ให้แน่ใจว่าค่าสีมาจากตัวแปรธีมของ Bootstrap/Light Able */
     .swal2-timer-progress-bar.bg-primary {
         background-color: var(--bs-primary) !important;
     }
@@ -163,6 +180,7 @@
         background-color: var(--bs-danger) !important;
     }
 </style>
+
 
 
 {{-- Choice JS --}}

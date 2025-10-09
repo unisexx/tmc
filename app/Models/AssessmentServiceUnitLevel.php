@@ -51,6 +51,17 @@ class AssessmentServiceUnitLevel extends Model
         'approved_at'  => 'datetime',
     ];
 
+    protected $appends = [
+        'level_text',
+        'level_badge_class',
+        'status_text',
+        'status_badge_class',
+        'approval_text',
+        'approval_badge_class',
+        'is_locked',
+        'can_edit',
+    ];
+
     /* ==========================
     | ความสัมพันธ์
     ========================== */
@@ -61,12 +72,12 @@ class AssessmentServiceUnitLevel extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id'); // ผู้ทำแบบประเมิน
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function approver()
     {
-        return $this->belongsTo(User::class, 'approved_by'); // ผู้อนุมัติ
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function creator()
@@ -97,7 +108,7 @@ class AssessmentServiceUnitLevel extends Model
     }
 
     /* ==========================
-    | Accessors Helper
+    | Accessors (ดึงจาก config กลาง)
     ========================== */
     public function getLevelTextAttribute(): ?string
     {
@@ -111,37 +122,42 @@ class AssessmentServiceUnitLevel extends Model
         return $map[$this->level] ?? 'secondary';
     }
 
+    public function getStatusTextAttribute(): string
+    {
+        $map = config('assessment.status_text', []);
+        return $map[$this->status] ?? '-';
+    }
+
+    public function getStatusBadgeClassAttribute(): string
+    {
+        $map = config('assessment.status_badge_class', []);
+        return $map[$this->status] ?? 'secondary';
+    }
+
     public function getApprovalTextAttribute(): ?string
     {
-        return match ($this->approval_status) {
-            'pending'   => 'รอดำเนินการ',
-            'reviewing' => 'อยู่ระหว่างการพิจารณา',
-            'returned'  => 'ส่งกลับแก้ไข',
-            'approved'  => 'อนุมัติ',
-            'rejected'  => 'ไม่อนุมัติ',
-            default     => null,
-        };
+        $map = config('assessment.approval_text', []);
+        return $map[$this->approval_status] ?? null;
     }
 
     public function getApprovalBadgeClassAttribute(): string
     {
-        return match ($this->approval_status) {
-            'pending'   => 'secondary',
-            'reviewing' => 'info',
-            'returned'  => 'warning',
-            'approved'  => 'success',
-            'rejected'  => 'danger',
-            default     => 'secondary',
-        };
+        $map = config('assessment.approval_badge_class', []);
+        return $map[$this->approval_status] ?? 'secondary';
     }
 
-    public function getStatusTextAttribute(): string
+    /* ==========================
+    | Logic Helper
+    ========================== */
+    public function getIsLockedAttribute(): bool
     {
-        return match ($this->status) {
-            'draft'     => 'แบบร่าง',
-            'completed' => 'ส่งแล้ว',
-            default     => '-',
-        };
+        // ล็อกเมื่ออยู่ในสถานะที่ไม่ควรแก้ไขอีก
+        return in_array($this->approval_status, ['pending', 'reviewing', 'approved', 'rejected'], true);
     }
 
+    public function getCanEditAttribute(): bool
+    {
+        // แก้ไขได้เมื่อไม่ล็อก (เช่น ยังไม่ส่ง หรือถูกส่งกลับ returned)
+        return !$this->is_locked;
+    }
 }

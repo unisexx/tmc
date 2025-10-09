@@ -39,10 +39,19 @@
     <div class="card-body">
 
         @php
-            // ชื่อหน่วยบริการจากหน่วยปัจจุบันใน session
             $currentUnitId = session('current_service_unit_id');
-            $currentUnitName = optional(Auth::user()?->serviceUnits?->firstWhere('id', $currentUnitId))->org_name ?? '-';
+
+            // 1) ถ้ามีตัวแปร $serviceUnit จาก Controller ใช้เลย
+            $currentUnitName =
+                isset($serviceUnit) && $serviceUnit?->id === $currentUnitId
+                    ? $serviceUnit->org_name ?? null
+                    : // 2) ลองหาในหน่วยของผู้ใช้ (กรณีไม่ใช่แอดมิน หรือแอดมินมีผูกบางหน่วย)
+                        optional(Auth::user()?->serviceUnits?->firstWhere('id', $currentUnitId))->org_name ??
+                        // 3) สุดท้ายค่อย query ตรงตาม id (สำหรับแอดมินที่เลือกหน่วยใดก็ได้)
+                        App\Models\ServiceUnit::whereKey($currentUnitId)->value('org_name');
+            $currentUnitName = $currentUnitName ?: '-';
         @endphp
+
 
         <div class="border rounded p-2 mb-3 bg-body-tertiary d-flex flex-wrap align-items-center gap-3">
             {{-- หน่วยบริการ --}}

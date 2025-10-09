@@ -53,14 +53,6 @@
     <div class="card shadow-sm print-area">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">สรุปผลการประเมินตนเองของหน่วยบริการสุขภาพผู้เดินทาง</h5>
-            <div class="btn-toolbar gap-2">
-                <a href="{{ route('backend.self-assessment-service-unit-level.index') }}" class="btn btn-outline-secondary">
-                    <i class="ti ti-arrow-left"></i> ย้อนกลับ
-                </a>
-                <button onclick="window.print()" class="btn btn-primary">
-                    <i class="ti ti-printer"></i> พิมพ์
-                </button>
-            </div>
         </div>
 
         <div class="card-body">
@@ -210,11 +202,8 @@
                 <a href="{{ route('backend.self-assessment-service-unit-level.index') }}" class="btn btn-outline-secondary">
                     <i class="ti ti-arrow-left"></i> ย้อนกลับ
                 </a>
-                <button onclick="window.print()" class="btn btn-primary">
-                    <i class="ti ti-printer"></i> พิมพ์
-                </button>
                 <a href="{{ route('backend.self-assessment-service-unit-level.export-pdf', $row->id) }}" target="_blank" class="btn btn-danger">
-                    <i class="ti ti-file-type-pdf"></i> Export PDF
+                    <i class="ti ti-file-type-pdf"></i> ดาวน์โหลด PDF
                 </a>
             </div>
         </div>

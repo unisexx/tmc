@@ -38,12 +38,14 @@
     </li>
 @endcan
 
-{{-- <li class="pc-item">
-    <a href="{{ route('backend.self.index') }}" class="pc-link">
-        <span class="pc-micon"><i class="ph-duotone ph-clipboard-text"></i></span>
-        <span class="pc-mtext">การประเมินตนเอง 6 องค์ประกอบ</span>
-    </a>
-</li> --}}
+@can('approve-assessment')
+    <li class="pc-item">
+        <a href="#" class="pc-link">
+            <span class="pc-micon"><i class="ph-duotone ph-clipboard-text"></i></span>
+            <span class="pc-mtext">ตรวจสอบผลการประเมิน</span>
+        </a>
+    </li>
+@endcan
 
 @can('highlights.view')
     <li class="pc-item">
