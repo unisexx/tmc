@@ -25,12 +25,13 @@ class UserController extends Controller
      * =========================================================================*/
     public function index(Request $request)
     {
-        $q = trim($request->get('q', ''));
+        $q       = trim($request->get('q', ''));
+        $roleId  = $request->get('role_id');
+        $purpose = $request->get('purpose');
 
         $users = User::query()
             ->with([
                 'role:id,name',
-                // ดึง serviceUnits + pivot + จังหวัด/อำเภอ/ตำบล
                 'serviceUnits' => function ($q) {
                     $q->withPivot('is_primary')
                         ->select('service_units.id', 'org_name', 'org_affiliation', 'org_province_code', 'org_district_code', 'org_subdistrict_code', 'org_postcode');
@@ -50,11 +51,15 @@ class UserController extends Controller
                         ->orWhere('username', 'like', "%{$q}%");
                 });
             })
+            ->when($roleId, fn($qr) => $qr->where('role_id', $roleId))
+            ->when($purpose, fn($qr) => $qr->where('reg_purpose', 'like', "%{$purpose}%"))
             ->latest('id')
             ->paginate(20)
             ->withQueryString();
 
-        return view('backend.user.index', compact('users', 'q'));
+        $roles = \Spatie\Permission\Models\Role::orderBy('id')->pluck('name', 'id');
+
+        return view('backend.user.index', compact('users', 'q', 'roles', 'roleId', 'purpose'));
     }
 
     /* =========================================================================

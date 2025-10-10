@@ -8,35 +8,54 @@
 @section('content')
     <div class="row">
         <div class="col-12">
-            <div class="card table-card">
-                <div class="card-header d-flex align-items-center justify-content-between py-3">
+            <div class="card">
+                {{-- <div class="card-header d-flex align-items-center justify-content-between py-3">
                     <h5 class="mb-0">สิทธิ์การใช้งาน</h5>
-
-                    <div class="d-flex gap-2">
-                        {{-- ปุ่มเข้า/ออกโหมดจัดเรียง --}}
-                        @if (empty($reorder))
-                            <a href="{{ request()->fullUrlWithQuery(['reorder' => 1, 'page' => null]) }}" class="btn btn-outline-secondary">
-                                <i class="ti ti-arrows-sort"></i> โหมดจัดเรียง
-                            </a>
-                        @else
-                            <a href="{{ request()->fullUrlWithQuery(['reorder' => 0]) }}" class="btn btn-outline-secondary">
-                                <i class="ti ti-arrow-back-up"></i> ออกจากโหมดจัดเรียง
-                            </a>
-                        @endif
-
-                        <a href="{{ route('backend.role.create') }}" class="btn btn-primary">
-                            <i class="ti ti-plus"></i> เพิ่มรายการ
-                        </a>
-                    </div>
-                </div>
+                </div> --}}
 
                 <div class="card-body pt-3">
+
+                    {{-- Filter Bar (ย้ายมาอยู่ card-body) --}}
+                    @php $q = request('q'); @endphp
+                    <form method="GET" action="{{ route('backend.role.index') }}" class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+
+                        {{-- ซ้าย: ค้นหา (ไม่ใช้ input-group) --}}
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <div class="input-group" style="width: min(420px, 90vw);">
+                                <span class="input-group-text">คำค้น</span>
+                                <input id="q" type="text" name="q" value="{{ $q }}" class="form-control" placeholder="ชื่อสิทธิ์">
+                            </div>
+
+
+                            <button class="btn btn-outline-primary" type="submit">
+                                <i class="ph-duotone ph-magnifying-glass"></i> ค้นหา
+                            </button>
+                        </div>
+
+                        {{-- ขวา: ปุ่มโหมดจัดเรียง + เพิ่มรายการ --}}
+                        <div class="d-flex justify-content-end">
+                            @if (empty($reorder))
+                                <a href="{{ request()->fullUrlWithQuery(['reorder' => 1, 'page' => null]) }}" class="btn btn-outline-secondary">
+                                    <i class="ti ti-arrows-sort"></i> โหมดจัดเรียง
+                                </a>
+                            @else
+                                <a href="{{ request()->fullUrlWithQuery(['reorder' => 0]) }}" class="btn btn-outline-secondary">
+                                    <i class="ti ti-arrow-back-up"></i> ออกจากโหมดจัดเรียง
+                                </a>
+                            @endif
+
+                            <a href="{{ route('backend.role.create') }}" class="btn btn-primary ms-2">
+                                <i class="ti ti-plus"></i> เพิ่มรายการ
+                            </a>
+                        </div>
+                    </form>
+
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle" id="pc-dt-simple">
-                            <thead>
+                        <table class="table table-hover table-striped align-middle mb-0">
+                            <thead class="table-light">
                                 <tr>
                                     @if (!empty($reorder))
-                                        <th style="width:48px;"></th> {{-- คอลัมน์จับลาก --}}
+                                        <th style="width:48px;"></th>
                                     @endif
                                     <th style="width:80px;">#</th>
                                     <th>สิทธิ์การใช้งาน</th>
@@ -49,9 +68,7 @@
                                 @forelse ($roles as $i => $role)
                                     <tr data-id="{{ $role->id }}">
                                         @if (!empty($reorder))
-                                            <td class="text-muted">
-                                                <i class="ti ti-grip-vertical drag-handle"></i>
-                                            </td>
+                                            <td class="text-muted"><i class="ti ti-grip-vertical drag-handle"></i></td>
                                         @endif
 
                                         <td>{{ method_exists($roles, 'firstItem') ? $roles->firstItem() + $i : $loop->iteration }}</td>
@@ -77,7 +94,6 @@
                                                 </button>
                                             </form>
                                         </td>
-
                                     </tr>
                                 @empty
                                     <tr>
@@ -88,7 +104,7 @@
                         </table>
                     </div>
 
-                    {{-- โหมดปกติเท่านั้นที่แสดง paginate --}}
+                    {{-- แสดง paginate เฉพาะโหมดปกติ --}}
                     @if (empty($reorder) && method_exists($roles, 'links'))
                         <div class="mt-3">
                             {{ $roles->appends(request()->query())->links() }}
@@ -101,17 +117,7 @@
 @endsection
 
 @section('scripts')
-    @if (empty($reorder))
-        {{-- โหมดปกติ: DataTable --}}
-        <script type="module">
-            import {
-                DataTable
-            } from "/build/js/plugins/module.js";
-            if (document.querySelector('#pc-dt-simple')) {
-                window.dt = new DataTable("#pc-dt-simple");
-            }
-        </script>
-    @else
+    @if (!empty($reorder))
         {{-- โหมดจัดเรียง: SortableJS --}}
         <style>
             .drag-handle {
@@ -121,6 +127,12 @@
             .sortable-ghost {
                 opacity: .6;
                 background: #f6f7fb;
+            }
+
+            .table-responsive thead th {
+                position: sticky;
+                top: 0;
+                z-index: 1;
             }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
@@ -149,7 +161,6 @@
                             .then(r => r.json())
                             .then(res => {
                                 if (!res.ok) throw new Error(res.message || 'อัปเดตลำดับไม่สำเร็จ');
-                                // Toast สำเร็จ
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'บันทึกลำดับใหม่แล้ว',
@@ -176,7 +187,7 @@
     {{-- ใช้ได้ทั้งสองโหมด: Tooltip + SweetAlert ลบ --}}
     <script>
         (function() {
-            // ✅ Bootstrap Tooltip
+            // Bootstrap Tooltip
             document.addEventListener('DOMContentLoaded', function() {
                 const list = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 list.forEach(function(el) {
@@ -184,7 +195,7 @@
                 });
             });
 
-            // 🧹 ปิด tooltip เมื่อคลิกปุ่ม (กันค้าง)
+            // ปิด tooltip เมื่อคลิกปุ่ม (กันค้าง)
             document.addEventListener('click', function(e) {
                 const t = e.target.closest('[data-bs-toggle="tooltip"]');
                 if (t) {
@@ -193,11 +204,10 @@
                 }
             });
 
-            // 🛑 SweetAlert2: ยืนยันลบ
+            // SweetAlert2: ยืนยันลบ
             document.addEventListener('submit', function(e) {
                 const form = e.target;
                 if (!form.classList.contains('js-delete-form')) return;
-
                 e.preventDefault();
 
                 const title = form.dataset.title || 'รายการนี้';

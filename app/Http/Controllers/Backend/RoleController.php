@@ -15,20 +15,30 @@ class RoleController extends Controller
     // App/Http/Controllers/Backend/RoleController.php
     public function index(Request $request)
     {
-        $reorder = (bool) $request->boolean('reorder');
+        // โหมดลาก-วาง
+        $reorder = $request->boolean('reorder');
 
+        // ค่าค้นหา (trim กันช่องว่างล้วน)
+        $q = trim((string) $request->input('q', ''));
+
+        // สร้างคิวรี
         $query = Role::query()
-            ->when($request->filled('name'), fn($q) =>
-                $q->where('name', 'like', '%' . $request->name . '%')
-            );
-
-        // เรียงตาม ordering ก่อน ถ้าเท่ากันค่อย id ล่าสุด
-        $query->orderByRaw('COALESCE(ordering, 0) ASC')->latest('id');
+            ->when($q !== '', function ($qq) use ($q) {
+                $qq->where('name', 'like', "%{$q}%");
+            })
+        // เรียงตาม ordering ก่อน แล้วค่อย id ล่าสุด
+            ->orderByRaw('COALESCE(ordering, 0) ASC')
+            ->orderByDesc('id');
 
         if ($reorder) {
-            $roles = $query->get(); // โหมดลาก-วาง ไม่ใช้ paginate
+            // โหมดจัดเรียง: ดึงทั้งหมด (ไม่ paginate)
+            $roles = $query->get();
         } else {
-            $roles = $query->paginate(20)->withQueryString();
+            // โหมดปกติ: paginate + คงพารามิเตอร์ค้นหา
+            $perPage = (int) $request->integer('per_page', 10);
+            $perPage = $perPage > 0 && $perPage <= 100 ? $perPage : 10;
+
+            $roles = $query->paginate($perPage)->appends($request->query());
         }
 
         return view('backend.role.index', compact('roles', 'reorder'));

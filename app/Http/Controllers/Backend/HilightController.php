@@ -22,15 +22,23 @@ class HilightController extends Controller
 
     public function index(Request $request)
     {
-        $q       = $request->get('q');
-        $reorder = $request->boolean('reorder'); // << โหมดจัดเรียง (ดึงทุกรายการ)
+        $q       = trim((string) $request->get('q'));
+        $reorder = $request->boolean('reorder'); // โหมดจัดเรียง (ดึงทุกรายการ)
 
-        $query = Hilight::when($q, fn($qq) => $qq->where('title', 'like', "%{$q}%"))
+        $query = Hilight::when(!$reorder && $q, function ($qq) use ($q) {
+            $like = "%{$q}%";
+            $qq->where(function ($w) use ($like) {
+                $w->where('title', 'like', $like)
+                    ->orWhere('link_url', 'like', $like)
+                    ->orWhere('description', 'like', $like);
+            });
+        })
             ->orderBy('ordering')
             ->orderByDesc('id');
 
-        // ถ้าโหมดจัดเรียง ให้ดึงทั้งหมด (เพื่อจัดเรียงได้ทั้งชุด)
-        $rs = $reorder ? $query->get() : $query->paginate(15)->withQueryString();
+        // โหมดจัดเรียง: ดึงทั้งหมด (ignore $q)
+        $rs = $reorder ? $query->get()
+            : $query->paginate(10)->withQueryString();
 
         return view('backend.hilight.index', compact('rs', 'q', 'reorder'));
     }

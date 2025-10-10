@@ -13,7 +13,8 @@ class NewsController extends Controller
 {
     public function index(Request $req)
     {
-        $filters = $req->only(['q', 'is_active', 'category', 'from', 'to']);
+        $filters      = $req->only(['q', 'is_active', 'category', 'from', 'to']);
+        $filters['q'] = isset($filters['q']) ? trim((string) $filters['q']) : null;
 
         $rs = News::query()
             ->when($filters['q'] ?? null, function ($q, $kw) {
@@ -34,9 +35,13 @@ class NewsController extends Controller
                 ]);
             })
             ->orderByDesc('id')
-            ->paginate(15)->withQueryString();
+            ->paginate(10)->withQueryString();
 
-        return view('backend.news.index', compact('rs', 'filters'));
+        return view('backend.news.index', [
+            'rs'      => $rs,
+            'filters' => $filters,
+            'q'       => $filters['q'], // เผื่อใช้สะดวกใน view
+        ]);
     }
 
     public function create()

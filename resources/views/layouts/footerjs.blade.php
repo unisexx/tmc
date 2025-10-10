@@ -189,3 +189,4 @@
 
 {{-- flatpickr --}}
 <script src="{{ URL::asset('build/js/plugins/flatpickr.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>

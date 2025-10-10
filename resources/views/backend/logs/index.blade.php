@@ -1,8 +1,8 @@
 @extends('layouts.main')
 
-@section('title', 'บันทึกกิจกรรม')
+@section('title', 'ประวัติการใช้งาน')
 @section('breadcrumb-item', 'ระบบ')
-@section('breadcrumb-item-active', 'บันทึกกิจกรรม')
+@section('breadcrumb-item-active', 'ประวัติการใช้งาน')
 
 @push('css')
     <style>
@@ -36,75 +36,85 @@
     @endphp
 
     <div class="card">
-        <div class="card-header border-0 pb-0">
+        {{-- <div class="card-header border-0 pb-0">
             <h5 class="mb-0">บันทึกกิจกรรม (Activity Log)</h5>
-        </div>
+        </div> --}}
 
         <div class="card-body">
 
             {{-- Filter Bar --}}
-            <form method="GET" action="{{ route('backend.logs.index') }}" class="mb-3">
-                <div class="row g-2 align-items-end mb-2">
-                    {{-- บรรทัดที่ 1 --}}
-                    <div class="col-md-4 col-lg-3">
-                        <label class="form-label">คำค้น</label>
-                        <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="คำอธิบาย / หมวด / ชื่อโมเดล">
-                    </div>
+            <form method="GET" action="{{ route('backend.logs.index') }}" class="d-flex flex-wrap align-items-center gap-2 mb-3">
 
-                    <div class="col-md-3 col-lg-3">
-                        <label class="form-label">ผู้ใช้</label>
-                        <select name="user_id" class="form-select">
-                            <option value="">— ทั้งหมด —</option>
-                            @foreach ($users as $id => $name)
-                                <option value="{{ $id }}" @selected((string) $id === (string) $userId)>{{ $name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-md-3 col-lg-3">
-                        <label class="form-label">หมวด (log_name)</label>
-                        <select name="log_name" class="form-select">
-                            <option value="">— ทั้งหมด —</option>
-                            @foreach ($logNames as $ln)
-                                <option value="{{ $ln }}" @selected($ln === $logName)>{{ $ln }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-md-2 col-lg-3">
-                        <label class="form-label">เหตุการณ์</label>
-                        <select name="event" class="form-select">
-                            <option value="">— ทั้งหมด —</option>
-                            @foreach ($events as $k => $v)
-                                <option value="{{ $k }}" @selected($k === $event)>{{ $v }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                {{-- คำค้น --}}
+                <div class="input-group" style="max-width: 320px;">
+                    <span class="input-group-text">คำค้น</span>
+                    <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="คำอธิบาย / หมวด / ชื่อโมเดล">
                 </div>
 
-                <div class="row g-2 align-items-end">
-                    {{-- บรรทัดที่ 2 --}}
-                    <div class="col-md-2 col-lg-2">
-                        <label class="form-label">จากวันที่</label>
-                        <input type="date" name="date_from" value="{{ $dateFrom }}" class="form-control">
-                    </div>
-
-                    <div class="col-md-2 col-lg-2">
-                        <label class="form-label">ถึงวันที่</label>
-                        <input type="date" name="date_to" value="{{ $dateTo }}" class="form-control">
-                    </div>
-
-                    <div class="col-md-8 col-lg-8 d-flex gap-2 mt-2 mt-md-0">
-                        <button class="btn btn-primary">
-                            <i class="ti ti-search me-1"></i> ค้นหา
-                        </button>
-                    </div>
+                {{-- ผู้ใช้ --}}
+                <div class="input-group" style="max-width: 320px;">
+                    <span class="input-group-text">ผู้ใช้</span>
+                    <select name="user_id" class="form-select">
+                        <option value="">— ทั้งหมด —</option>
+                        @foreach ($users as $id => $name)
+                            <option value="{{ $id }}" @selected((string) $id === (string) $userId)>{{ $name }}</option>
+                        @endforeach
+                    </select>
                 </div>
+
+                {{-- หมวด (log_name) --}}
+                <div class="input-group" style="max-width: 320px;">
+                    <span class="input-group-text">หมวด</span>
+                    <select name="log_name" class="form-select">
+                        <option value="">— ทั้งหมด —</option>
+                        @foreach ($logNames as $ln)
+                            <option value="{{ $ln }}" @selected($ln === $logName)>{{ $ln }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- บังคับขึ้นบรรทัดใหม่ --}}
+                <div class="w-100"></div>
+
+                {{-- เหตุการณ์ (แถวล่าง) --}}
+                <div class="input-group mt-2" style="max-width: 260px;">
+                    <span class="input-group-text">เหตุการณ์</span>
+                    <select name="event" class="form-select">
+                        <option value="">— ทั้งหมด —</option>
+                        @foreach ($events as $k => $v)
+                            <option value="{{ $k }}" @selected($k === $event)>{{ $v }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- ช่วงวันที่ (แถวล่าง) --}}
+                <div class="input-group mt-2" style="max-width: 320px;">
+                    <span class="input-group-text">ช่วงวันที่</span>
+                    <input id="logs-daterange" type="text" class="form-control" placeholder="ช่วงวันที่ (YYYY-MM-DD - YYYY-MM-DD)" value="{{ $dateFrom && $dateTo ? $dateFrom . ' - ' . $dateTo : '' }}" autocomplete="off">
+                </div>
+
+                {{-- hidden values สำหรับ Controller --}}
+                <input type="hidden" name="date_from" id="input-date-from" value="{{ $dateFrom }}">
+                <input type="hidden" name="date_to" id="input-date-to" value="{{ $dateTo }}">
+
+                <button class="btn btn-outline-primary mt-2" type="submit">
+                    <i class="ti ti-search me-1"></i> ค้นหา
+                </button>
+
+                {{-- ปุ่มล้างค่า (เลือกใช้) --}}
+                {{-- @if (request()->query())
+                    <a href="{{ route('backend.logs.index') }}" class="btn btn-light border mt-2"> ล้างค่า </a>
+                @endif --}}
+
+                {{-- ถ้าอยากให้ขึ้นบรรทัดใหม่เฉพาะจอใหญ่ ใช้ตัวคั่นแบบนี้แทน: --}}
+                {{-- <div class="w-100 d-none d-lg-block"></div> --}}
             </form>
+
+
 
             {{-- Table --}}
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover table-striped align-middle">
                     <thead class="table-light">
                         <tr>
                             <th style="width: 160px;">เวลา</th>
@@ -249,3 +259,54 @@
         </div>
     </div>
 @endsection
+
+@push('js')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const rangeEl = document.getElementById('logs-daterange');
+            const fromEl = document.getElementById('input-date-from');
+            const toEl = document.getElementById('input-date-to');
+            const btnClr = document.getElementById('btn-clear-daterange');
+
+            const startVal = fromEl.value || null; // 'YYYY-MM-DD' หรือ null
+            const endVal = toEl.value || null;
+
+            const fp = flatpickr(rangeEl, {
+                mode: 'range',
+                dateFormat: 'Y-m-d', // ค่าที่ส่งไปหลังบ้าน (คงรูปแบบเดิม)
+                locale: 'th', // 👈 ใช้ภาษาไทย (วัน/เดือน/ปุ่มต่าง ๆ)
+                defaultDate: [startVal, endVal].filter(Boolean),
+                allowInput: true,
+                conjunction: ' - ', // แสดงเป็น "2025-10-01 - 2025-10-10"
+                onChange: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 2) {
+                        const s = instance.formatDate(selectedDates[0], 'Y-m-d');
+                        const e = instance.formatDate(selectedDates[1], 'Y-m-d');
+                        fromEl.value = s;
+                        toEl.value = e;
+                    } else if (selectedDates.length === 1) {
+                        fromEl.value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                        toEl.value = '';
+                    } else {
+                        fromEl.value = '';
+                        toEl.value = '';
+                    }
+                },
+                onReady: function(_, __, instance) {
+                    // sync ค่าแสดงผลตอนเปิดหน้า (ถ้ามีค่าเริ่มต้น)
+                    if (startVal && endVal) {
+                        rangeEl.value = startVal + ' - ' + endVal;
+                    }
+                }
+            });
+
+            // ปุ่มล้างช่วง
+            btnClr?.addEventListener('click', function() {
+                fp.clear();
+                rangeEl.value = '';
+                fromEl.value = '';
+                toEl.value = '';
+            });
+        });
+    </script>
+@endpush
