@@ -38,15 +38,23 @@
                             </thead>
                             <tbody>
                                 @forelse($users as $i => $u)
-                                    @php
-                                        $rowNo = method_exists($users, 'firstItem') ? $users->firstItem() + $i : $loop->iteration;
-                                        $unit = $u->serviceUnits()->wherePivot('is_primary', true)->first() ?? $u->serviceUnits()->first();
-                                        $isActive = (bool) ($u->is_active ?? false);
-                                        $purposes = $u->reg_purpose_labels_with_color ?? [];
-                                        $hasP = $u->hasPurpose('P');
-                                        $hasR = $u->hasPurpose('R');
-                                    @endphp
                                     <tr>
+                                        @php
+                                            // เลขลำดับ
+                                            $rowNo = method_exists($users, 'firstItem') ? $users->firstItem() + $i : $loop->iteration;
+
+                                            // หน่วยบริการหลัก (primary -> ตัวแรก)
+                                            $unit = $u->serviceUnits->firstWhere('pivot.is_primary', true) ?? $u->serviceUnits->first();
+
+                                            // สิทธิ์/บทบาท/วัตถุประสงค์
+                                            $isActive = (bool) ($u->is_active ?? false);
+                                            $purposes = $u->reg_purpose_labels_with_color ?? [];
+                                            $badgeT = collect($purposes)->firstWhere('label', 'หน่วยบริการสุขภาพผู้เดินทาง');
+                                            $otherBadges = collect($purposes)->reject(fn($pp) => ($pp['label'] ?? '') === 'หน่วยบริการสุขภาพผู้เดินทาง');
+                                            $hasP = $u->hasPurpose('P');
+                                            $hasR = $u->hasPurpose('R');
+                                        @endphp
+
                                         <td>{{ $rowNo }}</td>
 
                                         {{-- ผู้ใช้งาน --}}
@@ -58,12 +66,11 @@
                                         {{-- สังกัด / บทบาท --}}
                                         <td class="d-none d-xl-table-cell">
                                             <div class="row align-items-start">
-                                                {{-- ถ้ามี purposes ให้แสดงไอคอนเรียงต่อกัน --}}
+                                                {{-- ไอคอนตาม purpose --}}
                                                 @if (!empty($purposes))
                                                     <div class="col-auto pe-0 d-flex align-items-start gap-1 flex-wrap">
                                                         @foreach ($purposes as $pp)
                                                             @php
-                                                                // กำหนด icon และสีพื้นหลังตามประเภท
                                                                 $label = $pp['label'] ?? '';
                                                                 [$icon, $bgClass] = match (true) {
                                                                     str_contains($label, 'สคร') => ['ph-map-pin-area', 'btn-light-success'],
@@ -81,29 +88,51 @@
 
                                                 {{-- เนื้อหาทางขวา --}}
                                                 <div class="col">
-                                                    {{-- วัตถุประสงค์ที่ลงทะเบียน --}}
-                                                    <div class="mb-1 d-flex flex-wrap gap-1">
-                                                        @forelse($purposes as $pp)
-                                                            <span class="badge {{ $pp['class'] }}">{{ $pp['label'] }}</span>
-                                                        @empty
-                                                            <span class="text-muted small">-</span>
-                                                        @endforelse
-                                                    </div>
 
-                                                    {{-- สังกัดหน่วยงาน --}}
-                                                    @if (!empty($unit?->org_affiliation))
-                                                        <div class="small text-muted truncate-1" title="{{ $unit->org_affiliation }}">
-                                                            {{ $unit->org_affiliation }}
+                                                    {{-- Badge: หน่วยบริการสุขภาพผู้เดินทาง (T) อยู่บนสุด --}}
+                                                    @if ($badgeT)
+                                                        <div class="mb-1">
+                                                            <span class="badge {{ $badgeT['class'] }}">{{ $badgeT['label'] }}</span>
                                                         </div>
                                                     @endif
 
-                                                    {{-- จังหวัด/สคร. --}}
+                                                    {{-- ชื่อหน่วยบริการ + จังหวัด/อำเภอ/ตำบล (แสดงเมื่อมีชื่อหน่วย) --}}
+                                                    @if ($unit && filled($unit->org_name))
+                                                        @php
+                                                            $prov = $unit->province->title ?? null;
+                                                            $dist = $unit->district->title ?? null;
+                                                            $subd = $unit->subdistrict->title ?? null;
+                                                            $geo = collect([$prov, $dist, $subd])
+                                                                ->filter()
+                                                                ->implode(' / ');
+                                                        @endphp
+
+                                                        <div class="fw-semibold truncate-1" title="{{ $unit->org_name }}">
+                                                            {{ $unit->org_name }}
+                                                        </div>
+
+                                                        @if ($geo !== '' || filled($unit->org_postcode))
+                                                            <div class="small text-muted truncate-1" title="{{ trim($geo . ' ' . ($unit->org_postcode ? '· ' . $unit->org_postcode : '')) }}">
+                                                                {{ $geo }} @if ($unit->org_postcode)
+                                                                    · {{ $unit->org_postcode }}
+                                                                @endif
+                                                            </div>
+                                                        @endif
+                                                    @endif
+
+                                                    {{-- Badge อื่น ๆ (ยกเว้น T) --}}
+                                                    <div class="mt-1 d-flex flex-wrap gap-1">
+                                                        @foreach ($otherBadges as $pp)
+                                                            <span class="badge {{ $pp['class'] }}">{{ $pp['label'] }}</span>
+                                                        @endforeach
+                                                    </div>
+
+                                                    {{-- จังหวัดที่สังกัด / สคร. --}}
                                                     @if ($hasP && $u->superviseProvince)
                                                         <div class="small text-muted truncate-1" title="จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}">
                                                             จังหวัดที่สังกัด: {{ $u->superviseProvince->title }}
                                                         </div>
                                                     @endif
-
                                                     @if ($hasR && $u->superviseRegion)
                                                         <div class="small text-muted truncate-1" title="สคร.: {{ $u->superviseRegion->short_title }}">
                                                             สคร.: {{ $u->superviseRegion->short_title }}
@@ -113,18 +142,13 @@
                                             </div>
                                         </td>
 
-
                                         <td class="d-none d-md-table-cell">{{ $u->username ?? '-' }}</td>
                                         <td class="d-none d-lg-table-cell">{{ $u->contact_mobile ?? '-' }}</td>
 
-                                        {{-- ✅ เปลี่ยนเป็นสิทธิ์การใช้งาน --}}
                                         <td class="text-center d-none d-lg-table-cell">
-                                            <span class="badge {{ $u->role_badge_class }}">
-                                                {{ $u->role->name ?? '-' }}
-                                            </span>
+                                            <span class="badge {{ $u->role_badge_class }}">{{ $u->role->name ?? '-' }}</span>
                                         </td>
 
-                                        {{-- สถานะระบบ --}}
                                         <td class="text-center">
                                             @if ($isActive)
                                                 <i class="ph-duotone ph-check-circle text-primary f-24" data-bs-toggle="tooltip" data-bs-title="Active"></i>
@@ -133,7 +157,6 @@
                                             @endif
                                         </td>
 
-                                        {{-- การจัดการ --}}
                                         <td class="text-end d-flex justify-content-end gap-1">
                                             <form action="{{ route('backend.impersonate.start', $u->id) }}" method="POST" class="d-inline js-impersonate-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                 @csrf

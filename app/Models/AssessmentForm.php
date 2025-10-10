@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CrudActivity;
 use Illuminate\Database\Eloquent\Model;
 
 class AssessmentForm extends Model
 {
+    use CrudActivity;
+
     protected $fillable = [
         'service_unit_id',
         'assess_year',

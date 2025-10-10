@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CrudActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AssessmentServiceUnitLevel extends Model
 {
-    use HasFactory;
+    use HasFactory, CrudActivity;
 
     protected $table = 'assessment_service_unit_levels';
 

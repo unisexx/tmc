@@ -25,9 +25,22 @@ class UserController extends Controller
      * =========================================================================*/
     public function index(Request $request)
     {
-        $q     = trim($request->get('q', ''));
+        $q = trim($request->get('q', ''));
+
         $users = User::query()
-            ->with(['role', 'serviceUnits' => fn($q) => $q->withPivot('is_primary'), 'superviseProvince', 'superviseRegion'])
+            ->with([
+                'role:id,name',
+                // ดึง serviceUnits + pivot + จังหวัด/อำเภอ/ตำบล
+                'serviceUnits' => function ($q) {
+                    $q->withPivot('is_primary')
+                        ->select('service_units.id', 'org_name', 'org_affiliation', 'org_province_code', 'org_district_code', 'org_subdistrict_code', 'org_postcode');
+                },
+                'serviceUnits.province:code,title',
+                'serviceUnits.district:code,title',
+                'serviceUnits.subdistrict:code,title',
+                'superviseProvince:code,title',
+                'superviseRegion:id,short_title',
+            ])
             ->whereNotNull('role_id')
             ->when($q !== '', function ($qr) use ($q) {
                 $qr->where(function ($x) use ($q) {

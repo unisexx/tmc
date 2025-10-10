@@ -12,7 +12,7 @@ class Permissions
         'visitor-stats'        => ['view', 'export'],
         'assessment'           => ['view', 'create', 'update', 'delete'],
         'service-unit-profile' => ['view', 'create', 'update', 'delete'],
-        'approve-assessment'   => ['view', 'create', 'update', 'delete'],
+        'review-assessment'    => ['view', 'create', 'update', 'delete'],
         'highlights'           => ['view', 'create', 'update', 'delete'],
         'news'                 => ['view', 'create', 'update', 'delete'],
         'faqs'                 => ['view', 'create', 'update', 'delete'],
@@ -22,6 +22,7 @@ class Permissions
         'approve-application'  => ['view', 'create', 'update', 'delete'],
         'users'                => ['view', 'create', 'update', 'delete'],
         'roles-permissions'    => ['view', 'create', 'update', 'delete'],
+        'log'                  => ['view'],
     ];
 
     /**
@@ -32,7 +33,7 @@ class Permissions
         'visitor-stats'        => 'สถิติผู้เข้าชม',
         'assessment'           => 'การประเมินตนเอง',
         'service-unit-profile' => 'ข้อมูลหน่วยบริการ',
-        'approve-assessment'   => 'อนุมัติผลการประเมิน',
+        'review-assessment'    => 'ตรวจสอบผลการประเมิน',
         'highlights'           => 'ไฮไลท์',
         'news'                 => 'ข่าว',
         'faqs'                 => 'คำถามที่พบบ่อย',
@@ -42,6 +43,7 @@ class Permissions
         'approve-application'  => 'ตรวจสอบใบสมัคร',
         'users'                => 'ผู้ใช้งาน',
         'roles-permissions'    => 'สิทธิ์การใช้งาน',
+        'log'                  => 'ประวัติการใช้งาน',
     ];
 
     /**

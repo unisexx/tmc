@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Backend\ActivityLogController;
 use App\Http\Controllers\Backend\ApplicationReviewController;
+use App\Http\Controllers\Backend\AssessmentReviewController;
 use App\Http\Controllers\Backend\ContactController;
 use App\Http\Controllers\Backend\CookiePolicyController;
 use App\Http\Controllers\Backend\DashboardController;
@@ -115,6 +117,15 @@ Route::middleware(['auth'])->group(function () {
 
         // ดาวน์โหลดไฟล์แนบ ที่แนบมากับแบบประเมิน
         Route::get('attachments/{id}', [SelfAssessmentServiceUnitLevelController::class, 'downloadAttachment'])->name('attachments.download');
+
+        /* ตรวจสอบผลการประเมิน */
+        Route::get('review-assessment', [AssessmentReviewController::class, 'index'])->name('review-assessment.index');
+        Route::get('review-assessment/{id}', [AssessmentReviewController::class, 'show'])->whereNumber('id')->name('review-assessment.show');
+        Route::put('review-assessment/{id}/status', [AssessmentReviewController::class, 'updateStatus'])->whereNumber('id')->name('review-assessment.status');
+        Route::delete('review-assessment/{id}', [AssessmentReviewController::class, 'destroy'])->whereNumber('id')->name('review-assessment.destroy');
+
+        // ประวัติการใช้งาน
+        Route::get('/logs', [ActivityLogController::class, 'index'])->name('logs.index');
 
         // Route::post('{form}/submit', [SelfAssessmentFlowController::class, 'submit'])->name('submit');   // เปลี่ยน status
 

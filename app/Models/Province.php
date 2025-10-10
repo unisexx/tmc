@@ -2,10 +2,12 @@
 // app/Models/Province.php
 namespace App\Models;
 
+use App\Models\Concerns\CrudActivity;
 use Illuminate\Database\Eloquent\Model;
 
 class Province extends Model
 {
+    use CrudActivity;
     protected $table      = 'province';
     protected $primaryKey = 'code';
     public $incrementing  = false;

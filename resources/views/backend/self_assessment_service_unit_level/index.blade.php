@@ -74,7 +74,24 @@
                                         <td>{{ $rows->firstItem() + $i }}</td>
                                         <td>{{ $row->assess_year ? (int) $row->assess_year + 543 : '—' }}</td>
                                         <td>{{ (int) $row->assess_round === 1 ? 'รอบที่ 1' : 'รอบที่ 2' }}</td>
-                                        <td>{{ optional($row->serviceUnit)->org_name ?? '—' }}</td>
+                                        <td>
+                                            @php $su = $row->serviceUnit; @endphp
+                                            <div class="fw-semibold">{{ $su->org_name ?? '—' }}</div>
+                                            @if ($su)
+                                                <div class="text-muted small">
+                                                    {{ $su->province->title ?? '—' }}
+                                                    @if (!empty($su->district?->title))
+                                                        / {{ $su->district->title }}
+                                                    @endif
+                                                    @if (!empty($su->subdistrict?->title))
+                                                        / {{ $su->subdistrict->title }}
+                                                    @endif
+                                                    @if (!empty($su->org_postcode))
+                                                        · {{ $su->org_postcode }}
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </td>
 
                                         <td class="text-center">
                                             {{-- ใช้ component ระดับ --}}
@@ -181,7 +198,8 @@
                 Swal.fire({
                     icon: 'question',
                     title,
-                    html,
+                    html: text, // ← เดิมเป็น html, (ตัวแปรไม่มี) ให้ใช้ html: text
+                    // หรือจะใช้ text: text ก็ได้ ถ้าไม่ต้องการ HTML tag
                     showCancelButton: true,
                     confirmButtonText: confirmText,
                     cancelButtonText: 'ยกเลิก',
@@ -192,6 +210,7 @@
                 });
                 return;
             }
+
 
             // 🗑️ ปุ่มลบ
             if (btnDelete) {

@@ -2,10 +2,13 @@
 // app/Models/HealthRegion.php
 namespace App\Models;
 
+use App\Models\Concerns\CrudActivity;
 use Illuminate\Database\Eloquent\Model;
 
 class HealthRegion extends Model
 {
+    use CrudActivity;
+
     protected $fillable = ['code', 'title', 'short_title', 'hq_province', 'phone', 'lat', 'lng'];
 
     public function provinces()

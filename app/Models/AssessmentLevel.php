@@ -3,10 +3,12 @@
 // app/Models/AssessmentLevel.php
 namespace App\Models;
 
+use App\Models\Concerns\CrudActivity;
 use Illuminate\Database\Eloquent\Model;
 
 class AssessmentLevel extends Model
 {
+    use CrudActivity;
     protected $fillable = ['code', 'name'];
     public function questions()
     {return $this->hasMany(AssessmentQuestion::class);}

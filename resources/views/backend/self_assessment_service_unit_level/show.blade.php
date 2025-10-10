@@ -56,145 +56,94 @@
         </div>
 
         <div class="card-body">
+
+            {{-- ==== แจ้งสถานะการพิจารณา (ใช้ <x-approval-badge> เหมือนหน้า index) ==== --}}
             @php
-                // หน่วยบริการ (ยึดตาม record ถ้ามี, fallback ไปที่หน่วยปัจจุบันใน session)
-                $currentUnitId = session('current_service_unit_id');
-                $currentUnitName = $row->serviceUnit->org_name ?? (optional(Auth::user()?->serviceUnits?->firstWhere('id', $currentUnitId))->org_name ?? '-');
+                $status = $row->approval_status ?? 'pending';
 
-                // ระดับเดิมจาก record
-                $oldLv = $row->level ?? null;
-
-                // ปีงบประมาณ / รอบ (ใช้ค่าที่คุณมีอยู่แล้ว)
-                $yearBE = $yearBE ?? ($row->assess_year ?? fiscalYearCE()) + 543;
-                $roundTxt = isset($row->assess_round) ? fiscalRoundText((int) $row->assess_round) : '-';
+                // mapping สำหรับ alert + ไอคอน (ไว้แค่เรื่องสกินของกล่องแจ้งเตือน)
+                $alertCtxMap = [
+                    'pending' => 'secondary',
+                    'reviewing' => 'warning',
+                    'returned' => 'info',
+                    'approved' => 'success',
+                    'rejected' => 'danger',
+                ];
+                $iconMap = [
+                    'pending' => 'ti-info-circle',
+                    'reviewing' => 'ti-hourglass',
+                    'returned' => 'ti-arrow-back-up',
+                    'approved' => 'ti-badge-check',
+                    'rejected' => 'ti-circle-x',
+                ];
+                $alertCtx = $alertCtxMap[$status] ?? 'secondary';
+                $icon = $iconMap[$status] ?? 'ti-info-circle';
             @endphp
 
-            <div class="border rounded p-2 mb-3 bg-body-tertiary d-flex flex-wrap align-items-center gap-3">
-                <!-- หน่วยบริการ -->
-                <div class="d-inline-flex align-items-center gap-2">
-                    <i class="ph-duotone ph-hospital fs-5"></i>
-                    <span class="text-muted">หน่วยบริการ</span>
-                    <span class="fw-semibold">{{ $currentUnitName }}</span>
-                </div>
+            @if (in_array($status, ['returned', 'rejected', 'reviewing', 'approved', 'pending'], true))
+                <div class="alert alert-{{ $alertCtx }} d-flex align-items-start" role="alert">
+                    <div class="me-2">
+                        <i class="ti {{ $icon }} fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">
+                            สถานะปัจจุบัน:
+                            {{-- ✅ ใช้ component เดียวกับหน้า index --}}
+                            <x-approval-badge :status="$status" />
+                        </div>
 
-                <div class="vr"></div>
+                        {{-- ข้อความอธิบายตามสถานะ --}}
+                        @switch($status)
+                            @case('returned')
+                                <div class="mt-1">
+                                    แบบประเมินถูก<strong>ส่งกลับเพื่อแก้ไข</strong> กรุณาตรวจสอบรายการที่ขอให้ปรับปรุงด้านล่าง จากนั้นแก้ไขและส่งใหม่อีกครั้ง
+                                </div>
+                            @break
 
-                <!-- ระดับ (ใช้ x-level-badge แบบเดียวกับฟอร์ม) -->
-                <div class="d-inline-flex align-items-center gap-2">
-                    <i class="ph-duotone ph-medal fs-5"></i>
-                    <span class="text-muted">ระดับ</span>
-                    <span id="summaryLevelBadge">
-                        @if ($oldLv)
-                            <x-level-badge :level="$oldLv" class="ms-1" />
-                        @else
-                            <span class="badge bg-secondary ms-1">—</span>
+                            @case('rejected')
+                                <div class="mt-1">
+                                    แบบประเมิน<strong>ไม่อนุมัติ</strong> โปรดอ่านเหตุผลประกอบและปรับปรุงก่อนส่งใหม่ในรอบถัดไป
+                                </div>
+                            @break
+
+                            @case('reviewing')
+                                <div class="mt-1">อยู่ระหว่างการตรวจสอบโดยเจ้าหน้าที่ ขณะนี้ไม่สามารถแก้ไขได้</div>
+                            @break
+
+                            @case('approved')
+                                <div class="mt-1">แบบประเมินได้รับการ<strong>อนุมัติ</strong>แล้ว</div>
+                            @break
+
+                            @default
+                                <div class="mt-1">แบบประเมินอยู่ในสถานะเริ่มต้น</div>
+                        @endswitch
+
+                        {{-- เหตุผล/หมายเหตุจากผู้ตรวจ --}}
+                        @if (!empty($row->approval_remark))
+                            <div class="mt-2">
+                                <div class="small text-muted">หมายเหตุจากผู้พิจารณา</div>
+                                <div class="border rounded p-2 bg-body-tertiary">{!! nl2br(e($row->approval_remark)) !!}</div>
+                            </div>
                         @endif
-                    </span>
-                </div>
 
-                <div class="vr"></div>
-
-                <!-- ปีงบประมาณ -->
-                <div class="d-inline-flex align-items-center gap-2">
-                    <i class="ph-duotone ph-calendar-blank fs-5"></i>
-                    <span class="text-muted">ปีงบประมาณ</span>
-                    <span class="fw-semibold">{{ $yearBE }}</span>
-                </div>
-
-                <div class="vr"></div>
-
-                <!-- รอบ -->
-                <div class="d-inline-flex align-items-center gap-2">
-                    <i class="ph-duotone ph-number-circle-one fs-5"></i>
-                    <span class="text-muted">รอบ</span>
-                    <span class="fw-semibold">{{ $roundTxt }}</span>
-                </div>
-            </div>
-
-
-
-            {{-- ตารางสรุป 6 องค์ประกอบ (3 คอลัมน์) --}}
-            <div class="table-responsive">
-                <table class="table table-bordered table-summary align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 28%">องค์ประกอบ</th>
-                            <th style="width: 36%">คุณสมบัติและศักยภาพการให้บริการที่มี<br><small class="text-muted">List ข้อที่มี</small></th>
-                            <th style="width: 36%">ช่องว่างในการพัฒนา<br><small class="text-muted">List ข้อที่ไม่มี</small></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @php
-                            // เผื่อไม่มีข้อมูล ส่งหัวเรื่อง 1..6 ไว้ก่อน
-                            $defaultNames = [
-                                1 => 'การบริหารจัดการ',
-                                2 => 'กระบวนงาน',
-                                3 => 'บุคลากร',
-                                4 => 'อาคาร สถานที่',
-                                5 => 'เครื่องมือ เครื่องใช้ วัสดุเวชภัณฑ์และเอกสารทางการแพทย์',
-                                6 => 'ระบบเทคโนโลยี และแลกเปลี่ยนข้อมูล',
-                            ];
-                        @endphp
-
-                        @for ($i = 1; $i <= 6; $i++)
-                            @php
-                                $cmp = $components[$i] ?? ['name' => $defaultNames[$i] ?? "องค์ประกอบที่ $i", 'has' => [], 'gaps' => []];
-                            @endphp
-                            <tr>
-                                <td>
-                                    <div class="fw-semibold">{{ $i }}. {{ $cmp['name'] }}</div>
-                                </td>
-                                <td>
-                                    @if (count($cmp['has']))
-                                        <ul>
-                                            @foreach ($cmp['has'] as $txt)
-                                                <li>{{ $txt }}</li>
-                                            @endforeach
-                                        </ul>
-                                    @else
-                                        <span class="text-muted">- ไม่มีรายการ -</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if (count($cmp['gaps']))
-                                        <ul>
-                                            @foreach ($cmp['gaps'] as $txt)
-                                                <li>{{ $txt }}</li>
-                                            @endforeach
-                                        </ul>
-                                    @else
-                                        <span class="text-muted">- ไม่มีช่องว่าง -</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endfor
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- ข้อเสนอเพื่อการพัฒนา / แผนพัฒนา --}}
-            <div class="mt-4">
-                <div class="fw-semibold mb-2">
-                    2. หน่วยบริการฯ มีข้อเสนอเพื่อการพัฒนา และ/หรือ แผนพัฒนา
-                </div>
-
-                @if ($form && $form->suggestions->isNotEmpty())
-                    <ol class="mb-0">
-                        @foreach ($form->suggestions->sortBy('id') as $sg)
-                            <li class="mb-1">
-                                {{ $sg->text ?? '—' }}
-                                @if (!empty($sg->attachment_path))
-                                    <a class="ms-2 link-primary" target="_blank" href="{{ Storage::disk('public')->url($sg->attachment_path) }}">
-                                        ไฟล์แนบ
-                                    </a>
+                        {{-- ผู้พิจารณาและเวลา (ถ้ามี) --}}
+                        @if ($row->approved_at || $row->approver)
+                            <div class="mt-2 small text-muted">
+                                @if ($row->approver)
+                                    ผู้พิจารณา: <span class="fw-semibold">{{ $row->approver->name }}</span>
                                 @endif
-                            </li>
-                        @endforeach
-                    </ol>
-                @else
-                    <div class="text-muted">- ไม่มีข้อเสนอ/แผนพัฒนา -</div>
-                @endif
-            </div>
+                                @if ($row->approved_at)
+                                    <span class="vr"></span> เวลา: {{ \Carbon\Carbon::parse($row->approved_at)->format('d/m/Y H:i') }}
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+
+
+            @include('backend.self_assessment_service_unit_level._summary', compact('row', 'yearBE', 'form', 'components'))
         </div>
 
         <div class="card-footer d-flex justify-content-end">
@@ -207,6 +156,5 @@
                 </a>
             </div>
         </div>
-
     </div>
 @endsection

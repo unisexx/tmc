@@ -86,3 +86,80 @@ if (!function_exists('thFullDate')) {
         return $ts->format('j') . ' ' . $months[(int) $ts->format('n')] . ' ' . ($ts->year + 543);
     }
 }
+
+/**
+ * แปลง working_hours_json → ข้อความภาษาไทยหลายบรรทัด
+ * โครงสร้างอินพุตที่รองรับ:
+ * [
+ *   "mon" => ["08:00-12:00","13:00-17:00"],
+ *   "tue" => [],
+ *   ...
+ * ]
+ */
+if (!function_exists('workingHoursToThaiLines')) {
+    function workingHoursToThaiLines(array | string | null $json): string
+    {
+        if (empty($json)) {
+            return workingHoursEmptyLines();
+        }
+
+        if (is_string($json)) {
+            $json = json_decode($json, true);
+        }
+        if (!is_array($json)) {
+            return workingHoursEmptyLines();
+        }
+
+        $days = [
+            'mon' => 'จันทร์',
+            'tue' => 'อังคาร',
+            'wed' => 'พุธ',
+            'thu' => 'พฤหัสบดี',
+            'fri' => 'ศุกร์',
+            'sat' => 'เสาร์',
+            'sun' => 'อาทิตย์',
+        ];
+
+        $lines = [];
+        foreach ($days as $key => $label) {
+            $ranges = $json[$key] ?? [];
+            if (!is_array($ranges)) {
+                $ranges = [];
+            }
+
+            // เรียงช่วงเวลา (จากเวลาเริ่ม)
+            usort($ranges, function ($a, $b) {
+                $sa = (int) substr($a, 0, 2);
+                $sb = (int) substr($b, 0, 2);
+                return $sa <=> $sb;
+            });
+
+            $text    = count($ranges) ? implode(', ', $ranges) : '— ปิดทำการ —';
+            $lines[] = "{$label} : {$text}";
+        }
+
+        return implode("\n", $lines);
+    }
+}
+
+/**
+ * คืนข้อความ default (ทุกวันปิดทำการ)
+ */
+if (!function_exists('workingHoursEmptyLines')) {
+    function workingHoursEmptyLines(): string
+    {
+        return "จันทร์ : — ปิดทำการ —\nอังคาร : — ปิดทำการ —\nพุธ : — ปิดทำการ —\nพฤหัสบดี : — ปิดทำการ —\nศุกร์ : — ปิดทำการ —\nเสาร์ : — ปิดทำการ —\nอาทิตย์ : — ปิดทำการ —";
+    }
+}
+
+/**
+ * ตัวช่วยสำหรับแสดงใน Blade ให้เป็นหลายบรรทัดพร้อม escape HTML
+ * ใช้แทน nl2br(e()) ได้สะดวก
+ */
+if (!function_exists('renderWorkingHoursHtml')) {
+    function renderWorkingHoursHtml(array | string | null $json): string
+    {
+        $text = workingHoursToThaiLines($json);
+        return nl2br(e($text));
+    }
+}

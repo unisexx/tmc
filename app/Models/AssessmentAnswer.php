@@ -3,11 +3,14 @@
 // app/Models/AssessmentAnswer.php
 namespace App\Models;
 
+use App\Models\Concerns\CrudActivity;
 use Illuminate\Database\Eloquent\Model;
 
 // app/Models/AssessmentAnswer.php
 class AssessmentAnswer extends Model
 {
+    use CrudActivity;
+
     protected $fillable = ['assessment_form_id', 'assessment_question_id', 'answer_bool', 'answer_text', 'attachment_path'];
 
     protected $casts = [

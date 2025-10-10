@@ -22,12 +22,14 @@
     </li>
 @endcan
 
-<li class="pc-item">
-    <a href="{{ route('backend.service-unit.edit') }}" class="pc-link">
-        <span class="pc-micon"><i class="ph-duotone ph-hospital"></i></span>
-        <span class="pc-mtext">ข้อมูลหน่วยบริการ</span>
-    </a>
-</li>
+@can('service-unit-profile.view')
+    <li class="pc-item">
+        <a href="{{ route('backend.service-unit.edit') }}" class="pc-link">
+            <span class="pc-micon"><i class="ph-duotone ph-hospital"></i></span>
+            <span class="pc-mtext">ข้อมูลหน่วยบริการ</span>
+        </a>
+    </li>
+@endcan
 
 @can('assessment.view')
     <li class="pc-item">
@@ -38,9 +40,9 @@
     </li>
 @endcan
 
-@can('approve-assessment')
+@can('review-assessment.view')
     <li class="pc-item">
-        <a href="#" class="pc-link">
+        <a href="{{ route('backend.review-assessment.index') }}" class="pc-link">
             <span class="pc-micon"><i class="ph-duotone ph-clipboard-text"></i></span>
             <span class="pc-mtext">ตรวจสอบผลการประเมิน</span>
         </a>
@@ -132,6 +134,15 @@
         <a href="{{ route('backend.role.index') }}" class="pc-link">
             <span class="pc-micon"><i class="ph-duotone ph-shield-check"></i></span>
             <span class="pc-mtext" data-i18n="สิทธิ์การใช้งาน">สิทธิ์การใช้งาน</span>
+        </a>
+    </li>
+@endcan
+
+@can('log.view')
+    <li class="pc-item">
+        <a href="{{ route('backend.logs.index') }}" class="pc-link">
+            <span class="pc-micon"><i class="ph-duotone ph-clock-counter-clockwise"></i></span>
+            <span class="pc-mtext" data-i18n="ประวัติการใช้งาน">ประวัติการใช้งาน</span>
         </a>
     </li>
 @endcan

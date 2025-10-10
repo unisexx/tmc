@@ -39,7 +39,14 @@ class SelfAssessmentServiceUnitLevelController extends Controller
                 : redirect()->route('backend.dashboard');
         }
 
-        $q = AssessmentServiceUnitLevel::with(['serviceUnit', 'user', 'approver'])
+        $q = AssessmentServiceUnitLevel::with([
+            'serviceUnit:id,org_name,org_province_code,org_district_code,org_subdistrict_code,org_postcode',
+            'serviceUnit.province:code,title',
+            'serviceUnit.district:code,title',
+            'serviceUnit.subdistrict:code,title',
+            'user:id,name',
+            'approver:id,name',
+        ])
             ->where('service_unit_id', $unitId)
             ->latest('id');
 
