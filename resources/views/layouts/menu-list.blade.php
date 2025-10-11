@@ -4,6 +4,18 @@
     <i class="ph-duotone ph-chart-pie"></i>
 </li>
 
+<li class="pc-item pc-hasmenu">
+    <a href="#!" class="pc-link"><span class="pc-micon"> <i class="ph-duotone ph-desktop"></i></span><span class="pc-mtext" data-i18n="จัดการข้อมูลหน้าแรก">จัดการข้อมูลหน้าแรก</span><span class="pc-arrow"><i data-feather="chevron-right"></i></span></a>
+    <ul class="pc-submenu">
+        <li class="pc-item"><a class="pc-link" href="/demo/layout-horizontal" data-i18n="ไฮไลท์">ไฮไลท์</a></li>
+        <li class="pc-item"><a class="pc-link" href="/demo/layout-horizontal" data-i18n="ข่าวประชาสัมพันธ์">ข่าวประชาสัมพันธ์</a></li>
+        <li class="pc-item"><a class="pc-link" href="/demo/layout-horizontal" data-i18n="คำถามที่พบบ่อย">คำถามที่พบบ่อย</a></li>
+        <li class="pc-item"><a class="pc-link" href="/demo/layout-horizontal" data-i18n="ข้อมูลติดต่อ">ข้อมูลติดต่อ</a></li>
+        <li class="pc-item"><a class="pc-link" href="/demo/layout-horizontal" data-i18n="นโยบายข้อมูลส่วนบุคคล">นโยบายข้อมูลส่วนบุคคล</a></li>
+        <li class="pc-item"><a class="pc-link" href="/demo/layout-horizontal" data-i18n="นโยบายคุกกี้">นโยบายคุกกี้</a></li>
+    </ul>
+</li>
+
 @can('dashboard.view')
     <li class="pc-item">
         <a href="{{ route('backend.dashboard') }}" class="pc-link">

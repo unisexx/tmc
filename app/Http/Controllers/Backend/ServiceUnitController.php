@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ServiceUnitManagersRequest;
 use App\Http\Requests\ServiceUnitRequest;
 use App\Models\Province;
 use App\Models\ServiceUnit;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -132,6 +134,76 @@ class ServiceUnitController extends Controller
         $service_unit->delete();
         flash_notify('ลบหน่วยบริการเรียบร้อยแล้ว', 'success');
         return redirect()->route('backend.service-unit.index');
+    }
+
+    /**
+     * แสดงฟอร์มตั้งค่าผู้รับผิดชอบหน่วยงาน
+     */
+    public function managers(ServiceUnit $service_unit)
+    {
+        // รายชื่อผู้ใช้ทั้งหมดสำหรับ select2 (ไม่ใช้ AJAX)
+        $allUsers = User::query()
+            ->with('role:id,name')
+            ->select('id', 'name', 'email', 'contact_cid', 'contact_position', 'contact_mobile', 'role_id', 'reg_purpose', 'is_active')
+            ->where('is_active', 1)
+            ->whereJsonContains('reg_purpose', 'T')
+            ->orderBy('name')
+            ->get();
+
+        // หน่วย + ผู้ใช้ปัจจุบัน (พร้อมข้อมูลแสดงผลในตาราง)
+        $unit = $service_unit->load([
+            'users' => function ($q) {
+                $q->with('role:id,name')
+                    ->select('users.id', 'name', 'email', 'contact_cid', 'contact_position', 'contact_mobile', 'role_id');
+            },
+        ]);
+
+        $current = $unit->users->map(function ($u) {
+            return [
+                'user_id'       => $u->id,
+                'name'          => $u->name,
+                'email'         => $u->email,
+                'cid'           => $u->contact_cid,
+                'position_name' => $u->contact_position,
+                'mobile'        => $u->contact_mobile,
+                'role_name'     => optional($u->role)->name ?? 'ไม่มีสิทธิ์',
+                'role'          => 'manager', // fix ให้เป็น manager ตามเงื่อนไข
+                'is_primary'    => (bool) ($u->pivot->is_primary ?? 0),
+                'start_date'    => $u->pivot->start_date ?? null,
+                'end_date'      => $u->pivot->end_date ?? null,
+            ];
+        });
+
+        return view('backend.service_unit.managers', [
+            'unit'         => $unit,
+            'currentItems' => $current,
+            'allUsers'     => $allUsers,
+        ]);
+    }
+
+    /**
+     * บันทึกผู้รับผิดชอบหน่วยงาน
+     */
+    public function managersUpdate(ServiceUnitManagersRequest $request, ServiceUnit $service_unit)
+    {
+        $payload = collect($request->input('managers', []))
+            ->filter(fn($x) => !empty($x['user_id']))
+            ->mapWithKeys(function ($row) {
+                $userId = (int) $row['user_id'];
+                return [
+                    $userId => [
+                        'role'       => $row['role'] ?? null,
+                        'is_primary' => !empty($row['is_primary']),
+                        'start_date' => $row['start_date'] ?? null,
+                        'end_date'   => $row['end_date'] ?? null,
+                    ],
+                ];
+            })->toArray();
+
+        $service_unit->users()->sync($payload);
+
+        flash_notify('บันทึกผู้รับผิดชอบหน่วยงานเรียบร้อยแล้ว', 'success');
+        return redirect()->route('backend.service-unit.managers.edit', $service_unit->id);
     }
 
     /**

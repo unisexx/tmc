@@ -95,6 +95,10 @@
                                 <td>{{ $unit->org_tel ?: '-' }}</td>
 
                                 <td class="text-end">
+                                    <a href="{{ route('backend.service-unit.managers.edit', $unit->id) }}" class="btn btn-primary btn-sm">
+                                        <i class="ph-duotone ph-users-three"></i> ผู้รับผิดชอบ
+                                    </a>
+
                                     <a href="{{ route('backend.service-unit.edit', $unit) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
                                         <i class="ti ti-edit f-20"></i>
                                     </a>

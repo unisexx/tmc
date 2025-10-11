@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\Backend\ActivityLogController;
 use App\Http\Controllers\Backend\ApplicationReviewController;
 use App\Http\Controllers\Backend\AssessmentReviewController;
@@ -43,6 +44,12 @@ Route::middleware(['auth'])->group(function () {
 
         // จัดการหน่วยบริการ
         Route::resource('service-unit', ServiceUnitController::class)->names('service-unit');
+
+        // ผู้รับผิดชอบหน่วยงาน
+        Route::get('service-unit/{service_unit}/managers', [ServiceUnitController::class, 'managers'])
+            ->name('service-unit.managers.edit');
+        Route::put('service-unit/{service_unit}/managers', [ServiceUnitController::class, 'managersUpdate'])
+            ->name('service-unit.managers.update');
 
         // switch หน่วยบริการที่ topbar
         Route::post('service-unit/switch', [ServiceUnitController::class, 'switch'])->name('service-unit.switch');
@@ -129,6 +136,9 @@ Route::middleware(['auth'])->group(function () {
 
         // ประวัติการใช้งาน
         Route::get('/logs', [ActivityLogController::class, 'index'])->name('logs.index');
+
+        // Ajax ค้นหา user
+        Route::get('ajax/users/lookup', [AjaxController::class, 'ajaxUserLookup'])->name('ajax.users.lookup');
     });
 });
 
