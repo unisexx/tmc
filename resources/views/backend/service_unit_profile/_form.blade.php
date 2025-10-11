@@ -49,6 +49,54 @@
     </div>
 
     <div class="col-md-6">
+        <label for="org_affiliation" class="form-label required">สังกัด</label>
+        <select name="org_affiliation" id="org_affiliation" class="form-select">
+            <option value="">--- เลือก ---</option>
+            @foreach (['สำนักงานปลัดกระทรวงสาธารณสุข', 'กรมควบคุมโรค', 'กรมการแพทย์', 'กรมสุขภาพจิต', 'สภากาชาดไทย', 'สำนักการแพทย์ กรุงเทพมหานคร', 'กระทรวงอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม', 'กระทรวงกลาโหม', 'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ'] as $option)
+                <option value="{{ $option }}" @selected(old('org_affiliation', $unit->org_affiliation ?? '') == $option)>
+                    {{ $option }}
+                </option>
+            @endforeach
+        </select>
+        @error('org_affiliation')
+            <div class="invalid-feedback d-block">{{ $message }}</div>
+        @enderror
+    </div>
+
+    <div class="col-md-6" id="org_affiliation_other_box" style="display: none;">
+        <label for="org_affiliation_other" class="form-label required">โปรดระบุ</label>
+        <input type="text" name="org_affiliation_other" id="org_affiliation_other" class="form-control" value="{{ old('org_affiliation_other', $unit->org_affiliation_other ?? '') }}">
+        @error('org_affiliation_other')
+            <div class="invalid-feedback d-block">{{ $message }}</div>
+        @enderror
+    </div>
+
+    @push('js')
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const orgSelect = document.getElementById('org_affiliation');
+                const otherBox = document.getElementById('org_affiliation_other_box');
+
+
+                function toggleOtherBox(value) {
+                    if (value === 'อื่น ๆ') {
+                        otherBox.style.display = 'block';
+                    } else {
+                        otherBox.style.display = 'none';
+                        document.getElementById('org_affiliation_other').value = '';
+                    }
+                }
+
+                toggleOtherBox(orgSelect.value);
+
+                orgSelect.addEventListener('change', function() {
+                    toggleOtherBox(this.value);
+                });
+            });
+        </script>
+    @endpush
+
+    <div class="col-md-6">
         <label for="org_tel" class="form-label">หมายเลขโทรศัพท์</label>
         <input type="text" name="org_tel" id="org_tel" value="{{ old('org_tel', $unit->org_tel ?? ($unit->org_phone ?? '')) }}" class="form-control @error('org_tel') is-invalid @enderror">
         @error('org_tel')

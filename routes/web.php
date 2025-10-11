@@ -41,6 +41,9 @@ Route::middleware(['auth'])->group(function () {
             ->parameters(['profile' => 'user'])
             ->names('profile');
 
+        // จัดการหน่วยบริการ
+        Route::resource('service-unit', ServiceUnitController::class)->names('service-unit');
+
         // switch หน่วยบริการที่ topbar
         Route::post('service-unit/switch', [ServiceUnitController::class, 'switch'])->name('service-unit.switch');
 
@@ -91,10 +94,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('role/reorder', [RoleController::class, 'reorder'])->name('role.reorder');
 
         // แก้ไขหน่วยบริการที่ตัวเองรับผิดชอบ
-        Route::get('/service-unit/profile', [ServiceUnitProfileController::class, 'edit'])
-            ->name('service-unit.edit');
-        Route::put('/service-unit/profile', [ServiceUnitProfileController::class, 'update'])
-            ->name('service-unit.update');
+        Route::get('/service-unit-profile', [ServiceUnitProfileController::class, 'edit'])
+            ->name('service-unit-profile.edit');
+        Route::put('/service-unit-profile', [ServiceUnitProfileController::class, 'update'])
+            ->name('service-unit-profile.update');
 
         // tinymce uploads
         Route::post('upload/tinymce', [UploadController::class, 'tinymce'])->name('upload.tinymce');
@@ -126,29 +129,6 @@ Route::middleware(['auth'])->group(function () {
 
         // ประวัติการใช้งาน
         Route::get('/logs', [ActivityLogController::class, 'index'])->name('logs.index');
-
-        // Route::post('{form}/submit', [SelfAssessmentFlowController::class, 'submit'])->name('submit');   // เปลี่ยน status
-
-        // ===== SelfAssessmentController (ย้ายเข้า backend) =====
-        // Route::prefix('self-assess')->name('self.')->group(function () {
-        //     Route::get('/', [SelfAssessmentComponentController::class, 'index'])->name('index');
-        //     Route::get('/create', [SelfAssessmentComponentController::class, 'create'])->name('create');
-        //     Route::post('/', [SelfAssessmentComponentController::class, 'store'])->name('store');
-        //     Route::get('/{id}/edit', [SelfAssessmentComponentController::class, 'edit'])->name('edit');
-        //     Route::put('/{id}', [SelfAssessmentComponentController::class, 'update'])->name('update');
-        //     Route::post('/{id}/submit', [SelfAssessmentComponentController::class, 'submit'])->name('submit');
-        //     Route::get('/{id}', [SelfAssessmentComponentController::class, 'show'])->name('show');
-        //     Route::delete('/{id}', [SelfAssessmentComponentController::class, 'destroy'])->name('destroy');
-
-        //     // ทบทวนโดย สคร./ส่วนกลาง
-        //     Route::middleware(['can:self.review'])->group(function () {
-        //         Route::get('/{id}/review', [SelfAssessmentComponentController::class, 'reviewForm'])->name('reviewForm');
-        //         Route::post('/{id}/review', [SelfAssessmentComponentController::class, 'review'])->name('review');
-        //         Route::post('/{id}/approve', [SelfAssessmentComponentController::class, 'approve'])->name('approve');
-        //         Route::post('/{id}/reject', [SelfAssessmentComponentController::class, 'reject'])->name('reject');
-        //     });
-        // });
-        // ===== end SelfAssessment =====
     });
 });
 

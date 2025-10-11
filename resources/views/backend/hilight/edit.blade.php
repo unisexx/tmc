@@ -5,12 +5,7 @@
 @section('breadcrumb-item', 'เนื้อหา')
 @section('breadcrumb-item-active', 'แก้ไขไฮไลท์')
 
-@section('css')
-    {{-- CSS เสริมเฉพาะหน้า (ถ้ามี) --}}
-@endsection
-
 @section('content')
-    <!-- [ Main Content ] start -->
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -22,15 +17,9 @@
                         @csrf
                         @method('put')
                         @include('backend.hilight._form', ['mode' => 'edit'])
-                        {{-- ปุ่ม submit/back อยู่ใน _form.blade.php --}}
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    <!-- [ Main Content ] end -->
-@endsection
-
-@section('scripts')
-    {{-- JS เฉพาะหน้านี้ (ถ้ามี) --}}
 @endsection

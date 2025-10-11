@@ -89,7 +89,7 @@ class ServiceUnitProfileController extends Controller
         $unit->save();
 
         flash_notify('บันทึกการแก้ไขแล้ว', 'success');
-        return redirect()->route('backend.service-unit.edit');
+        return redirect()->route('backend.service-unit-profile.edit');
     }
 
     private function resolveCurrentServiceUnit(Request $request): ?ServiceUnit
