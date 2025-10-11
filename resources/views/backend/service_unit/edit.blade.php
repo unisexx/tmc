@@ -13,11 +13,7 @@
                     <h5 class="mb-0">แก้ไขหน่วยบริการ</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{{ route('backend.service-unit.update', $unit) }}" enctype="multipart/form-data">
-                        @csrf
-                        @method('put')
-                        @include('backend.service_unit_profile._form', ['mode' => 'edit'])
-                    </form>
+                    <x-service-unit.form :unit="$unit" mode="edit" :action="route('backend.service-unit.update', $unit)" method="put" :back-url="route('backend.service-unit.index')" />
                 </div>
             </div>
         </div>

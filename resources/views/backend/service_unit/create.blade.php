@@ -13,10 +13,8 @@
                     <h5 class="mb-0">เพิ่มหน่วยบริการ</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{{ route('backend.service-unit.store') }}" enctype="multipart/form-data">
-                        @csrf
-                        @include('backend.service_unit_profile._form', ['mode' => 'create'])
-                    </form>
+                    {{-- resources/views/backend/service_unit/create.blade.php --}}
+                    <x-service-unit.form :unit="$unit" mode="create" :action="route('backend.service-unit.store')" :backUrl="route('backend.service-unit.index')" method="post" />
                 </div>
             </div>
         </div>

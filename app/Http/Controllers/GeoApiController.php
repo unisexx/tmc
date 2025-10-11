@@ -7,142 +7,192 @@ use App\Models\Postcode;
 use App\Models\Province;
 use App\Models\Subdistrict;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class GeoApiController extends Controller
 {
-    /**
-     * คืนรายชื่อจังหวัดทั้งหมด
-     */
+    /** ===== Helpers ===== */
+
+    /** สร้างช่วงรหัส: base * 10^digits + [1..99] */
+    private function codeRange(int $base, int $digits = 2): array
+    {
+        $mul = 10 ** $digits; // 100 (2 หลัก), 1000 (3 หลัก) ...
+        return [$base * $mul + 1, $base * $mul + ($mul - 1)];
+    }
+
+    /** ล้างชื่อพื้นที่: ตัดช่องว่างซ้ำ/เครื่องหมายพิเศษอย่าง * */
+    private function clean(string $s): string
+    {
+        $s = trim($s);
+        $s = preg_replace('/\s+/', ' ', $s);
+        $s = str_replace('*', '', $s);
+        return $s;
+    }
+
+    /** ห่อ response เป็น JSON เสมอ */
+    private function resp($data)
+    {
+        return response()->json($data);
+    }
+
+    /** ===== Endpoints ===== */
+
+    /** รายชื่อจังหวัด */
     public function provinces()
     {
-        return Province::where('title', 'not like', '%*%')
-            ->orderBy('title')
-            ->get(['code', 'title']);
+        $rows = Cache::remember('geo:provinces', 86400, function () {
+            return Province::query()
+                ->where('title', 'not like', '%*%')
+                ->orderBy('title')
+                ->get(['code', 'title'])
+                ->map(fn($r) => ['code' => (int) $r->code, 'title' => $this->clean($r->title)]);
+        });
+
+        return $this->resp($rows);
     }
 
-    /**
-     * คืนรายชื่ออำเภอตามจังหวัด
-     * ตัวอย่าง query: /geo/districts?province=10
-     */
+    /** รายชื่ออำเภอตามจังหวัด ?province=10 */
     public function districts(Request $req)
     {
-        $prov = (int) $req->query('province'); // เช่น 10
+        $prov = (int) $req->query('province');
         abort_unless($prov > 0, 400, 'invalid province code');
 
-        // district code 4 หลัก: [prov*100+1 .. prov*100+99]
-        $min = $prov * 100 + 1;
-        $max = $prov * 100 + 99;
+        [$min, $max] = $this->codeRange($prov, 2); // 4 หลัก
 
-        return District::whereBetween('code', [$min, $max])
-            ->where('title', 'not like', '%*%')
-            ->orderBy('title')
-            ->get(['code', 'title']);
+        $cacheKey = "geo:districts:{$prov}";
+        $rows     = Cache::remember($cacheKey, 86400, function () use ($min, $max) {
+            return District::query()
+                ->whereBetween('code', [$min, $max])
+                ->where('title', 'not like', '%*%')
+                ->orderBy('title')
+                ->get(['code', 'title'])
+                ->map(fn($r) => ['code' => (int) $r->code, 'title' => $this->clean($r->title)]);
+        });
+
+        return $this->resp($rows);
+    }
+
+    /** รายชื่อตำบลตามอำเภอ ?district=1001 */
+    public function subdistricts(Request $req)
+    {
+        $dist = (int) $req->query('district');
+        abort_unless($dist > 0, 400, 'invalid district code');
+
+        [$min, $max] = $this->codeRange($dist, 2); // 6 หลัก
+
+        $cacheKey = "geo:subdistricts:{$dist}";
+        $rows     = Cache::remember($cacheKey, 86400, function () use ($min, $max) {
+            return Subdistrict::query()
+                ->whereBetween('code', [$min, $max])
+                ->where('title', 'not like', '%*%')
+                ->orderBy('title')
+                ->get(['code', 'title'])
+                ->map(fn($r) => ['code' => (int) $r->code, 'title' => $this->clean($r->title)]);
+        });
+
+        return $this->resp($rows);
     }
 
     /**
-     * คืนรายชื่อตำบลตามอำเภอ
-     * ตัวอย่าง query: /geo/subdistricts?district=1001
+     * รหัสไปรษณีย์จาก subdistrict/district/province อย่างน้อยหนึ่ง
+     * คืนรายการ [{code, title}] โดย title เป็นตัวเลขรหัสเพื่อแสดงใน <select>
      */
-    public function subdistricts(Request $req)
-    {
-        $dist = (int) $req->query('district'); // เช่น 1001
-        abort_unless($dist > 0, 400, 'invalid district code');
-
-        // subdistrict code 6 หลัก: [dist*100+1 .. dist*100+99]
-        $min = $dist * 100 + 1;
-        $max = $dist * 100 + 99;
-
-        return Subdistrict::whereBetween('code', [$min, $max])
-            ->where('title', 'not like', '%*%')
-            ->orderBy('title')
-            ->get(['code', 'title']);
-    }
-
     public function postcodes(Request $req)
     {
         $sub  = (int) $req->query('subdistrict');
         $dist = (int) $req->query('district');
         $prov = (int) $req->query('province');
-
         abort_if(!$sub && !$dist && !$prov, 400, 'missing location param');
 
         $subTitle = $distTitle = $provTitle = null;
 
         if ($sub) {
-            $subRow = Subdistrict::select(['code', 'title'])->find($sub);
-            abort_if(!$subRow, 404, 'subdistrict not found');
+            $s = Subdistrict::select(['code', 'title'])->find($sub);
+            abort_if(!$s, 404, 'subdistrict not found');
             $dist     = intdiv($sub, 100);
-            $subTitle = $subRow->title;
+            $subTitle = $this->clean($s->title);
         }
         if ($dist) {
-            $distRow = District::select(['code', 'title'])->find($dist);
-            abort_if(!$distRow, 404, 'district not found');
+            $d = District::select(['code', 'title'])->find($dist);
+            abort_if(!$d, 404, 'district not found');
             $prov      = intdiv($dist, 100);
-            $distTitle = $distRow->title; // มี "เขต/อำเภอ" นำหน้าอยู่แล้ว
+            $distTitle = $this->clean($d->title); // มี "เขต/อำเภอ" อยู่แล้ว
         }
         if ($prov) {
-            $provRow = Province::select(['code', 'title'])->find($prov);
-            abort_if(!$provRow, 404, 'province not found');
-            $provTitle = $provRow->title; // เช่น "กรุงเทพมหานคร"
+            $p = Province::select(['code', 'title'])->find($prov);
+            abort_if(!$p, 404, 'province not found');
+            $provTitle = $this->clean($p->title);
         }
 
-        // ---------- กลยุทธ์ match ----------
-        // ตาราง postcode.title เป็น "sub + dist + prov" (คั่นด้วยช่องว่าง)
-        // ใช้ like ทีละชิ้น เพื่อลดปัญหาระยะห่าง/เว้นวรรค/ข้อมูลพิเศษ
-        $q = Postcode::query()
-            ->select('code')
-            ->distinct()
-            ->when($provTitle, fn($qq) => $qq->where('title', 'like', "%{$provTitle}%"))
-            ->when($distTitle, fn($qq) => $qq->where('title', 'like', "%{$distTitle}%"))
-            ->when($subTitle, fn($qq) => $qq->where('title', 'like', "%{$subTitle}%"));
-
-        // ถ้ามี subdistrict แล้วอยาก match แบบ "sub dist prov" ตรง ๆ ก่อน (แม่นกว่า)
+        // exact-first (sub dist prov) → ถัดไป progressive match
         if ($subTitle && $distTitle && $provTitle) {
-            $exact = Postcode::query()
-                ->select('code')->distinct()
-                ->where('title', 'like', "%{$subTitle} {$distTitle} {$provTitle}%")
-                ->orderBy('code')
-                ->pluck('code')
-                ->all();
-
+            $exact = Cache::remember(
+                'geo:postcodes:exact:' . md5($subTitle . $distTitle . $provTitle),
+                86400,
+                fn() => Postcode::query()
+                    ->select('code')->distinct()
+                    ->where('title', 'like', "%{$subTitle} {$distTitle} {$provTitle}%")
+                    ->orderBy('code')
+                    ->pluck('code')
+                    ->map(fn($c) => (string) $c)
+                    ->all()
+            );
             if (!empty($exact)) {
-                return collect($exact)->map(fn($c) => ['code' => (string) $c, 'title' => (string) $c]);
+                return $this->resp(collect($exact)->map(fn($c) => ['code' => $c, 'title' => $c]));
             }
         }
 
-        // ไม่ได้ผลหรือเลือกมาไม่ครบ 3 ชิ้น ⇒ ใช้วิธีค่อยๆ บังคับชิ้นส่วน (prov/dist/sub) ตามที่มี
-        $rows = $q->orderBy('code')->get();
+        $cacheKey = 'geo:postcodes:any:' . md5(($provTitle ?? '-') . '|' . ($distTitle ?? '-') . '|' . ($subTitle ?? '-'));
+        $rows     = Cache::remember($cacheKey, 86400, function () use ($provTitle, $distTitle, $subTitle) {
+            $q = Postcode::query()
+                ->select('code')
+                ->distinct();
 
-        return $rows->map(fn($r) => [
-            'code'  => (string) $r->code,
-            'title' => (string) $r->code, // ให้แสดงเป็นตัวเลขรหัสไปรษณีย์ตรงๆ
-        ]);
+            if ($provTitle) {
+                $q->where('title', 'like', '%' . $provTitle . '%');
+            }
+
+            if ($distTitle) {
+                $q->where('title', 'like', '%' . $distTitle . '%');
+            }
+
+            if ($subTitle) {
+                $q->where('title', 'like', '%' . $subTitle . '%');
+            }
+
+            return $q->orderBy('code')
+                ->get()
+                ->map(fn($r) => ['code' => (string) $r->code, 'title' => (string) $r->code]);
+        });
+
+        return $this->resp($rows);
     }
 
-    /**
-     * คืนพิกัดศูนย์กลางของตำบลจากรหัสตำบล
-     * GET /geo/subdistrict-center?code=100101
-     * response: { code, title, lat, lng }
-     */
+    /** พิกัดศูนย์กลางตำบลจาก code */
     public function subdistrictCenter(Request $req)
     {
         $code = (int) $req->query('code');
         abort_unless($code > 0, 400, 'invalid subdistrict code');
 
-        $s = Subdistrict::query()
-            ->select(['code', 'title', 'lat_center', 'lng_center'])
-            ->where('code', $code)
-            ->first();
+        $cacheKey = "geo:sub-center:{$code}";
+        $data     = Cache::remember($cacheKey, 86400, function () use ($code) {
+            $s = Subdistrict::query()
+                ->select(['code', 'title', 'lat_center', 'lng_center'])
+                ->where('code', $code)
+                ->first();
 
-        abort_unless($s, 404, 'subdistrict not found');
-        abort_unless(!is_null($s->lat_center) && !is_null($s->lng_center), 404, 'no center coord');
+            abort_unless($s, 404, 'subdistrict not found');
+            abort_unless(!is_null($s->lat_center) && !is_null($s->lng_center), 404, 'no center coord');
 
-        return [
-            'code'  => (int) $s->code,
-            'title' => $s->title,
-            'lat'   => (float) $s->lat_center,
-            'lng'   => (float) $s->lng_center,
-        ];
+            return [
+                'code'  => (int) $s->code,
+                'title' => $this->clean($s->title),
+                'lat'   => (float) $s->lat_center,
+                'lng'   => (float) $s->lng_center,
+            ];
+        });
+
+        return $this->resp($data);
     }
-
 }
