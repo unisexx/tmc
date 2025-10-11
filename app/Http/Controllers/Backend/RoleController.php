@@ -35,8 +35,8 @@ class RoleController extends Controller
             $roles = $query->get();
         } else {
             // โหมดปกติ: paginate + คงพารามิเตอร์ค้นหา
-            $perPage = (int) $request->integer('per_page', 10);
-            $perPage = $perPage > 0 && $perPage <= 100 ? $perPage : 10;
+            $perPage = (int) $request->integer('per_page', 20);
+            $perPage = $perPage > 0 && $perPage <= 100 ? $perPage : 20;
 
             $roles = $query->paginate($perPage)->appends($request->query());
         }

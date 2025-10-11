@@ -12,46 +12,6 @@ use Illuminate\Support\Facades\Auth;
 class ServiceUnitController extends Controller
 {
     /**
-     * สลับหน่วยบริการใน session (ใช้กับ dropdown บน topbar)
-     */
-    public function switch(Request $req)
-    {
-            $user  = Auth::user();
-            $input = $req->input('service_unit_id');
-
-            // 🟦 1) ถ้าเป็นแอดมินและเลือก "ภาพรวม"
-            if ($user->isAdmin() && ($input === null || $input === '')) {
-                session()->forget('current_service_unit_id');
-                flash_notify('เข้าสู่มุมมองภาพรวม (ไม่ผูกกับหน่วยบริการ)', 'success');
-                return redirect()->route('backend.dashboard');
-            }
-
-            // 🟦 2) ตรวจสอบรหัสที่ส่งมา
-            $id = (int) $input;
-            if (!$id) {
-                flash_notify('ไม่พบรหัสหน่วยบริการที่ต้องการสลับ', 'warning');
-                return back();
-            }
-
-            // 🟦 3) ตรวจสิทธิ์การเข้าถึง
-            if ($user->isAdmin()) {
-                $unit = ServiceUnit::find($id);
-            } else {
-                $unit = $user->serviceUnits()->where('service_units.id', $id)->first();
-            }
-
-            if (!$unit) {
-                flash_notify('คุณไม่มีสิทธิ์สลับไปยังหน่วยบริการนี้ หรือหน่วยบริการไม่พบ', 'warning');
-                return back();
-            }
-
-            // 🟦 4) ตั้งค่า session
-            session(['current_service_unit_id' => $unit->id]);
-            flash_notify('สลับหน่วยบริการเรียบร้อยแล้ว', 'success');
-            return redirect()->route('backend.dashboard');
-    }
-
-    /**
      * แสดงรายการหน่วยบริการ (มีตัวกรอง)
      */
     public function index(Request $request)
@@ -77,7 +37,7 @@ class ServiceUnitController extends Controller
             )
             ->orderBy('org_name');
 
-        $serviceUnits = $query->paginate(10)->withQueryString();
+        $serviceUnits = $query->paginate(20)->withQueryString();
         $provinces    = Province::orderBy('title')->pluck('title', 'code');
 
         return view('backend.service_unit.index', compact(
@@ -172,5 +132,45 @@ class ServiceUnitController extends Controller
         $service_unit->delete();
         flash_notify('ลบหน่วยบริการเรียบร้อยแล้ว', 'success');
         return redirect()->route('backend.service-unit.index');
+    }
+
+    /**
+     * สลับหน่วยบริการใน session (ใช้กับ dropdown บน topbar)
+     */
+    public function switch(Request $req)
+    {
+            $user  = Auth::user();
+            $input = $req->input('service_unit_id');
+
+            // 🟦 1) ถ้าเป็นแอดมินและเลือก "ภาพรวม"
+            if ($user->isAdmin() && ($input === null || $input === '')) {
+                session()->forget('current_service_unit_id');
+                flash_notify('เข้าสู่มุมมองภาพรวม (ไม่ผูกกับหน่วยบริการ)', 'success');
+                return redirect()->route('backend.dashboard');
+            }
+
+            // 🟦 2) ตรวจสอบรหัสที่ส่งมา
+            $id = (int) $input;
+            if (!$id) {
+                flash_notify('ไม่พบรหัสหน่วยบริการที่ต้องการสลับ', 'warning');
+                return back();
+            }
+
+            // 🟦 3) ตรวจสิทธิ์การเข้าถึง
+            if ($user->isAdmin()) {
+                $unit = ServiceUnit::find($id);
+            } else {
+                $unit = $user->serviceUnits()->where('service_units.id', $id)->first();
+            }
+
+            if (!$unit) {
+                flash_notify('คุณไม่มีสิทธิ์สลับไปยังหน่วยบริการนี้ หรือหน่วยบริการไม่พบ', 'warning');
+                return back();
+            }
+
+            // 🟦 4) ตั้งค่า session
+            session(['current_service_unit_id' => $unit->id]);
+            flash_notify('สลับหน่วยบริการเรียบร้อยแล้ว', 'success');
+            return redirect()->route('backend.dashboard');
     }
 }

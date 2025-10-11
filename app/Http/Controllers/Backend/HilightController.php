@@ -38,7 +38,7 @@ class HilightController extends Controller
 
         // โหมดจัดเรียง: ดึงทั้งหมด (ignore $q)
         $rs = $reorder ? $query->get()
-            : $query->paginate(10)->withQueryString();
+            : $query->paginate(20)->withQueryString();
 
         return view('backend.hilight.index', compact('rs', 'q', 'reorder'));
     }

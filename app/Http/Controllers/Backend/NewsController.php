@@ -35,7 +35,7 @@ class NewsController extends Controller
                 ]);
             })
             ->orderByDesc('id')
-            ->paginate(10)->withQueryString();
+            ->paginate(20)->withQueryString();
 
         return view('backend.news.index', [
             'rs'      => $rs,

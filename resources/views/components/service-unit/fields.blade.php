@@ -7,41 +7,6 @@
     @include('components.service-unit.assets')
 @endif
 
-{{-- ====================== Error Summary ====================== --}}
-@if ($errors->any())
-    <div id="error-summary" class="alert alert-danger" role="alert">
-        <div class="d-flex align-items-start gap-2">
-            <i class="ti ti-alert-circle fs-4 mt-1"></i>
-            <div>
-                <strong>กรอกข้อมูลไม่ครบหรือไม่ถูกต้อง {{ $errors->count() }} รายการ</strong>
-                <div class="small">โปรดตรวจสอบฟิลด์ที่มีเครื่องหมาย <span class="text-danger">*</span> หรือมีกรอบสีแดง</div>
-                <ul class="mt-2 mb-0">
-                    @foreach ($errors->toArray() as $field => $messages)
-                        <li class="small">
-                            {{-- แปลงชื่อ field ที่เป็น array ให้อ่านง่าย --}}
-                            <a href="#field-{{ \Illuminate\Support\Str::slug($field) }}" class="text-reset text-decoration-underline">
-                                {{ str_replace(['working_hours.*.', 'working_hours.'], 'วัน-เวลาทำการ: ', $field) }}
-                            </a>
-                            : {{ $messages[0] }}
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        </div>
-    </div>
-    @push('js')
-        <script>
-            // เลื่อนขึ้นไปดูสรุป error อัตโนมัติ
-            document.addEventListener('DOMContentLoaded', () => {
-                const box = document.getElementById('error-summary');
-                if (box) box.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            });
-        </script>
-    @endpush
-@endif
 
 <div class="row g-3">
 
@@ -56,10 +21,13 @@
 
     <div class="col-md-6">
         <label for="org_affiliation" class="form-label required">สังกัด</label>
+        @php
+            $affOptions = config('service_unit.affiliations');
+        @endphp
         <select name="org_affiliation" id="org_affiliation" class="form-select">
             <option value="">--- เลือก ---</option>
-            @foreach (['สำนักงานปลัดกระทรวงสาธารณสุข', 'กรมควบคุมโรค', 'กรมการแพทย์', 'กรมสุขภาพจิต', 'สภากาชาดไทย', 'สำนักการแพทย์ กรุงเทพมหานคร', 'กระทรวงอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม', 'กระทรวงกลาโหม', 'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ'] as $option)
-                <option value="{{ $option }}" @selected(old('org_affiliation', $unit->org_affiliation ?? '') == $option)>
+            @foreach ($affOptions as $option)
+                <option value="{{ $option }}" @selected(old('org_affiliation', $unit->org_affiliation ?? '') === $option)>
                     {{ $option }}
                 </option>
             @endforeach

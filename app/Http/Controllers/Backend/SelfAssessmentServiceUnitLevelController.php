@@ -63,7 +63,7 @@ class SelfAssessmentServiceUnitLevelController extends Controller
         if ($st = $req->get('status')) {$q->where('status', $st);}
         if ($ap = $req->get('approval')) {$q->where('approval_status', $ap);}
 
-        $rows = $q->paginate(15)->appends($req->query());
+        $rows = $q->paginate(20)->appends($req->query());
 
         return view('backend.self_assessment_service_unit_level.index', compact('rows'));
     }

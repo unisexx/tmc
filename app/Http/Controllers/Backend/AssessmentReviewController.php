@@ -75,7 +75,7 @@ class AssessmentReviewController extends Controller
             ->latest('submitted_at');
 
         return view('backend.review_assessment.index', [
-            'items' => $query->paginate(15)->withQueryString(),
+            'items' => $query->paginate(20)->withQueryString(),
         ]);
     }
 

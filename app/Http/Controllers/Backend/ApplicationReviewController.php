@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
@@ -21,31 +20,53 @@ class ApplicationReviewController extends Controller
 {
     public function __construct()
     {
-        // กำหนดสิทธิ์ได้ตามต้องการ
         // $this->middleware('permission:ผู้ใช้งาน-จัดการผู้ใช้งาน-ดู|ผู้ใช้งาน-จัดการผู้ใช้งาน-เพิ่ม|ผู้ใช้งาน-จัดการผู้ใช้งาน-แก้ไข|ผู้ใช้งาน-จัดการผู้ใช้งาน-ลบ', ['only' => ['index', 'show']]);
     }
 
     /* =========================================================================
     | 1) รายชื่อผู้ใช้
      * ====================================================================== */
+    /* =========================================================================
+    | 1) รายชื่อผู้ใช้
+     * ====================================================================== */
     public function index(Request $request)
     {
-        $q     = trim($request->get('q', ''));
+        $q       = trim($request->get('q', ''));
+        $purpose = $request->get('purpose'); // 'T' | 'P' | 'R' | null
+
         $users = User::query()
-            ->with(['roles:id,name', 'serviceUnits' => fn($q) => $q->select('service_units.id', 'org_affiliation')])
+            ->with([
+                'serviceUnits' => function ($q) {
+                    $q->withPivot('is_primary')
+                        ->select('service_units.id', 'org_name', 'org_affiliation',
+                            'org_province_code', 'org_district_code', 'org_subdistrict_code', 'org_postcode');
+                },
+                'serviceUnits.province:code,title',
+                'serviceUnits.district:code,title',
+                'serviceUnits.subdistrict:code,title',
+                'superviseProvince:code,title',
+                'superviseRegion:id,short_title',
+            ])
             ->where('reg_status', '!=', 'อนุมัติ')
             ->when($q !== '', function ($qr) use ($q) {
-                $qr->where(function ($x) use ($q) {
-                    $x->where('name', 'like', "%{$q}%")
-                        ->orWhere('email', 'like', "%{$q}%")
-                        ->orWhere('username', 'like', "%{$q}%");
+                $like = "%{$q}%";
+                $qr->where(function ($x) use ($like) {
+                    $x->where('name', 'like', $like)
+                        ->orWhere('contact_name', 'like', $like)
+                        ->orWhere('email', 'like', $like)
+                        ->orWhere('username', 'like', $like)
+                        ->orWhere('contact_mobile', 'like', $like);
                 });
+            })
+        // ✅ ค้นหาเฉพาะ JSON array
+            ->when(in_array($purpose, ['T', 'P', 'R'], true), function ($qr) use ($purpose) {
+                $qr->whereJsonContains('reg_purpose', $purpose);
             })
             ->latest('id')
             ->paginate(20)
             ->withQueryString();
 
-        return view('backend.application-review.index', compact('users', 'q'));
+        return view('backend.application-review.index', compact('users', 'q', 'purpose'));
     }
 
     /* =========================================================================
@@ -104,7 +125,6 @@ class ApplicationReviewController extends Controller
      * ====================================================================== */
     public function edit(User $user)
     {
-        // หน่วยบริการหลัก ถ้าไม่มีให้หยิบอันแรก
         $unit = $user->serviceUnits()
             ->wherePivot('is_primary', true)
             ->first() ?? $user->serviceUnits()->first();
@@ -156,7 +176,6 @@ class ApplicationReviewController extends Controller
      * ====================================================================== */
     public function destroy(User $user)
     {
-        // ลบไฟล์แนบ (ถ้ามี)
         if ($user->officer_doc_path && Storage::disk('public')->exists($user->officer_doc_path)) {
             Storage::disk('public')->delete($user->officer_doc_path);
         }
@@ -169,10 +188,6 @@ class ApplicationReviewController extends Controller
     | Helpers
      * ====================================================================== */
 
-    /**
-     * รวมขั้นตอน validate + normalize + เตรียมข้อมูล upload/file + PDPA
-     * คืนค่า: [$data สำหรับบันทึก, $passwordPlain ถ้ามีการตั้ง/สุ่มให้]
-     */
     private function validatedPayload(Request $request, ?User $current): array
     {
         $purposeWhitelist = [
@@ -188,20 +203,18 @@ class ApplicationReviewController extends Controller
             'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ',
         ];
 
-        // === flag: ต้องกรอกส่วนหน่วยบริการหรือไม่ ===
         $isServiceUnit = in_array(
             'หน่วยบริการสุขภาพผู้เดินทาง',
             (array) $request->input('reg_purpose', []),
             true
         );
 
-        // ===== Validate หลัก =====
         $rules = [
             // 1) วัตถุประสงค์
             'reg_purpose'                 => ['required', 'array', 'max:3'],
             'reg_purpose.*'               => ['string', Rule::in($purposeWhitelist)],
 
-            // เงื่อนไขตามบทบาทกำกับดูแล
+            // เงื่อนไขกำกับดูแล
             'reg_supervise_province_code' => [
                 'nullable', 'string', 'max:10',
                 Rule::requiredIf(function () use ($request) {
@@ -223,7 +236,7 @@ class ApplicationReviewController extends Controller
                 }),
             ],
 
-            // 2) หน่วยบริการ/หน่วยงาน — required เฉพาะเมื่อ $isServiceUnit = true
+            // 2) หน่วยบริการ/หน่วยงาน — required เฉพาะเมื่อเป็นหน่วยบริการ
             'org_name'                    => [$isServiceUnit ? 'required' : 'nullable', 'string', 'max:255'],
             'org_affiliation'             => [$isServiceUnit ? 'required' : 'nullable', 'string', Rule::in($affWhitelist)],
             'org_affiliation_other'       => [
@@ -235,13 +248,11 @@ class ApplicationReviewController extends Controller
             'org_lat'                     => ['nullable', 'numeric', 'between:-90,90'],
             'org_lng'                     => ['nullable', 'numeric', 'between:-180,180'],
 
-            // รหัสพื้นที่ — required เฉพาะเมื่อเป็นหน่วยบริการ
             'org_province_code'           => [$isServiceUnit ? 'required' : 'nullable', 'string', 'size:2', Rule::exists('province', 'code')],
             'org_district_code'           => [$isServiceUnit ? 'required' : 'nullable', 'string', 'size:4', Rule::exists('district', 'code')],
             'org_subdistrict_code'        => [$isServiceUnit ? 'required' : 'nullable', 'string', 'size:6', Rule::exists('subdistrict', 'code')],
             'org_postcode'                => [$isServiceUnit ? 'required' : 'nullable', 'string', 'size:5'],
 
-            // เวลาทำการ (กริดลากเลือก) — required เฉพาะเมื่อเป็นหน่วยบริการ
             'org_working_hours'           => ['nullable', 'string', 'max:1000'],
             'working_hours_json'          => [$isServiceUnit ? 'required' : 'nullable', 'string'],
 
@@ -355,13 +366,11 @@ class ApplicationReviewController extends Controller
         $validator = Validator::make($request->all(), $rules, $messages, $attributes);
 
         $validator->after(function ($v) use ($request, $isServiceUnit) {
-            // เช็กซัมบัตรประชาชน
             $cid = preg_replace('/\D/', '', (string) $request->input('contact_cid'));
             if ($cid && !$this->isValidThaiCitizenId($cid)) {
                 $v->errors()->add('contact_cid', 'เลขบัตรประชาชนไม่ถูกต้อง (เช็กซัมไม่ผ่าน)');
             }
 
-            // ตรวจ JSON เวลาทำการ เฉพาะเคสหน่วยบริการ
             if ($isServiceUnit) {
                 [$ok, $err] = $this->validateWorkingGridJson($request->input('working_hours_json'));
                 if (!$ok) {
@@ -389,26 +398,14 @@ class ApplicationReviewController extends Controller
             }
         }
 
-        // ===== Normalize reg_purpose + ฟิลด์กำกับดูแล =====
-        // ค่าที่ผู้ใช้ติ๊กมาจากฟอร์ม (เป็น array ของข้อความ)
-        $selectedPurposes = (array) $request->input('reg_purpose', []);
+        // ===== Normalize reg_purpose → JSON array ของโค้ด =====
+        $selectedPurposes    = (array) $request->input('reg_purpose', []);
+        $data['reg_purpose'] = $this->mapPurposeToCodesArray($selectedPurposes); // ← บันทึกเป็น ['T','P'] เป็นต้น
 
-        // flag สำหรับการ validate/เคลียร์ฟิลด์กำกับดูแล
-        $cbProvince = in_array(
-            'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
-            $selectedPurposes,
-            true
-        );
-        $cbRegion = in_array(
-            'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
-            $selectedPurposes,
-            true
-        );
+        // flag สำหรับกำกับดูแล
+        $cbProvince = in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)', $selectedPurposes, true);
+        $cbRegion   = in_array('ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)', $selectedPurposes, true);
 
-        // แปลงไปเป็นรหัสแล้วบันทึกลง data (สตริง เช่น "T,P")
-        $data['reg_purpose'] = $this->mapPurposeToCodes($selectedPurposes);
-
-        // จัดการค่า field กำกับดูแลตาม flag จากตัวเลือกดิบ
         if ($cbProvince && !$cbRegion) {
             $data['reg_supervise_region_id'] = null;
         } elseif ($cbRegion && !$cbProvince) {
@@ -418,7 +415,7 @@ class ApplicationReviewController extends Controller
             $data['reg_supervise_region_id']     = null;
         }
 
-        // เวลาทำการ: แปลง JSON เฉพาะเมื่อส่งมา (หรือเป็นหน่วยบริการ)
+        // เวลาทำการ
         $data['org_working_hours_json'] = $this->parseWorkingGridJson($request->input('working_hours_json'));
 
         // อัปโหลดไฟล์เอกสารเจ้าหน้าที่
@@ -443,7 +440,7 @@ class ApplicationReviewController extends Controller
             $data['pdpa_version']     = $data['pdpa_version'] ?? 'v1.0';
         }
 
-        // ตรวจเอกสารเจ้าหน้าที่ (verify)
+        // ตรวจเอกสารเจ้าหน้าที่
         if ($request->filled('officer_doc_verified')) {
             if ($request->input('officer_doc_verified') === '1') {
                 $data['officer_doc_verified_at'] = Carbon::now();
@@ -485,7 +482,6 @@ class ApplicationReviewController extends Controller
             $data['name'] = $current->name;
         }
 
-        // ทำความสะอาด payload
         unset($data['officer_doc'], $data['remove_officer_doc'], $data['pdpa_accept'], $data['working_hours_json']);
 
         return [$data, $passwordPlain];
@@ -517,13 +513,12 @@ class ApplicationReviewController extends Controller
                 if ($b <= $a) {
                     return [false, "เวลาสิ้นสุดต้องมากกว่าเวลาเริ่ม (วัน {$d})"];
                 }
-
             }
         }
         return [true, null];
     }
 
-/** แปลง JSON string → array (คีย์วันครบเสมอ) */
+    /** แปลง JSON string → array (คีย์วันครบเสมอ) */
     private function parseWorkingGridJson(?string $json): array
     {
         $days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -541,14 +536,11 @@ class ApplicationReviewController extends Controller
                 ));
             }
         } catch (\Throwable $e) {
-            // ถ้า parse ไม่ได้ ให้คืนค่าว่างทั้งสัปดาห์
         }
         return $out;
     }
 
-    /**
-     * ส่งอีเมลแจ้งบัญชี (แบบง่าย)
-     */
+    /** ส่งอีเมลแจ้งบัญชี (แบบง่าย) */
     private function notifyCredentials(string $email, string $username, ?string $passwordPlain): void
     {
         if (!$passwordPlain) {
@@ -613,7 +605,6 @@ class ApplicationReviewController extends Controller
         }
         $keyAddr = trim($org['org_address'] ?? '');
 
-        // กันส่งฟิลด์เกิน โดยเลือกเฉพาะคอลัมน์ที่มีจริง
         $payload = collect($org)->only([
             'org_name',
             'org_affiliation',
@@ -639,7 +630,6 @@ class ApplicationReviewController extends Controller
     // ผูก pivot และตั้ง primary ของ user
     private function attachUnitToUser(User $user, ServiceUnit $unit, string $role = 'manager'): void
     {
-        // แนวทาง: ไม่ให้ซ้ำ role ในหน่วยเดียวกัน
         $user->serviceUnits()->syncWithoutDetaching([
             $unit->id => [
                 'role'       => $role,
@@ -649,20 +639,19 @@ class ApplicationReviewController extends Controller
             ],
         ]);
 
-        // เคลียร์ primary อื่น แล้วตั้งอันนี้เป็น primary
         $user->serviceUnits()->updateExistingPivot(
             $user->serviceUnits()->pluck('service_units.id')->toArray(),
             ['is_primary' => false]
         );
         $user->serviceUnits()->updateExistingPivot($unit->id, ['is_primary' => true]);
 
-        // อัปเดตคอลัมน์อ้างอิงใน users
         if (Schema::hasColumn('users', 'primary_service_unit_id')) {
             $user->forceFill(['primary_service_unit_id' => $unit->id])->save();
         }
     }
 
-    private function mapPurposeToCodes(array $purposes): string
+    /** แปลงรายการชื่อ "ในฐานะ" → อาร์เรย์โค้ด เช่น ['T','P'] */
+    private function mapPurposeToCodesArray(array $purposes): array
     {
         $map = [
             'หน่วยบริการสุขภาพผู้เดินทาง'                                => 'T',
@@ -674,7 +663,7 @@ class ApplicationReviewController extends Controller
             ->map(fn($x) => $map[$x] ?? null)
             ->filter()
             ->unique()
-            ->implode(','); // ตัวอย่าง: "T,P"
+            ->values()
+            ->all(); // ตัวอย่างผลลัพธ์: ['T','P']
     }
-
 }

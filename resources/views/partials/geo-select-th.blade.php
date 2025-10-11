@@ -50,17 +50,29 @@
     </div>
 </div>
 
-
 @pushOnce('js')
     <script>
         (function() {
+            const R_PROV = `{{ route('geo.provinces') }}`;
+            const R_DIST = `{{ route('geo.districts') }}`;
+            const R_SUBD = `{{ route('geo.subdistricts') }}`;
+            const R_POST = `{{ route('geo.postcodes') }}`;
+
             async function fetchJson(url) {
-                const r = await fetch(url);
-                if (!r.ok) throw new Error('HTTP ' + r.status);
-                return r.json();
+                try {
+                    const r = await fetch(url, {
+                        credentials: 'same-origin'
+                    });
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return await r.json();
+                } catch (e) {
+                    console.error('[geo-select] fetch failed:', url, e);
+                    return [];
+                }
             }
 
             function fillSelect(sel, list, placeholder) {
+                if (!sel) return; // guard
                 sel.innerHTML = '';
                 const opt0 = document.createElement('option');
                 opt0.value = '';
@@ -76,21 +88,25 @@
 
             async function initChain(rootId) {
                 const root = document.getElementById(rootId);
+                if (!root) return;
+                if (root.dataset.inited === '1') return;
+                root.dataset.inited = '1';
+
                 const selP = root.querySelector('select[id$="_province"]');
                 const selD = root.querySelector('select[id$="_district"]');
                 const selS = root.querySelector('select[id$="_subdistrict"]');
                 const inpZ = root.querySelector('input[id$="_postcode"]');
+                if (!selP || !selD || !selS || !inpZ) return;
 
-                function clearZip() {
+                const clearZip = () => {
                     inpZ.value = '';
-                }
+                };
 
-                // โหลดจังหวัด
-                const provinces = await fetchJson(`{{ route('geo.provinces') }}`);
+                // provinces
+                const provinces = await fetchJson(R_PROV);
                 fillSelect(selP, provinces, '— เลือกจังหวัด —');
                 if (selP.dataset.init) selP.value = selP.dataset.init;
 
-                // province change
                 selP.addEventListener('change', async () => {
                     selD.disabled = true;
                     selS.disabled = true;
@@ -100,12 +116,11 @@
 
                     const pv = selP.value;
                     if (!pv) return;
-                    const dists = await fetchJson(`{{ route('geo.districts') }}?province=${pv}`);
+                    const dists = await fetchJson(`${R_DIST}?province=${encodeURIComponent(pv)}`);
                     fillSelect(selD, dists, '— เลือกอำเภอ/เขต —');
                     selD.disabled = false;
                 });
 
-                // district change
                 selD.addEventListener('change', async () => {
                     selS.disabled = true;
                     fillSelect(selS, [], '— เลือกตำบล/แขวง —');
@@ -113,47 +128,48 @@
 
                     const dv = selD.value;
                     if (!dv) return;
-                    const subs = await fetchJson(`{{ route('geo.subdistricts') }}?district=${dv}`);
+                    const subs = await fetchJson(`${R_SUBD}?district=${encodeURIComponent(dv)}`);
                     fillSelect(selS, subs, '— เลือกตำบล/แขวง —');
                     selS.disabled = false;
                 });
 
-                // subdistrict change → ดึงรหัสไปรษณีย์ แล้วใส่ “ค่าแรก”
                 selS.addEventListener('change', async () => {
                     clearZip();
                     const sv = selS.value;
                     if (!sv) return;
-                    const zips = await fetchJson(`{{ route('geo.postcodes') }}?subdistrict=${sv}`);
-                    if (Array.isArray(zips) && zips.length > 0) {
-                        inpZ.value = String(zips[0].code); // ใช้ตัวแรก
-                    }
-                    // ถ้าไม่พบค่าใด ๆ ปล่อยว่างไว้ให้ผู้ใช้พิมพ์เอง
+                    const zips = await fetchJson(`${R_POST}?subdistrict=${encodeURIComponent(sv)}`);
+                    if (Array.isArray(zips) && zips.length) inpZ.value = String(zips[0].code || '');
                 });
 
-                // ----- Prefill -----
+                // Prefill chain
                 if (selP.value) {
-                    const dists = await fetchJson(`{{ route('geo.districts') }}?province=${selP.value}`);
+                    const dists = await fetchJson(`${R_DIST}?province=${encodeURIComponent(selP.value)}`);
                     fillSelect(selD, dists, '— เลือกอำเภอ/เขต —');
                     selD.disabled = false;
                     if (selD.dataset.init) selD.value = selD.dataset.init;
                 }
                 if (selD.value) {
-                    const subs = await fetchJson(`{{ route('geo.subdistricts') }}?district=${selD.value}`);
+                    const subs = await fetchJson(`${R_SUBD}?district=${encodeURIComponent(selD.value)}`);
                     fillSelect(selS, subs, '— เลือกตำบล/แขวง —');
                     selS.disabled = false;
                     if (selS.dataset.init) selS.value = selS.dataset.init;
                 }
                 if (selS.value) {
-                    const zips = await fetchJson(`{{ route('geo.postcodes') }}?subdistrict=${selS.value}`);
-                    if (Array.isArray(zips) && zips.length > 0) {
-                        inpZ.value = String(zips[0].code);
-                    }
+                    const zips = await fetchJson(`${R_POST}?subdistrict=${encodeURIComponent(selS.value)}`);
+                    if (Array.isArray(zips) && zips.length) inpZ.value = String(zips[0].code || '');
                 }
-                // ใส่ค่าตั้งต้นจาก old()/db ถ้ามี
-                if (inpZ.dataset.init) inpZ.value = inpZ.dataset.init;
+                if (inpZ.dataset.init && !inpZ.value) inpZ.value = inpZ.dataset.init;
             }
 
-            document.querySelectorAll('[id^="geo_"]').forEach(el => initChain(el.id));
+            function boot() {
+                document.querySelectorAll('[id^="geo_"]').forEach(el => initChain(el.id));
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', boot);
+            } else {
+                boot();
+            }
         })
         ();
     </script>

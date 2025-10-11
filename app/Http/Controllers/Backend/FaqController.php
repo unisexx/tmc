@@ -25,7 +25,7 @@ class FaqController extends Controller
             ->orderByDesc('id');
 
         // ถ้าโหมดจัดเรียง ให้ดึงทั้งหมด (เพื่อใช้ drag & drop ได้ทั้งชุด)
-        $rs = $reorder ? $query->get() : $query->paginate(10)->withQueryString();
+        $rs = $reorder ? $query->get() : $query->paginate(20)->withQueryString();
 
         return view('backend.faq.index', compact('rs', 'q', 'reorder'));
     }

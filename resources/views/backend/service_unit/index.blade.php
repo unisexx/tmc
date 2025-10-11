@@ -25,6 +25,22 @@
                         <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="ชื่อหน่วย / ที่อยู่ / โทรศัพท์">
                     </div>
 
+                    @php
+                        $affOptions = config('service_unit.affiliations');
+                    @endphp
+                    <div class="input-group" style="max-width: 220px;">
+                        <span class="input-group-text">สังกัด</span>
+                        <select name="affiliation" class="form-select">
+                            <option value="">— ทั้งหมด —</option>
+                            @foreach ($affOptions as $option)
+                                <option value="{{ $option }}" @selected(($affiliation ?? '') === $option)>
+                                    {{ $option }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+
                     <div class="input-group" style="max-width: 220px;">
                         <span class="input-group-text">จังหวัด</span>
                         <select name="province" class="form-select">
@@ -35,16 +51,6 @@
                         </select>
                     </div>
 
-                    <div class="input-group" style="max-width: 220px;">
-                        <span class="input-group-text">สังกัด</span>
-                        <select name="affiliation" class="form-select">
-                            <option value="">— ทั้งหมด —</option>
-                            <option value="กรมควบคุมโรค" @selected($affiliation == 'กรมควบคุมโรค')>กรมควบคุมโรค</option>
-                            <option value="กรมการแพทย์" @selected($affiliation == 'กรมการแพทย์')>กรมการแพทย์</option>
-                            <option value="เอกชน" @selected($affiliation == 'เอกชน')>เอกชน</option>
-                            <option value="อื่นๆ" @selected($affiliation == 'อื่นๆ')>อื่นๆ</option>
-                        </select>
-                    </div>
 
                     {{-- ปุ่มค้นหา อยู่ต่อท้ายสังกัด --}}
                     <button class="btn btn-outline-primary">
@@ -65,7 +71,7 @@
 
             {{-- ตาราง --}}
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-striped table-hover table-sm align-middle mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>#</th>
@@ -73,7 +79,6 @@
                             <th>สังกัด</th>
                             <th>จังหวัด</th>
                             <th>เบอร์โทร</th>
-                            <th class="text-center">แผนที่</th>
                             <th class="text-end">จัดการ</th>
                         </tr>
                     </thead>
@@ -88,24 +93,16 @@
                                 <td>{{ $unit->org_affiliation ?: '-' }}</td>
                                 <td>{{ $unit->province?->title }}</td>
                                 <td>{{ $unit->org_tel ?: '-' }}</td>
-                                <td class="text-center">
-                                    @if ($unit->org_lat && $unit->org_lng)
-                                        <a href="https://maps.google.com/?q={{ $unit->org_lat }},{{ $unit->org_lng }}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                            <i class="ti ti-map-pin"></i>
-                                        </a>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
+
                                 <td class="text-end">
-                                    <a href="{{ route('backend.service-unit.edit', $unit) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="ti ti-edit"></i>
+                                    <a href="{{ route('backend.service-unit.edit', $unit) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
+                                        <i class="ti ti-edit f-20"></i>
                                     </a>
-                                    <form action="{{ route('backend.service-unit.destroy', $unit) }}" method="POST" class="d-inline" onsubmit="return confirm('ยืนยันการลบหน่วยบริการนี้?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="btn btn-sm btn-outline-danger">
-                                            <i class="ti ti-trash"></i>
+
+                                    <form action="{{ route('backend.service-unit.destroy', $unit) }}" method="POST" class="d-inline js-delete-form" data-title="{{ $unit->org_name }}">
+                                        @csrf @method('DELETE')
+                                        <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ">
+                                            <i class="ti ti-trash f-20"></i>
                                         </button>
                                     </form>
                                 </td>
@@ -124,4 +121,46 @@
             </div>
         </div>
     </div>
+@endsection
+
+
+@section('scripts')
+    <script>
+        // Bootstrap Tooltip
+        document.addEventListener('DOMContentLoaded', function() {
+            const list = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            list.forEach(function(el) {
+                new bootstrap.Tooltip(el);
+            });
+        });
+
+        // ซ่อน tooltip เมื่อคลิก
+        document.addEventListener('click', function(e) {
+            const t = e.target.closest('[data-bs-toggle="tooltip"]');
+            if (t) {
+                const inst = bootstrap.Tooltip.getInstance(t);
+                inst && inst.hide();
+            }
+        });
+
+        // 🗑️ SweetAlert2: ยืนยัน "ลบผู้ใช้"
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (!form.classList.contains('js-delete-form')) return;
+            e.preventDefault();
+            const title = form.dataset.title || 'หน่วยบริการนี้';
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยืนยันการลบ?',
+                html: `ต้องการลบ <b>${title}</b> หรือไม่?<br>การลบเป็นแบบถาวร ไม่สามารถกู้คืนได้`,
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก',
+                reverseButtons: true,
+                focusCancel: true
+            }).then(res => {
+                if (res.isConfirmed) form.submit();
+            });
+        });
+    </script>
 @endsection

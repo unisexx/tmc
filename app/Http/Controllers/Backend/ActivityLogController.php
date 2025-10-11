@@ -51,7 +51,7 @@ class ActivityLogController extends Controller
             $builder->whereDate('created_at', '<=', Carbon::parse($dateTo)->format('Y-m-d'));
         }
 
-        $logs = $builder->paginate(10)->appends($req->all());
+        $logs = $builder->paginate(20)->appends($req->all());
 
         // options สำหรับฟอร์ม
         $users    = User::orderBy('name')->pluck('name', 'id');
