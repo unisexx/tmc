@@ -37,6 +37,12 @@ Route::middleware(['auth'])->group(function () {
     // Backend Routes (ตายตัว - production)
     // ==============================
     Route::prefix('backend')->name('backend.')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // สถิติการเข้าเว็บ
+        Route::get('/stat', [StatController::class, 'index'])->name('stat');
+
         // แก้ไขข้อมูลส่วนตัว
         Route::resource('profile', ProfileController::class)
             ->parameters(['profile' => 'user'])
@@ -53,10 +59,6 @@ Route::middleware(['auth'])->group(function () {
 
         // switch หน่วยบริการที่ topbar
         Route::post('service-unit/switch', [ServiceUnitController::class, 'switch'])->name('service-unit.switch');
-
-        // static/simple pages
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        Route::get('/stat', [StatController::class, 'index'])->name('stat');
 
         // ไฮไลท์
         Route::resource('hilight', HilightController::class)->names('hilight');
