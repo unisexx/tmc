@@ -1,3 +1,5 @@
+{{-- x-register.purpose --}}
+
 @props([
     'user' => null,
     'provinces' => collect(),

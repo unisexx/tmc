@@ -45,7 +45,7 @@
                                     <th style="width:72px;">#</th>
                                     <th>หัวข้อ</th>
                                     <th class="text-center" style="width:140px;">สถานะ</th>
-                                    <th class="text-end" style="width:120px;">จัดการ</th>
+                                    <th class="text-center" style="width:120px;">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -76,17 +76,19 @@
                                                 <i class="ph-duotone ph-x-circle text-danger fs-4" data-bs-toggle="tooltip" data-bs-title="ฉบับร่าง (Inactive)"></i>
                                             @endif
                                         </td>
-                                        <td class="text-end">
-                                            <a href="{{ route('backend.news.edit', $row) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
-                                                <i class="ti ti-edit fs-5"></i>
-                                            </a>
+                                        <td class="text-center">
+                                            <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="จัดการข่าว">
+                                                <a href="{{ route('backend.news.edit', $row) }}" class="btn btn-sm btn-light border">
+                                                    <i class="ti ti-edit me-1"></i> แก้ไข
+                                                </a>
 
-                                            <form class="d-inline js-delete-form" method="post" action="{{ route('backend.news.destroy', $row) }}" data-title="{{ $row->title }}">
-                                                @csrf @method('delete')
-                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ">
-                                                    <i class="ti ti-trash fs-5"></i>
-                                                </button>
-                                            </form>
+                                                <form class="d-inline js-delete-form" method="post" action="{{ route('backend.news.destroy', $row) }}" data-title="{{ $row->title }}">
+                                                    @csrf @method('delete')
+                                                    <button type="submit" class="btn btn-sm btn-light border">
+                                                        <i class="ti ti-trash me-1"></i> ลบ
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty

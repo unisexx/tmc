@@ -1,3 +1,5 @@
+{{-- <x-register.user-info --}}
+
 @props(['user' => null])
 
 <h5>3. ข้อมูลทั่วไปของผู้ลงทะเบียน</h5>

@@ -73,7 +73,7 @@
                                     <th class="d-none d-lg-table-cell">โทรศัพท์</th>
                                     <th class="text-center d-none d-lg-table-cell">สิทธิ์การใช้งาน</th>
                                     <th class="text-center">สถานะระบบ</th>
-                                    <th class="text-end" style="width:120px">การจัดการ</th>
+                                    <th style="width:120px">การจัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -196,27 +196,28 @@
                                             @endif
                                         </td>
 
-                                        <td class="text-end">
-                                            <div class="d-inline-flex justify-content-end gap-1">
+                                        <td class="text-center">
+                                            <div class="d-inline-flex align-items-center justify-content-end gap-2" role="group" aria-label="จัดการผู้ใช้">
                                                 <form action="{{ route('backend.impersonate.start', $u->id) }}" method="POST" class="d-inline js-impersonate-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                     @csrf
-                                                    <button type="submit" class="avtar avtar-xs btn-link-danger" data-bs-toggle="tooltip" data-bs-title="จำลองผู้ใช้">
-                                                        <i class="ti ti-user-exclamation f-20"></i>
+                                                    <button type="submit" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="จำลองผู้ใช้">
+                                                        <i class="ti ti-user-exclamation me-1"></i> จำลอง
                                                     </button>
                                                 </form>
 
-                                                <a href="{{ route('backend.user.edit', $u) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
-                                                    <i class="ti ti-edit f-20"></i>
+                                                <a href="{{ route('backend.user.edit', $u) }}" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
+                                                    <i class="ti ti-edit me-1"></i> แก้ไข
                                                 </a>
 
                                                 <form action="{{ route('backend.user.destroy', $u) }}" method="POST" class="d-inline js-delete-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
                                                     @csrf @method('DELETE')
-                                                    <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ">
-                                                        <i class="ti ti-trash f-20"></i>
+                                                    <button type="submit" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="ลบ">
+                                                        <i class="ti ti-trash me-1"></i> ลบ
                                                     </button>
                                                 </form>
                                             </div>
                                         </td>
+
                                     </tr>
                                 @empty
                                     <tr>

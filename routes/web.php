@@ -86,6 +86,10 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('application-review', ApplicationReviewController::class)
             ->parameters(['application-review' => 'user'])
             ->names('application-review');
+        Route::get('/application/revise/{user}', [ApplicationReviewController::class, 'reviseForm'])
+            ->name('application.revise')->middleware('signed');
+        Route::put('/application/revise/{user}', [ApplicationReviewController::class, 'reviseSubmit'])
+            ->name('application.revise.submit')->middleware('signed');
 
         // จัดการผู้ใช้งาน
         Route::resource('user', UserController::class)->names('user');

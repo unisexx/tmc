@@ -60,7 +60,7 @@
                                     <th style="width:80px;">#</th>
                                     <th>สิทธิ์การใช้งาน</th>
                                     <th class="text-center" style="width:120px;">สถานะ</th>
-                                    <th class="text-end" style="width:120px;">จัดการ</th>
+                                    <th class="text-center" style="width:120px;">จัดการ</th>
                                 </tr>
                             </thead>
 
@@ -82,17 +82,19 @@
                                             @endif
                                         </td>
 
-                                        <td class="text-end">
-                                            <a href="{{ route('backend.role.edit', $role) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข" aria-label="แก้ไข: {{ $role->name }}">
-                                                <i class="ti ti-edit f-20"></i>
-                                            </a>
+                                        <td class="text-center">
+                                            <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="จัดการบทบาทผู้ใช้">
+                                                <a href="{{ route('backend.role.edit', $role) }}" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="แก้ไข" aria-label="แก้ไข: {{ $role->name }}">
+                                                    <i class="ti ti-edit me-1"></i> แก้ไข
+                                                </a>
 
-                                            <form class="d-inline js-delete-form" method="post" action="{{ route('backend.role.destroy', $role) }}" data-title="{{ $role->name }}">
-                                                @csrf @method('delete')
-                                                <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ" aria-label="ลบ: {{ $role->name }}">
-                                                    <i class="ti ti-trash f-20"></i>
-                                                </button>
-                                            </form>
+                                                <form class="d-inline js-delete-form" method="post" action="{{ route('backend.role.destroy', $role) }}" data-title="{{ $role->name }}">
+                                                    @csrf @method('delete')
+                                                    <button type="submit" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="ลบ" aria-label="ลบ: {{ $role->name }}">
+                                                        <i class="ti ti-trash me-1"></i> ลบ
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty

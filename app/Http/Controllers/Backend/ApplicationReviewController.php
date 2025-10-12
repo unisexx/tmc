@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
@@ -23,9 +24,6 @@ class ApplicationReviewController extends Controller
         // $this->middleware('permission:ผู้ใช้งาน-จัดการผู้ใช้งาน-ดู|ผู้ใช้งาน-จัดการผู้ใช้งาน-เพิ่ม|ผู้ใช้งาน-จัดการผู้ใช้งาน-แก้ไข|ผู้ใช้งาน-จัดการผู้ใช้งาน-ลบ', ['only' => ['index', 'show']]);
     }
 
-    /* =========================================================================
-    | 1) รายชื่อผู้ใช้
-     * ====================================================================== */
     /* =========================================================================
     | 1) รายชื่อผู้ใช้
      * ====================================================================== */
@@ -136,6 +134,11 @@ class ApplicationReviewController extends Controller
     {
         [$data, $pwdPlain] = $this->validatedPayload($request, $user);
 
+        // เก็บสถานะเดิม/ใหม่ไว้ใช้หลังบันทึก
+        $prevStatus = $user->reg_status ?? 'รอตรวจสอบ';
+        $newStatus  = $data['reg_status'] ?? $prevStatus;
+
+        // ดึงค่า org_* สำหรับ upsert หน่วยบริการ
         $org = $this->extractOrgData($request);
         unset(
             $data['org_name'], $data['org_affiliation'], $data['org_affiliation_other'],
@@ -166,6 +169,42 @@ class ApplicationReviewController extends Controller
                 $this->attachUnitToUser($user, $unit, 'manager');
             }
         });
+
+        // ===== แจ้งผลการพิจารณา =====
+        try {
+            // if ($newStatus !== $prevStatus) {
+            if ($newStatus === 'ไม่อนุมัติ') {
+                // ลิงก์ให้ผู้สมัครแก้ไขใบสมัคร (หมดอายุ 7 วัน)
+                $reviseUrl = URL::temporarySignedRoute(
+                    'backend.application.revise', now()->addDays(7), ['user' => $user->id]
+                );
+
+                $reason = trim((string) $request->input('reg_review_note', '-'));
+
+                Mail::raw(
+                    "เรียนคุณ {$user->contact_name}\n\n"
+                    . "ผลการพิจารณาการสมัคร: ไม่อนุมัติ\n"
+                    . "เหตุผล: {$reason}\n\n"
+                    . "คุณสามารถแก้ไขและส่งใบสมัครอีกครั้งได้ที่ลิงก์ต่อไปนี้:\n{$reviseUrl}\n"
+                    . "ลิงก์มีอายุ 7 วัน\n",
+                    function ($m) use ($user) {
+                        $m->to($user->email)->subject('แจ้งผลการสมัคร: ไม่อนุมัติ และลิงก์แก้ไขใบสมัคร');
+                    }
+                );
+            } elseif ($newStatus === 'อนุมัติ') {
+                Mail::raw(
+                    "เรียนคุณ {$user->contact_name}\n\n"
+                    . "ใบสมัครของคุณได้รับการอนุมัติเรียบร้อย\n"
+                    . "คุณสามารถเข้าสู่ระบบและเริ่มใช้งานได้ทันทีที่หน้าเข้าสู่ระบบของระบบผู้เดินทาง\n",
+                    function ($m) use ($user) {
+                        $m->to($user->email)->subject('แจ้งผลการสมัคร: อนุมัติ');
+                    }
+                );
+            }
+            // }
+        } catch (\Throwable $e) {
+            report($e); // ไม่ให้การอัปเดตล้มแม้ส่งอีเมลล้มเหลว
+        }
 
         flash_notify('อัปเดตข้อมูลผู้ใช้งานเรียบร้อย', 'success');
         return redirect()->route('backend.application-review.index');
@@ -666,4 +705,99 @@ class ApplicationReviewController extends Controller
             ->values()
             ->all(); // ตัวอย่างผลลัพธ์: ['T','P']
     }
+
+    public function show(User $user)
+    {
+        // หน่วยบริการหลักของผู้ใช้
+        $unit = $user->serviceUnits()
+            ->wherePivot('is_primary', true)
+            ->first() ?? $user->serviceUnits()->first();
+
+        // รายชื่อ role สำหรับกล่องตรวจสอบ (ไม่แสดง admin)
+        $roles = \Spatie\Permission\Models\Role::query()
+            ->whereRaw('LOWER(name) not like ?', ['%admin%'])
+            ->where('guard_name', 'web')
+            ->orderBy('ordering', 'asc')
+            ->get(['id', 'name']);
+
+        // แปลง purpose code -> label สำหรับโชว์และส่งกลับ form แบบ hidden
+        $purposeLabels = [
+            'T' => 'หน่วยบริการสุขภาพผู้เดินทาง',
+            'P' => 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับจังหวัด (สสจ.)',
+            'R' => 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)',
+        ];
+        $selectedLabels = collect((array) $user->reg_purpose)->map(function ($v) use ($purposeLabels) {
+            return $purposeLabels[$v] ?? $v;
+        })->values()->all();
+
+        return view('backend.application-review.show', compact(
+            'user', 'unit', 'roles', 'selectedLabels'
+        ));
+    }
+
+    /**
+     * แสดงฟอร์มให้ผู้สมัครที่ "ไม่อนุมัติ" เข้ามาแก้ไขข้อมูลใบสมัครเดิมได้
+     * โดยใช้ฟอร์มเดียวกับตอนสมัคร (หน้า create)
+     * ฟังก์ชันนี้ถูกเรียกผ่านลิงก์ signed URL ที่ส่งไปในอีเมลแจ้งผล
+     *
+     * @param  User  $user  ผู้ใช้ที่ถูกปฏิเสธใบสมัคร
+     * @return \Illuminate\View\View
+     */
+    public function reviseForm(User $user)
+    {
+        // ดึงข้อมูลหน่วยบริการหลักของผู้ใช้ (ถ้ามี)
+        $unit = $user->serviceUnits()->wherePivot('is_primary', true)->first() ?? $user->serviceUnits()->first();
+
+        // เปิดหน้าใบสมัครใหม่ โดยโหลดข้อมูลเดิมกลับมาแก้ไข
+        return view('backend.application-review.create', compact('user', 'unit'));
+    }
+
+    /**
+     * บันทึกข้อมูลใบสมัครที่ผู้สมัครแก้ไขแล้วส่งกลับมาใหม่
+     * ระบบจะรีเซ็ตสถานะเป็น “รอตรวจสอบ” และล้างข้อมูลการอนุมัติเดิม
+     * ใช้ validatedPayload() เดิมเพื่อตรวจสอบและจัดรูปข้อมูลก่อนบันทึก
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  User  $user  ผู้ใช้ที่แก้ไขใบสมัคร
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function reviseSubmit(Request $request, User $user)
+    {
+        // ตรวจสอบความถูกต้องของข้อมูล + เตรียม array สำหรับอัปเดต
+        [$data, $pwdPlain] = $this->validatedPayload($request, $user);
+
+        // รีเซ็ตสถานะทุกครั้งเมื่อผู้สมัครส่งแก้ไข
+        $data['reg_status']      = 'รอตรวจสอบ';
+        $data['reg_review_note'] = null;
+        $data['approved_at']     = null;
+        $data['approved_by']     = null;
+        $data['is_active']       = 0;
+
+        // ดึงข้อมูลหน่วยบริการจากฟอร์ม
+        $org = $this->extractOrgData($request);
+
+        // ตรวจสอบว่าผู้สมัครสมัครในฐานะ “หน่วยบริการสุขภาพผู้เดินทาง” หรือไม่
+        $isServiceUnit = in_array(
+            'หน่วยบริการสุขภาพผู้เดินทาง',
+            (array) $request->input('reg_purpose', []),
+            true
+        );
+
+        // ทำงานทั้งหมดใน transaction เดียว
+        DB::transaction(function () use ($user, $data, $org, $isServiceUnit) {
+            // อัปเดตข้อมูลผู้ใช้
+            $user->update($data);
+
+            // ถ้าเป็นหน่วยบริการ → upsert ข้อมูลหน่วยบริการ + ผูก pivot ใหม่
+            if ($isServiceUnit) {
+                $unit = $this->upsertServiceUnit($org);
+                $this->attachUnitToUser($user, $unit, 'manager');
+            }
+        });
+
+        // แจ้งเตือนสำเร็จ แล้วกลับไปหน้า login หรือหน้าแจ้งผล
+        flash_notify('ส่งใบสมัครใหม่แล้ว กรุณารอการตรวจสอบ', 'success');
+        return redirect()->route('login');
+    }
+
 }

@@ -61,7 +61,7 @@
                                     <th class="text-center">ระดับ</th>
                                     <th class="text-center">สถานะแบบประเมิน</th>
                                     <th class="text-center">การอนุมัติ</th>
-                                    <th class="text-end">จัดการ</th>
+                                    <th class="text-center" width="120">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -112,38 +112,43 @@
                                             <span class="badge bg-{{ $row->approval_badge_class }}">{{ $row->approval_text ?? '—' }}</span> --}}
                                         </td>
 
-                                        <td class="text-end">
-                                            {{-- ดูสรุป --}}
-                                            <a href="{{ route('backend.self-assessment-service-unit-level.show', $row->id) }}" class="avtar avtar-xs btn-link-primary me-1" data-bs-toggle="tooltip" data-bs-title="ดูสรุปผลการประเมิน">
-                                                <i class="ti ti-eye f-20"></i>
-                                            </a>
+                                        <td class="text-center">
+                                            <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="จัดการแบบประเมินหน่วยบริการ">
 
-                                            {{-- แก้ไขแบบประเมินระดับหน่วยบริการ --}}
-                                            @if ($canEdit)
-                                                <button type="button" class="avtar avtar-xs btn-link-secondary me-1 js-edit-step1" data-url="{{ route('backend.self-assessment-service-unit-level.edit', $row->id) }}" data-title="แก้ไขแบบประเมิน" data-text="คุณต้องการเข้าไปแก้ไขแบบประเมินของหน่วยบริการนี้ใช่ไหม?" data-confirm="ไปหน้าแก้ไข" data-bs-toggle="tooltip" data-bs-title="แก้ไขแบบประเมิน">
-                                                    <i class="ti ti-edit f-20"></i>
-                                                </button>
-                                            @else
-                                                <button type="button" class="avtar avtar-xs btn-link-secondary me-1 js-locked" data-reason="แบบประเมินนี้อยู่ในสถานะรอดำเนินการตรวจสอบของ<br>สคร./สสจ." data-bs-toggle="tooltip" data-bs-title="ไม่สามารถแก้ไขแบบประเมินได้">
-                                                    <i class="ti ti-edit f-20"></i>
-                                                </button>
-                                            @endif
+                                                {{-- ดูสรุป --}}
+                                                <a href="{{ route('backend.self-assessment-service-unit-level.show', $row->id) }}" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="ดูสรุปผลการประเมิน">
+                                                    <i class="ti ti-eye me-1"></i> ดูสรุป
+                                                </a>
 
-                                            {{-- ลบ --}}
-                                            @if ($canEdit)
-                                                <form id="delete-form-{{ $row->id }}" action="{{ route('backend.self-assessment-service-unit-level.destroy', $row->id) }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                </form>
-                                                <button type="button" class="avtar avtar-xs btn-link-danger js-delete" data-form="delete-form-{{ $row->id }}" data-name="{{ optional($row->serviceUnit)->org_name }}" data-bs-toggle="tooltip" data-bs-title="ลบรายการ">
-                                                    <i class="ti ti-trash f-20"></i>
-                                                </button>
-                                            @else
-                                                <button type="button" class="avtar avtar-xs btn-link-secondary js-locked" data-reason="รายการที่ส่งตรวจสอบแล้วไม่สามารถลบได้" data-bs-toggle="tooltip" data-bs-title="ไม่สามารถลบได้">
-                                                    <i class="ti ti-trash f-20"></i>
-                                                </button>
-                                            @endif
+                                                {{-- แก้ไขแบบประเมินระดับหน่วยบริการ --}}
+                                                @if ($canEdit)
+                                                    <button type="button" class="btn btn-sm btn-light border js-edit-step1" data-url="{{ route('backend.self-assessment-service-unit-level.edit', $row->id) }}" data-title="แก้ไขแบบประเมิน" data-text="คุณต้องการเข้าไปแก้ไขแบบประเมินของหน่วยบริการนี้ใช่ไหม?" data-confirm="ไปหน้าแก้ไข" data-bs-toggle="tooltip" data-bs-title="แก้ไขแบบประเมิน">
+                                                        <i class="ti ti-edit me-1"></i> แก้ไข
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-sm btn-light border text-muted js-locked" data-reason="รายการที่ส่งตรวจสอบแล้วไม่สามารถแก้ไขได้" data-bs-toggle="tooltip" data-bs-title="ไม่สามารถแก้ไขแบบประเมินได้">
+                                                        <i class="ti ti-edit me-1"></i> แก้ไข
+                                                    </button>
+                                                @endif
+
+                                                {{-- ลบ --}}
+                                                @if ($canEdit)
+                                                    <form id="delete-form-{{ $row->id }}" action="{{ route('backend.self-assessment-service-unit-level.destroy', $row->id) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                    </form>
+                                                    <button type="button" class="btn btn-sm btn-light border js-delete" data-form="delete-form-{{ $row->id }}" data-name="{{ optional($row->serviceUnit)->org_name }}" data-bs-toggle="tooltip" data-bs-title="ลบรายการ">
+                                                        <i class="ti ti-trash me-1"></i> ลบ
+                                                    </button>
+                                                @else
+                                                    <button type="button" class="btn btn-sm btn-light border text-muted js-locked" data-reason="รายการที่ส่งตรวจสอบแล้วไม่สามารถลบได้" data-bs-toggle="tooltip" data-bs-title="ไม่สามารถลบได้">
+                                                        <i class="ti ti-trash me-1"></i> ลบ
+                                                    </button>
+                                                @endif
+
+                                            </div>
                                         </td>
+
                                     </tr>
                                 @empty
                                     <tr>

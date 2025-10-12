@@ -73,7 +73,7 @@
                                     <th class="text-center">ระดับ</th>
                                     <th class="text-center">สถานะฟอร์ม</th>
                                     <th class="text-center">การอนุมัติ</th>
-                                    <th class="text-center">จัดการ</th>
+                                    <th class="text-center" width="120">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -110,19 +110,28 @@
                                         </td>
 
                                         <td class="text-center">
-                                            <a href="{{ route('backend.review-assessment.show', $row->id) }}" class="btn btn-primary me-1">
-                                                <i class="ti ti-file-search me-1"></i> ตรวจสอบแบบประเมิน
-                                            </a>
+                                            <div class="d-inline-flex align-items-center justify-content-center gap-2" role="group" aria-label="จัดการการตรวจสอบแบบประเมิน">
 
-                                            @can('delete', $row)
-                                                <form id="delete-form-{{ $row->id }}" action="{{ route('backend.review-assessment.destroy', $row->id) }}" method="POST" class="d-inline">
-                                                    @csrf @method('DELETE')
-                                                </form>
-                                                <button type="button" class="btn btn-outline-danger btn-sm js-delete" data-form="delete-form-{{ $row->id }}" data-name="{{ $su->org_name ?? 'รายการนี้' }}">
-                                                    <i class="ti ti-trash me-1"></i> ลบข้อมูล
-                                                </button>
-                                            @endcan
+                                                {{-- ตรวจสอบแบบประเมิน --}}
+                                                <a href="{{ route('backend.review-assessment.show', $row->id) }}" class="btn btn-sm btn-light border">
+                                                    <i class="ti ti-file-search me-1"></i> ตรวจสอบแบบประเมิน
+                                                </a>
+
+                                                {{-- ลบข้อมูล --}}
+                                                @can('delete', $row)
+                                                    <form id="delete-form-{{ $row->id }}" action="{{ route('backend.review-assessment.destroy', $row->id) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                    </form>
+
+                                                    <button type="button" class="btn btn-sm btn-light border js-delete" data-form="delete-form-{{ $row->id }}" data-name="{{ $su->org_name ?? 'รายการนี้' }}">
+                                                        <i class="ti ti-trash me-1"></i> ลบข้อมูล
+                                                    </button>
+                                                @endcan
+
+                                            </div>
                                         </td>
+
 
 
                                     </tr>

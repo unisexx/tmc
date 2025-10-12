@@ -60,8 +60,7 @@
                             <th style="width:72px;">#</th>
                             <th>คำถาม / คำตอบ (ย่อ)</th>
                             <th class="text-center" style="width:120px;">สถานะ</th>
-                            <th class="text-center" style="width:110px;">ยอดดู</th>
-                            <th class="text-end" style="width:120px;">จัดการ</th>
+                            <th class="text-center" style="width:120px;">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="faqTbody">
@@ -92,21 +91,20 @@
                                 </td>
 
                                 <td class="text-center">
-                                    <span class="badge bg-light-primary text-primary">{{ number_format($row->views) }}</span>
+                                    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="จัดการคำถามที่พบบ่อย">
+                                        <a href="{{ route('backend.faq.edit', $row) }}" class="btn btn-sm btn-light border">
+                                            <i class="ti ti-edit me-1"></i> แก้ไข
+                                        </a>
+
+                                        <form class="d-inline js-delete-form" method="post" action="{{ route('backend.faq.destroy', $row) }}" data-title="{{ \Illuminate\Support\Str::limit($row->question, 80) }}">
+                                            @csrf @method('delete')
+                                            <button type="submit" class="btn btn-sm btn-light border">
+                                                <i class="ti ti-trash me-1"></i> ลบ
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
 
-                                <td class="text-end">
-                                    <a href="{{ route('backend.faq.edit', $row) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
-                                        <i class="ti ti-edit fs-5"></i>
-                                    </a>
-
-                                    <form class="d-inline js-delete-form" method="post" action="{{ route('backend.faq.destroy', $row) }}" data-title="{{ \Illuminate\Support\Str::limit($row->question, 80) }}">
-                                        @csrf @method('delete')
-                                        <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ">
-                                            <i class="ti ti-trash fs-5"></i>
-                                        </button>
-                                    </form>
-                                </td>
                             </tr>
                         @empty
                             <tr>

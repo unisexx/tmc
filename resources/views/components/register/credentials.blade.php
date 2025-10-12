@@ -1,3 +1,5 @@
+{{-- <x-register.credentials --}}
+
 @props(['user' => null])
 
 <h5>4. กำหนด Username และ Password สำหรับเข้าใช้งานระบบ</h5>

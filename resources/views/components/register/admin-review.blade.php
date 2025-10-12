@@ -1,3 +1,5 @@
+{{-- <x-register.admin-review --}}
+
 @props(['user' => null, 'roles' => null])
 
 <div class="card admin-review border-2 border-warning shadow-sm position-relative">

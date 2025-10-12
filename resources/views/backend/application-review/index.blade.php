@@ -57,7 +57,7 @@
                                     <th class="d-none d-md-table-cell">Username</th>
                                     <th class="d-none d-lg-table-cell">โทรศัพท์</th>
                                     <th class="text-center d-none d-lg-table-cell">สถานะลงทะเบียน</th>
-                                    <th class="text-center">สถานะระบบ</th>
+                                    {{-- <th class="text-center">สถานะระบบ</th> --}}
                                     <th class="text-end" style="width:120px">การจัดการ</th>
                                 </tr>
                             </thead>
@@ -164,32 +164,42 @@
                                         </td>
 
                                         {{-- สถานะระบบ --}}
-                                        <td class="text-center">
+                                        {{-- <td class="text-center">
                                             @if ($isActive)
                                                 <i class="ph-duotone ph-check-circle text-primary f-24" data-bs-toggle="tooltip" data-bs-title="Active"></i>
                                             @else
                                                 <i class="ph-duotone ph-x-circle text-danger f-24" data-bs-toggle="tooltip" data-bs-title="Inactive"></i>
                                             @endif
-                                        </td>
+                                        </td> --}}
 
                                         {{-- การจัดการ --}}
                                         <td class="text-end">
-                                            <div class="d-inline-flex justify-content-end gap-1">
-                                                <form action="{{ route('backend.impersonate.start', $u->id) }}" method="POST" class="d-inline js-impersonate-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
-                                                    @csrf
-                                                    <button type="submit" class="avtar avtar-xs btn-link-danger" data-bs-toggle="tooltip" data-bs-title="จำลองผู้ใช้">
-                                                        <i class="ti ti-user-exclamation f-20"></i>
-                                                    </button>
-                                                </form>
+                                            <div class="d-inline-flex align-items-center justify-content-end gap-2" role="group" aria-label="จัดการข้อมูลผู้ใช้">
 
-                                                <a href="{{ route('backend.application-review.edit', $u) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
-                                                    <i class="ti ti-edit f-20"></i>
+                                                {{-- จำลองผู้ใช้ --}}
+                                                {{-- <form action="{{ route('backend.impersonate.start', $u->id) }}" method="POST" class="d-inline js-impersonate-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="จำลองผู้ใช้">
+                                                        <i class="ti ti-user-exclamation me-1"></i> จำลอง
+                                                    </button>
+                                                </form> --}}
+
+                                                {{-- ตรวจสอบ --}}
+                                                <a href="{{ route('backend.application-review.show', $u) }}" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="ตรวจสอบ">
+                                                    <i class="ti ti-clipboard-check me-1"></i> ตรวจสอบ
                                                 </a>
 
+                                                {{-- แก้ไข --}}
+                                                <a href="{{ route('backend.application-review.edit', $u) }}" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
+                                                    <i class="ti ti-edit me-1"></i> แก้ไข
+                                                </a>
+
+                                                {{-- ลบ --}}
                                                 <form action="{{ route('backend.application-review.destroy', $u) }}" method="POST" class="d-inline js-delete-form" data-title="{{ $u->contact_name ?? ($u->username ?? 'ผู้ใช้') }}">
-                                                    @csrf @method('DELETE')
-                                                    <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ">
-                                                        <i class="ti ti-trash f-20"></i>
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-light border" data-bs-toggle="tooltip" data-bs-title="ลบ">
+                                                        <i class="ti ti-trash me-1"></i> ลบ
                                                     </button>
                                                 </form>
                                             </div>
