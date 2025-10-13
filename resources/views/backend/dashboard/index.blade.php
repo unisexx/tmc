@@ -4,88 +4,12 @@
 @section('breadcrumb-item', 'Backend')
 @section('breadcrumb-item-active', 'แดชบอร์ด')
 
-@push('styles')
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-@endpush
-
-@push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-@endpush
-
-
 @section('content')
-    {{-- ฟอร์มค้นหา: ปีงบประมาณ · รอบการประเมิน · สคร. · จังหวัด --}}
-    @php
-        $yearCE = fiscalYearCE();
-        $roundNow = fiscalRound();
-        $yearOpts = fiscalYearOptionsBE(5);
-        $filterYear = (int) request('year', $yearCE);
-        $filterRound = (int) request('round', $roundNow);
-
-        $regionId = request('region');
-        $provinceCode = request('province_code');
-    @endphp
-
-    <form method="GET" class="card mb-3">
-        <div class="card-body">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                {{-- ปีงบประมาณ --}}
-                <div class="input-group" style="max-width: 260px;">
-                    <span class="input-group-text">ปีงบประมาณ</span>
-                    <select name="year" class="form-select">
-                        @foreach ($yearOpts as $y)
-                            <option value="{{ $y['ce'] }}" @selected($filterYear === (int) $y['ce'])>
-                                {{ $y['be'] }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- รอบการประเมิน --}}
-                <div class="input-group" style="max-width: 280px;">
-                    <span class="input-group-text">รอบ</span>
-                    <select name="round" class="form-select">
-                        <option value="1" @selected($filterRound === 1)>รอบที่ 1 (ต.ค. – มี.ค.)</option>
-                        <option value="2" @selected($filterRound === 2)>รอบที่ 2 (เม.ย. – ก.ย.)</option>
-                    </select>
-                </div>
-
-                {{-- สคร. --}}
-                <div class="input-group" style="max-width: 260px;">
-                    <span class="input-group-text">สคร.</span>
-                    <select name="region" class="form-select">
-                        <option value="">ทุกเขต</option>
-                        @foreach ($regions as $r)
-                            <option value="{{ $r->id }}" @selected((string) $regionId === (string) $r->id)>
-                                {{ $r->short_title }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- จังหวัด --}}
-                <div class="input-group" style="max-width: 320px;">
-                    <span class="input-group-text">จังหวัด</span>
-                    <select name="province_code" class="form-select">
-                        <option value="">ทุกจังหวัด</option>
-                        @foreach ($provinces as $p)
-                            <option value="{{ $p->code }}" @selected((string) $provinceCode === (string) $p->code)>
-                                {{ $p->title }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <button class="btn btn-outline-primary" type="submit">
-                    <i class="ph-duotone ph-magnifying-glass"></i> ค้นหา
-                </button>
-            </div>
-        </div>
-    </form>
+    {{-- ฟอร์มค้นหา: ปีงบประมาณ · รอบ · สคร. · จังหวัด · หน่วยบริการ --}}
+    @include('backend.dashboard._filter')
 
 
-
+    {{-- Card จำนวนแต่ละระดับ --}}
     @php
         $total = array_sum($summary) + $notAssessed;
         $pct = fn($v) => $total > 0 ? number_format(($v / $total) * 100, 1) . '%' : '0%';
@@ -97,7 +21,7 @@
     <div class="row g-3 mb-3">
         {{-- ระดับพื้นฐาน --}}
         <div class="col-lg-3 col-md-6">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
@@ -119,7 +43,7 @@
 
         {{-- ระดับกลาง --}}
         <div class="col-lg-3 col-md-6">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
@@ -141,7 +65,7 @@
 
         {{-- ระดับสูง --}}
         <div class="col-lg-3 col-md-6">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
@@ -163,7 +87,7 @@
 
         {{-- ยังไม่ได้ประเมิน --}}
         <div class="col-lg-3 col-md-6">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
@@ -261,117 +185,209 @@
 
     </div>
 
-    <div class="card mb-3">
-        <div class="card-header"><i class="ph-duotone ph-chart-bar"></i> GAP สูงสุดต่อหน่วยบริการ</div>
-        <div class="card-body">
-            <canvas id="gapChart" height="120"></canvas>
-            <div class="table-responsive mt-3">
-                <table class="table table-sm table-striped">
-                    <thead>
-                        <tr>
-                            <th>ระดับ</th>
-                            <th>หน่วยบริการ</th>
-                            <th class="text-end">จำนวน GAP</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($gaps as $g)
-                            <tr>
-                                <td>
-                                    @php
-                                        $levelName = match ($g->level_code) {
-                                            'basic' => 'พื้นฐาน',
-                                            'intermediate', 'medium' => 'กลาง',
-                                            'advanced' => 'สูง',
-                                            default => '-',
-                                        };
-                                    @endphp
-                                    {{ $levelName }}
-                                </td>
-                                <td>{{ $g->org_name }}</td>
-                                <td class="text-end">{{ $g->gap_count }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="3" class="text-center text-muted">ไม่พบข้อมูล</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
 
-                </table>
+    <div class="row g-3 mb-3">
+        {{-- GAP: ระดับพื้นฐาน --}}
+        <div class="col-lg-4">
+            <div class="card h-100 position-relative">
+                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['basic'] }}" style="width:6px; border-top-left-radius:0.5rem; border-bottom-left-radius:0.5rem;"></span>
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="text-{{ $levelText['basic'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับพื้นฐาน</span>
+                    <span class="badge bg-{{ $levelBg['basic'] }} text-{{ $levelText['basic'] }}">{{ number_format($gapBasic->count()) }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:60%">รายการ GAP</th>
+                                    <th class="text-end" style="width:40%">จำนวนหน่วยบริการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($gapBasic as $row)
+                                    <tr>
+                                        <td class="text-wrap">{{ $row->gap_label }}</td>
+                                        <td class="text-end">{{ number_format($row->unit_count) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted">ไม่พบข้อมูล</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- GAP: ระดับกลาง --}}
+        <div class="col-lg-4">
+            <div class="card h-100 position-relative">
+                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['medium'] }}" style="width:6px; border-top-left-radius:0.5rem; border-bottom-left-radius:0.5rem;"></span>
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="text-{{ $levelText['medium'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับกลาง</span>
+                    <span class="badge bg-{{ $levelBg['medium'] }} text-{{ $levelText['medium'] }}">{{ number_format($gapIntermediate->count()) }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:60%">รายการ GAP</th>
+                                    <th class="text-end" style="width:40%">จำนวนหน่วยบริการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($gapIntermediate as $row)
+                                    <tr>
+                                        <td class="text-wrap">{{ $row->gap_label }}</td>
+                                        <td class="text-end">{{ number_format($row->unit_count) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted">ไม่พบข้อมูล</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- GAP: ระดับสูง --}}
+        <div class="col-lg-4">
+            <div class="card h-100 position-relative">
+                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['advanced'] }}" style="width:6px; border-top-left-radius:0.5rem; border-bottom-left-radius:0.5rem;"></span>
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="text-{{ $levelText['advanced'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับสูง</span>
+                    <span class="badge bg-{{ $levelBg['advanced'] }} text-{{ $levelText['advanced'] }}">{{ number_format($gapAdvanced->count()) }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:60%">รายการ GAP</th>
+                                    <th class="text-end" style="width:40%">จำนวนหน่วยบริการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($gapAdvanced as $row)
+                                    <tr>
+                                        <td class="text-wrap">{{ $row->gap_label }}</td>
+                                        <td class="text-end">{{ number_format($row->unit_count) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted">ไม่พบข้อมูล</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+
+    {{-- รอการพิจารณา, อยู่ระหว่างการพิจารณา, อนุมัติแล้ว --}}
+    @php
+        $labels = config('assessment.approval_text');
+        $bgMap = config('assessment.approval_badge_class');
+        $fgMap = config('assessment.approval_badge_text_color');
+    @endphp
+
     <div class="row g-3 mb-3">
-        @foreach (['pending' => 'รอการพิจารณา', 'reviewing' => 'อยู่ระหว่างการพิจารณา', 'approved' => 'อนุมัติแล้ว'] as $key => $label)
-            <div class="col-md-4">
-                <div class="card border-start border-{{ $key === 'approved' ? 'success' : ($key === 'reviewing' ? 'warning' : 'secondary') }} border-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div class="text-muted">{{ $label }}</div>
-                            <span class="badge bg-light text-dark">{{ number_format($status[$key]['count']) }}</span>
+        @foreach ($labels as $key => $label)
+            @php
+                $bg = $bgMap[$key] ?? 'gray-100';
+                $fg = $fgMap[$key] ?? 'gray-900';
+                $count = data_get($status, "$key.count", 0);
+                $unitsInStatus = data_get($status, "$key.units", collect()); // ชื่อใหม่ เลี่ยงชน $units หลัก
+            @endphp
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2 bg-{{ $bg }}">
+                        <span class="fw-semibold text-{{ $fg }}">
+                            <i class="ti ti-building-community me-1 text-{{ $fg }}"></i>{{ $label }}
+                        </span>
+                        <span class="badge border text-{{ $fg }} border-{{ $fg }} bg-white">
+                            {{ number_format($count) }}
+                        </span>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:6%">#</th>
+                                        <th>ชื่อหน่วยบริการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($unitsInStatus as $i => $u)
+                                        <tr>
+                                            <td>{{ $i + 1 }}</td>
+                                            <td class="text-truncate" title="{{ $u->org_name }}">{{ $u->org_name }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">ไม่มีข้อมูล</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
-                        <ul class="mb-0 mt-2 small">
-                            @foreach ($status[$key]['units'] as $u)
-                                <li>{{ $u->org_name }}</li>
-                            @endforeach
-                        </ul>
                     </div>
                 </div>
             </div>
         @endforeach
     </div>
 
-    <div class="card mb-3">
-        <div class="card-header">รายงานภาพรวม (กราฟ)</div>
-        <div class="card-body">
-            <canvas id="overallChart" height="120"></canvas>
-        </div>
-    </div>
-
-    <div class="row g-3">
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header">ระดับของหน่วยบริการ</div>
-                <div class="card-body">
-                    <canvas id="levelChart" height="120"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header">องค์ประกอบ / ข้อเสนอแนะ</div>
-                <div class="card-body">
-                    <canvas id="componentChart" height="120"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    {{-- รายงานภาพรวม (ตาราง) — ตามเขต + กราฟ ApexCharts แนวตั้ง แยกระดับ --}}
     <div class="card mt-3">
-        <div class="card-header">คุณสมบัติ(มี) / GAP(ไม่มี)</div>
-        <div class="card-body">
-            <canvas id="boolChart" height="120"></canvas>
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <span>รายงานภาพรวม — ตามเขต</span>
         </div>
-    </div>
 
-    <div class="card mt-3">
-        <div class="card-header">รายงานภาพรวม (ตาราง) — ตามเขต</div>
-        <div class="card-body table-responsive">
-            <table class="table table-sm table-striped">
+        <div class="card-body">
+            <div id="region-summary-chart" style="height: 420px;"></div>
+        </div>
+
+        <div class="card-body table-responsive pt-0">
+            <table id="region-summary-table" class="table table-sm table-striped align-middle mb-0">
                 <thead>
-                    <tr>
+                    <tr class="text-center">
                         <th>เขต</th>
-                        <th class="text-end">จำนวนหน่วยบริการ</th>
+                        <th class="text-end">พื้นฐาน</th>
+                        <th class="text-end">กลาง</th>
+                        <th class="text-end">สูง</th>
+                        <th class="text-end">ยังไม่ได้ประเมิน</th>
+                        <th class="text-end">รวม</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($regions as $r)
-                        @php $rc = ($regionTable[$r->id]->total ?? 0); @endphp
+                        @php
+                            $basic = (int) data_get($regionTable, "$r->id.basic", 0);
+                            $medium = (int) data_get($regionTable, "$r->id.medium", 0);
+                            $advanced = (int) data_get($regionTable, "$r->id.advanced", 0);
+                            $unassessed = (int) data_get($regionTable, "$r->id.unassessed", 0);
+                            $total = $basic + $medium + $advanced + $unassessed;
+                        @endphp
                         <tr>
                             <td>{{ $r->short_title }}</td>
-                            <td class="text-end">{{ number_format($rc) }}</td>
+                            <td class="text-end">{{ number_format($basic) }}</td>
+                            <td class="text-end">{{ number_format($medium) }}</td>
+                            <td class="text-end">{{ number_format($advanced) }}</td>
+                            <td class="text-end">{{ number_format($unassessed) }}</td>
+                            <td class="text-end fw-semibold">{{ number_format($total) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -379,25 +395,41 @@
         </div>
     </div>
 
+    {{-- รายงานภาพรวม (ตาราง) — ตามจังหวัด + กราฟแนวนอน --}}
     <div class="card mt-3">
-        <div class="card-header">รายงานภาพรวม (ตาราง) — ตามจังหวัด</div>
-        <div class="card-body table-responsive">
-            <table class="table table-sm table-striped">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <span>รายงานภาพรวม — ตามจังหวัด</span>
+        </div>
+
+        <div class="card-body">
+            <div id="province-summary-chart" style="height: 500px;"></div>
+        </div>
+
+        <div class="card-body table-responsive pt-0">
+            <table id="province-summary-table" class="table table-sm table-striped align-middle mb-0">
                 <thead>
-                    <tr>
+                    <tr class="text-center">
                         <th>จังหวัด</th>
-                        <th class="text-end">จำนวนหน่วยบริการ</th>
+                        <th class="text-end">พื้นฐาน</th>
+                        <th class="text-end">กลาง</th>
+                        <th class="text-end">สูง</th>
+                        <th class="text-end">ยังไม่ได้ประเมิน</th>
+                        <th class="text-end">รวม</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($provinceTable as $p)
                         <tr>
                             <td>{{ $p->title }}</td>
-                            <td class="text-end">{{ number_format($p->total) }}</td>
+                            <td class="text-end">{{ number_format($p->basic) }}</td>
+                            <td class="text-end">{{ number_format($p->medium) }}</td>
+                            <td class="text-end">{{ number_format($p->advanced) }}</td>
+                            <td class="text-end">{{ number_format($p->unassessed) }}</td>
+                            <td class="text-end fw-semibold">{{ number_format($p->total) }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="2" class="text-center text-muted">ไม่พบข้อมูล</td>
+                            <td colspan="6" class="text-center text-muted">ไม่พบข้อมูล</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -406,67 +438,316 @@
     </div>
 @endsection
 
+
 @push('js')
+    {{-- รายงานภาพรวม — ตามเขต --}}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            new Chart(document.getElementById('gapChart'), {
-                type: 'bar',
-                data: {
-                    labels: @json($gapChart['labels']),
-                    datasets: [{
-                        label: 'จำนวนช่องว่าง',
-                        data: @json($gapChart['data'])
-                    }]
+        (function() {
+            const tbl = document.getElementById('region-summary-table');
+            if (!tbl) return;
+
+            const regions = [];
+            const basic = [],
+                medium = [],
+                advanced = [],
+                unassessed = [];
+            tbl.querySelectorAll('tbody tr').forEach(tr => {
+                const t = tr.querySelectorAll('td');
+                if (t.length >= 6) {
+                    regions.push(t[0].textContent.trim());
+                    basic.push(parseInt(t[1].textContent.replace(/[, ]/g, '')) || 0);
+                    medium.push(parseInt(t[2].textContent.replace(/[, ]/g, '')) || 0);
+                    advanced.push(parseInt(t[3].textContent.replace(/[, ]/g, '')) || 0);
+                    unassessed.push(parseInt(t[4].textContent.replace(/[, ]/g, '')) || 0);
+                }
+            });
+            if (!regions.length) return;
+
+            // โหลดสีพื้นจาก config
+            const cfgBg = @json(config('assessment.level_badge_class'));
+
+            const colors = [
+                mapColor(cfgBg.basic),
+                mapColor(cfgBg.medium),
+                mapColor(cfgBg.advanced),
+                mapColor(cfgBg.unassessed)
+            ];
+
+            function mapColor(cls) {
+                // map Light Able utility class → hex ระดับ -400
+                const map = {
+                    'pink-100': '#f472b6', // pink-400
+                    'yellow-100': '#facc15', // yellow-400
+                    'green-100': '#4ade80', // green-400
+                    'gray-100': '#9ca3af' // gray-400
+                };
+                return map[cls] || '#9ca3af';
+            }
+
+
+
+            const el = document.getElementById('region-summary-chart');
+            const maxY = Math.max(...basic, ...medium, ...advanced, ...unassessed, 0);
+
+            const options = {
+                chart: {
+                    type: 'bar',
+                    height: 420,
+                    stacked: true,
+                    toolbar: {
+                        show: false
+                    },
+                    fontFamily: 'inherit'
                 },
-                options: {
-                    plugins: {
-                        legend: {
-                            display: false
+                series: [{
+                        name: 'พื้นฐาน',
+                        data: basic
+                    },
+                    {
+                        name: 'กลาง',
+                        data: medium
+                    },
+                    {
+                        name: 'สูง',
+                        data: advanced
+                    },
+                    {
+                        name: 'ยังไม่ได้ประเมิน',
+                        data: unassessed
+                    }
+                ],
+                xaxis: {
+                    categories: regions,
+                    labels: {
+                        style: {
+                            fontSize: '12px'
+                        }
+                    }
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '55%',
+                        borderRadius: 6,
+                        dataLabels: {
+                            total: {
+                                enabled: true,
+                                style: {
+                                    fontSize: '12px',
+                                    fontWeight: 600
+                                }
+                            }
+                        }
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                tooltip: {
+                    shared: true,
+                    intersect: false,
+                    y: {
+                        formatter: (v) => v.toLocaleString()
+                    }
+                },
+                colors: colors,
+                grid: {
+                    strokeDashArray: 3,
+                    padding: {
+                        left: 10,
+                        right: 10
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: (v) => v.toFixed(0),
+                        style: {
+                            fontSize: '12px'
                         }
                     },
-                    responsive: true,
-                    maintainAspectRatio: false
+                    tickAmount: maxY < 5 ? maxY : undefined,
+                    forceNiceScale: true,
+                    min: 0,
+                    title: {
+                        text: 'จำนวนหน่วยบริการ',
+                        style: {
+                            fontSize: '13px',
+                            fontWeight: 500
+                        }
+                    }
+                },
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'center',
+                    markers: {
+                        radius: 4
+                    }
                 }
-            });
+            };
 
-            new Chart(document.getElementById('overallChart'), {
-                type: 'pie',
-                data: @json($overallChart),
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-            new Chart(document.getElementById('levelChart'), {
-                type: 'doughnut',
-                data: @json($levelChart),
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-            new Chart(document.getElementById('componentChart'), {
-                type: 'bar',
-                data: @json($componentChart),
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-            new Chart(document.getElementById('boolChart'), {
-                type: 'bar',
-                data: @json($boolChart),
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-        });
+            const chart = new ApexCharts(el, options);
+            chart.render();
+        })();
     </script>
 @endpush
 
+@push('js')
+    {{-- รายงานภาพรวม — ตามจังหวัด --}}
+    <script>
+        (function() {
+            const tbl = document.getElementById('province-summary-table');
+            if (!tbl) return;
+
+            const provinces = [];
+            const basic = [],
+                medium = [],
+                advanced = [],
+                unassessed = [],
+                totals = [];
+
+            tbl.querySelectorAll('tbody tr').forEach(tr => {
+                const t = tr.querySelectorAll('td');
+                if (t.length >= 6) {
+                    provinces.push(t[0].textContent.trim());
+
+                    const b = parseInt(t[1].textContent.replace(/[, ]/g, '')) || 0;
+                    const m = parseInt(t[2].textContent.replace(/[, ]/g, '')) || 0;
+                    const a = parseInt(t[3].textContent.replace(/[, ]/g, '')) || 0;
+                    const u = parseInt(t[4].textContent.replace(/[, ]/g, '')) || 0;
+
+                    basic.push(b);
+                    medium.push(m);
+                    advanced.push(a);
+                    unassessed.push(u);
+                    totals.push(b + m + a + u);
+                }
+            });
+            if (!provinces.length) return;
+
+            const cfgBg = @json(config('assessment.level_badge_class'));
+
+            function mapColor(cls) {
+                const map = {
+                    'pink-100': '#f472b6', // basic
+                    'yellow-100': '#facc15', // medium
+                    'green-100': '#4ade80', // advanced
+                    'gray-100': '#9ca3af' // unassessed
+                };
+                return map[cls] || '#9ca3af';
+            }
+            const colors = [
+                mapColor(cfgBg.basic),
+                mapColor(cfgBg.medium),
+                mapColor(cfgBg.advanced),
+                mapColor(cfgBg.unassessed)
+            ];
+
+            const el = document.getElementById('province-summary-chart');
+            const maxX = Math.max(...totals, 0);
+
+            const options = {
+                chart: {
+                    type: 'bar',
+                    height: Math.max(360, provinces.length * 26),
+                    stacked: true,
+                    toolbar: {
+                        show: false
+                    },
+                    fontFamily: 'inherit'
+                },
+                series: [{
+                        name: 'พื้นฐาน',
+                        data: basic
+                    },
+                    {
+                        name: 'กลาง',
+                        data: medium
+                    },
+                    {
+                        name: 'สูง',
+                        data: advanced
+                    },
+                    {
+                        name: 'ยังไม่ได้ประเมิน',
+                        data: unassessed
+                    }
+                ],
+                plotOptions: {
+                    bar: {
+                        horizontal: true,
+                        barHeight: '70%',
+                        borderRadius: 6,
+                        dataLabels: {
+                            total: {
+                                enabled: true,
+                                style: {
+                                    fontSize: '12px',
+                                    fontWeight: 600
+                                }
+                            }
+                        }
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                xaxis: {
+                    categories: provinces,
+                    labels: {
+                        formatter: (v) => Number(v).toFixed(0),
+                        style: {
+                            fontSize: '12px'
+                        }
+                    },
+                    title: {
+                        text: 'จำนวนหน่วยบริการ',
+                        style: {
+                            fontSize: '13px',
+                            fontWeight: 500
+                        }
+                    },
+                    tickAmount: maxX < 5 ? maxX : undefined,
+                    min: 0
+                },
+                yaxis: {
+                    labels: {
+                        style: {
+                            fontSize: '12px'
+                        }
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    intersect: false,
+                    y: {
+                        formatter: (v) => v.toLocaleString()
+                    }
+                },
+                colors: colors,
+                grid: {
+                    strokeDashArray: 3,
+                    padding: {
+                        left: 10,
+                        right: 10
+                    }
+                },
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'center',
+                    markers: {
+                        radius: 4
+                    }
+                }
+            };
+
+            const chart = new ApexCharts(el, options);
+            chart.render();
+        })();
+    </script>
+@endpush
 
 @push('js')
+    {{-- แผนที่ พร้อมปักหมุด --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const map = L.map('map').setView([13.736717, 100.523186], 6);
@@ -541,7 +822,7 @@
                 suList.querySelectorAll('.list-group-item').forEach(el => el.classList.remove('active'));
                 item.classList.add('active');
 
-                map.flyTo([lat, lng], 13, {
+                map.flyTo([lat, lng], 16, {
                     animate: true
                 });
                 map.once('moveend', () => m.openPopup());

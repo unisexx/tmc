@@ -142,3 +142,11 @@
         <div class="text-muted">- ไม่มีข้อเสนอ/แผนพัฒนา -</div>
     @endif
 </div>
+
+{{-- ✅ ปุ่มดาวน์โหลดผลการประเมิน --}}
+<div class="mt-4">
+    <a href="{{ route('backend.self-assessment-service-unit-level.export-pdf', $row->id) }}" target="_blank" class="btn btn-danger">
+        <i class="ph-duotone ph-file-pdf me-1"></i>
+        ดาวน์โหลดผลการประเมิน
+    </a>
+</div>

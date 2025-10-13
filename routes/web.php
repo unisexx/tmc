@@ -144,10 +144,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/logs', [ActivityLogController::class, 'index'])->name('logs.index');
 
         // Ajax ค้นหา user
-        Route::get('ajax/users/lookup', [AjaxController::class, 'ajaxUserLookup'])->name('ajax.users.lookup');
+        // Route::get('ajax/users/lookup', [AjaxController::class, 'ajaxUserLookup'])->name('ajax.users.lookup');
     });
 });
 
+// Chain Select จังหวัด อำเภอ ตำบล รหัสไปรษณีย์ lat lon
 Route::prefix('geo')->group(function () {
     Route::get('/provinces', [GeoApiController::class, 'provinces'])->name('geo.provinces');
     Route::get('/districts', [GeoApiController::class, 'districts'])->name('geo.districts');
@@ -155,6 +156,13 @@ Route::prefix('geo')->group(function () {
     Route::get('/postcodes', [GeoApiController::class, 'postcodes'])->name('geo.postcodes');
     Route::get('/subdistrict-center', [GeoApiController::class, 'subdistrictCenter'])->name('geo.subdistrict-center');
 });
+
+// Ajax
+// lookup ผู้ใช้
+Route::get('/users/lookup', [AjaxController::class, 'ajaxUserLookup'])->name('ajax.users.lookup');
+// chain select: สคร. → จังหวัด → หน่วยบริการ
+Route::get('/regions/{region}/provinces', [AjaxController::class, 'ajaxProvincesByRegion'])->name('ajax.cascade.provinces');
+Route::get('/provinces/{province}/service-units', [AjaxController::class, 'ajaxServiceUnitsByProvince'])->name('ajax.cascade.serviceUnits');
 
 // ==============================
 // Dynamic Routes (ใช้เฉพาะตอน dev) ของ Light Abel Template (อย่าลืมลบออก)

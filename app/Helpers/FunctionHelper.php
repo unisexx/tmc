@@ -163,3 +163,62 @@ if (!function_exists('renderWorkingHoursHtml')) {
         return nl2br(e($text));
     }
 }
+
+if (!function_exists('renderWorkingHoursTable')) {
+    /**
+     * แสดงวัน-เวลาทำการเป็นตาราง Bootstrap
+     * รับได้ทั้ง array และ JSON string
+     */
+    function renderWorkingHoursTable(array | string | null $json): string
+    {
+        // แปลงอินพุตเป็น array
+        if (is_string($json)) {
+            $json = json_decode($json, true);
+        }
+        $data = is_array($json) ? $json : [];
+
+        // ลำดับวันในสัปดาห์
+        $days = [
+            'mon' => 'จันทร์',
+            'tue' => 'อังคาร',
+            'wed' => 'พุธ',
+            'thu' => 'พฤหัสบดี',
+            'fri' => 'ศุกร์',
+            'sat' => 'เสาร์',
+            'sun' => 'อาทิตย์',
+        ];
+
+        // helper แปลงช่วงเวลา "HH:MM-HH:MM" → "HH:MM น. – HH:MM น."
+        $fmtRanges = function (array $ranges): string {
+            if (!$ranges) {
+                return '— ปิดทำการ —';
+            }
+            // เรียงตามเวลาเริ่ม
+            usort($ranges, function ($a, $b) {
+                return strcmp(substr($a, 0, 5), substr($b, 0, 5));
+            });
+            $out = [];
+            foreach ($ranges as $rng) {
+                if (preg_match('/^(\d{2}:\d{2})-(\d{2}:\d{2})$/', $rng, $m)) {
+                    $out[] = "{$m[1]} น. – {$m[2]} น.";
+                } else {
+                    $out[] = e($rng);
+                }
+            }
+            return implode(', ', $out);
+        };
+
+        // สร้าง HTML ตาราง
+        $html = '<table class="table table-sm table-bordered mb-0"><tbody>';
+        foreach ($days as $key => $label) {
+            $ranges = isset($data[$key]) && is_array($data[$key]) ? $data[$key] : [];
+            $html .= '<tr>';
+            $html .= '<th class="w-25">' . e($label) . '</th>';
+            $html .= '<td>' . $fmtRanges($ranges) . '</td>';
+            $html .= '</tr>';
+        }
+        $html .= '</tbody></table>';
+
+        return $html;
+    }
+}

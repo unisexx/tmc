@@ -15,6 +15,7 @@
         <link rel="icon" href="{{ URL::asset('build/images/favicon.svg') }}" type="image/x-icon">
         @yield('css')
         @stack('css')
+        @stack('styles')
         @include('layouts.head-css')
     </head>
 
@@ -45,6 +46,7 @@
         @include('layouts.footerjs')
         @yield('scripts')
         @stack('js')
+        @stack('scripts')
     </body>
     <!-- [Body] end -->
 

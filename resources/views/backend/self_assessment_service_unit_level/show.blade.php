@@ -141,18 +141,16 @@
                 </div>
             @endif
 
-
-
+            {{-- แถบสรุป หน่วยบริการ, ระดับ, ปีงบ, รอบการประเมิน --}}
             @include('backend.self_assessment_service_unit_level._summary', compact('row', 'yearBE', 'form', 'components'))
+            {{-- ตารางองค์ประกอบ 1–6 + ข้อเสนอ/แผนพัฒนา (ยกมาเหมือนเดิม) --}}
+            @include('backend.self_assessment_service_unit_level._summary_table', ['components' => $components, 'form' => $form])
         </div>
 
         <div class="card-footer d-flex justify-content-end">
             <div class="btn-toolbar gap-2">
                 <a href="{{ route('backend.self-assessment-service-unit-level.index') }}" class="btn btn-outline-secondary">
                     <i class="ti ti-arrow-left"></i> ย้อนกลับ
-                </a>
-                <a href="{{ route('backend.self-assessment-service-unit-level.export-pdf', $row->id) }}" target="_blank" class="btn btn-danger">
-                    <i class="ti ti-file-type-pdf"></i> ดาวน์โหลด PDF
                 </a>
             </div>
         </div>

@@ -38,6 +38,3 @@
         <span class="fw-semibold">{{ $roundTxt }}</span>
     </div>
 </div>
-
-{{-- ตารางองค์ประกอบ 1–6 + ข้อเสนอ/แผนพัฒนา (ยกมาเหมือนเดิม) --}}
-@include('backend.self_assessment_service_unit_level._summary_table', ['components' => $components, 'form' => $form])

@@ -79,7 +79,7 @@
                             <th>สังกัด</th>
                             <th>จังหวัด</th>
                             <th>เบอร์โทร</th>
-                            <th class="text-end">จัดการ</th>
+                            <th class="text-center" width="120">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -94,22 +94,29 @@
                                 <td>{{ $unit->province?->title }}</td>
                                 <td>{{ $unit->org_tel ?: '-' }}</td>
 
-                                <td class="text-end">
-                                    <a href="{{ route('backend.service-unit.managers.edit', $unit->id) }}" class="btn btn-primary btn-sm">
-                                        <i class="ph-duotone ph-users-three"></i> ผู้รับผิดชอบ
-                                    </a>
+                                <td class="text-center">
+                                    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="จัดการหน่วยบริการ">
+                                        {{-- ปุ่มผู้รับผิดชอบ --}}
+                                        <a href="{{ route('backend.service-unit.managers.edit', $unit->id) }}" class="btn btn-sm btn-light border">
+                                            <i class="ph-duotone ph-users-three me-1"></i> ผู้รับผิดชอบ
+                                        </a>
 
-                                    <a href="{{ route('backend.service-unit.edit', $unit) }}" class="avtar avtar-xs btn-link-secondary" data-bs-toggle="tooltip" data-bs-title="แก้ไข">
-                                        <i class="ti ti-edit f-20"></i>
-                                    </a>
+                                        {{-- ปุ่มแก้ไข --}}
+                                        <a href="{{ route('backend.service-unit.edit', $unit) }}" class="btn btn-sm btn-light border">
+                                            <i class="ti ti-edit me-1"></i> แก้ไข
+                                        </a>
 
-                                    <form action="{{ route('backend.service-unit.destroy', $unit) }}" method="POST" class="d-inline js-delete-form" data-title="{{ $unit->org_name }}">
-                                        @csrf @method('DELETE')
-                                        <button class="avtar avtar-xs btn-link-secondary" type="submit" data-bs-toggle="tooltip" data-bs-title="ลบ">
-                                            <i class="ti ti-trash f-20"></i>
-                                        </button>
-                                    </form>
+                                        {{-- ปุ่มลบ --}}
+                                        <form action="{{ route('backend.service-unit.destroy', $unit) }}" method="POST" class="d-inline js-delete-form" data-title="{{ $unit->org_name }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-light border">
+                                                <i class="ti ti-trash me-1"></i> ลบ
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
+
                             </tr>
                         @empty
                             <tr>

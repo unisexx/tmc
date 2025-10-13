@@ -22,6 +22,7 @@ class Permissions
         'approve-application'  => ['view', 'create', 'update', 'delete'],
         'users'                => ['view', 'create', 'update', 'delete'],
         'roles-permissions'    => ['view', 'create', 'update', 'delete'],
+        'service-unit'         => ['view', 'create', 'update', 'delete'],
         'log'                  => ['view'],
     ];
 
@@ -43,6 +44,7 @@ class Permissions
         'approve-application'  => 'ตรวจสอบใบสมัคร',
         'users'                => 'ผู้ใช้งาน',
         'roles-permissions'    => 'สิทธิ์การใช้งาน',
+        'service-unit'         => 'หน่วยบริการ',
         'log'                  => 'ประวัติการใช้งาน',
     ];
 

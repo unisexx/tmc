@@ -1,3 +1,5 @@
+{{-- resources/views/backend/application-review/show.blade.php --}}
+
 @extends('layouts.main')
 
 @section('title', 'ตรวจสอบใบสมัคร: ' . ($user->contact_name ?? ($user->name ?? $user->username)))
@@ -5,26 +7,6 @@
 @section('breadcrumb-item-active', 'ตรวจสอบใบสมัคร')
 
 @php
-    use Illuminate\Support\Arr;
-
-    // helper แสดงวัน-เวลาทำการแบบอ่านง่าย
-    $daysTh = ['mon' => 'จันทร์', 'tue' => 'อังคาร', 'wed' => 'พุธ', 'thu' => 'พฤหัสบดี', 'fri' => 'ศุกร์', 'sat' => 'เสาร์', 'sun' => 'อาทิตย์'];
-    $wh = (array) ($unit->org_working_hours_json ?? []);
-    $fmtWh = function (array $whRow) {
-        if (empty($whRow)) {
-            return 'ปิด';
-        }
-        return collect($whRow)
-            ->map(function ($rng) {
-                // แปลง 07:00-11:00 → 07:00 น. – 11:00 น.
-                if (preg_match('/^(\d{2}:\d{2})-(\d{2}:\d{2})$/', $rng, $m)) {
-                    return "{$m[1]} น. – {$m[2]} น.";
-                }
-                return $rng;
-            })
-            ->implode(', ');
-    };
-
     // ป้าย purpose
     $purposeBadges = collect($selectedLabels ?? [])
         ->map(function ($label) {
@@ -34,8 +16,7 @@
                 'ผู้กำกับดูแลหน่วยบริการสุขภาพผู้เดินทางระดับเขต (สคร.)' => 'success',
             ];
             $cls = $map[$label] ?? 'secondary';
-            return "<span class=\"badge bg-{$cls} me-1\">
-{$label}</span>";
+            return "<span class=\"badge bg-{$cls} me-1\">{$label}</span>";
         })
         ->implode(' ');
 @endphp
@@ -121,17 +102,9 @@
                                     <div class="col-md-6">
                                         <div class="border rounded p-3 h-100">
                                             <div><strong>วัน-เวลาทำการ:</strong></div>
+                                            {{-- ใช้ helper แสดงตารางวัน-เวลาทำการ --}}
                                             <div class="table-responsive">
-                                                <table class="table table-sm table-bordered mb-0">
-                                                    <tbody>
-                                                        @foreach ($daysTh as $k => $label)
-                                                            <tr>
-                                                                <th class="w-25">{{ $label }}</th>
-                                                                <td>{{ $fmtWh((array) Arr::get($wh, $k, [])) }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
+                                                {!! renderWorkingHoursTable($unit->org_working_hours_json ?? null) !!}
                                             </div>
                                         </div>
                                     </div>
@@ -239,7 +212,7 @@
                 @method('PUT')
 
                 {{-- Hidden fields ที่จำเป็นให้ validation ผ่าน โดยดึงจากข้อมูลเดิม --}}
-                {{-- 1) วัตถุประสงค์การลงทะเบียน (ต้องส่งเป็น "label") --}}
+                {{-- 1) วัตถุประสงค์การลงทะเบียน --}}
                 @foreach ($selectedLabels ?? [] as $lbl)
                     <input type="hidden" name="reg_purpose[]" value="{{ $lbl }}">
                 @endforeach
@@ -263,10 +236,8 @@
                     <input type="hidden" name="org_subdistrict_code" value="{{ $unit->org_subdistrict_code }}">
                     <input type="hidden" name="org_postcode" value="{{ $unit->org_postcode }}">
                     <input type="hidden" name="org_working_hours" value="{{ $unit->org_working_hours }}">
-                    {{-- ต้องเป็น string JSON --}}
                     <input type="hidden" name="working_hours_json" value='@json($unit->org_working_hours_json ?? [], JSON_UNESCAPED_UNICODE)'>
                 @else
-                    {{-- ส่งค่าเปล่าแบบ string JSON --}}
                     @php $blankWh = ['mon'=>[],'tue'=>[],'wed'=>[],'thu'=>[],'fri'=>[],'sat'=>[],'sun'=>[]]; @endphp
                     <input type="hidden" name="working_hours_json" value='@json($blankWh, JSON_UNESCAPED_UNICODE)'>
                 @endif
@@ -278,16 +249,13 @@
                 <input type="hidden" name="contact_mobile" value="{{ $user->contact_mobile }}">
                 <input type="hidden" name="email" value="{{ $user->email }}">
 
-                {{-- 4) บัญชีผู้ใช้: username ต้องส่งเสมอ, password ไม่จำเป็น --}}
+                {{-- 4) บัญชีผู้ใช้ --}}
                 <input type="hidden" name="username" value="{{ $user->username }}">
 
-                {{-- 5) PDPA: ติ๊กแล้วให้ผ่าน --}}
+                {{-- 5) PDPA --}}
                 <input type="hidden" name="pdpa_accept" value="1">
 
-                {{-- 6) เอกสารเจ้าหน้าที่: ไม่แตะไฟล์เดิม --}}
-                {{-- ไม่ต้องส่ง officer_doc / remove_officer_doc --}}
-
-                {{-- ===== กล่องตรวจสอบจริง (เลือกระยะสถานะ + role + note) ===== --}}
+                {{-- ===== กล่องตรวจสอบจริง ===== --}}
                 <x-register.admin-review :user="$user" :roles="$roles" />
 
                 <div class="mt-3 d-flex gap-2">
@@ -326,8 +294,6 @@
             const pos = [lat, lng];
             L.marker(pos).addTo(map);
             map.setView(pos, 14);
-
-            // แก้ปัญหา map ใน card ที่เพิ่ง render
             setTimeout(() => map.invalidateSize(), 300);
         });
     </script>
