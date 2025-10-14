@@ -16,43 +16,6 @@
     });
 @endphp
 
-{{-- ====================== Error Summary ====================== --}}
-@if ($errors->any())
-    <div id="error-summary" class="alert alert-danger" role="alert">
-        <div class="d-flex align-items-start gap-2">
-            <i class="ti ti-alert-circle fs-4 mt-1"></i>
-            <div>
-                <strong>กรอกข้อมูลไม่ครบหรือไม่ถูกต้อง {{ $errors->count() }} รายการ</strong>
-                <div class="small">โปรดตรวจสอบฟิลด์ที่มีเครื่องหมาย <span class="text-danger">*</span> หรือมีกรอบสีแดง</div>
-                <ul class="mt-2 mb-0">
-                    @foreach ($errors->toArray() as $field => $messages)
-                        <li class="small">
-                            {{-- แปลงชื่อ field ที่เป็น array ให้อ่านง่าย --}}
-                            <a href="#field-{{ \Illuminate\Support\Str::slug($field) }}" class="text-reset text-decoration-underline">
-                                {{ str_replace(['working_hours.*.', 'working_hours.'], 'วัน-เวลาทำการ: ', $field) }}
-                            </a>
-                            : {{ $messages[0] }}
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        </div>
-    </div>
-    @push('js')
-        <script>
-            // เลื่อนขึ้นไปดูสรุป error อัตโนมัติ
-            document.addEventListener('DOMContentLoaded', () => {
-                const box = document.getElementById('error-summary');
-                if (box) box.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            });
-        </script>
-    @endpush
-@endif
-
-
 <div class="row g-3">
 
     <div class="col-md-6">
@@ -75,27 +38,22 @@
                 }
 
                 function fmtTH(v) {
-                    // 1-2345-67890-12-3 (เฉพาะแสดงผล)
                     if (v.length < 13) return '';
                     return `${v[0]}-${v.slice(1,5)}-${v.slice(5,10)}-${v.slice(10,12)}-${v[12]}`;
                 }
 
                 function updatePreview() {
                     const v = onlyDigits(el.value);
-                    if (v !== el.value) {
-                        el.value = v;
-                    }
+                    if (v !== el.value) el.value = v;
                     const f = fmtTH(v);
                     pv.style.display = f ? 'block' : 'none';
                     pv.textContent = f ? `รูปแบบ: ${f}` : '';
                 }
-
                 el.addEventListener('input', updatePreview);
                 updatePreview();
             });
         </script>
     @endpush
-
 
     <div class="col-md-6">
         <label for="contact_name" class="form-label required">ชื่อ-สกุล</label>
@@ -132,7 +90,6 @@
     <div class="col-12">
         <label for="officer_doc" class="form-label required">เอกสารยืนยันตัวเจ้าหน้าที่ (เช่น สำเนาบัตรประจำตัวเจ้าหน้าที่ของรัฐ, หนังสือรับรองการเป็นเจ้าหน้าที่)</label>
 
-        {{-- ถ้ามีไฟล์เดิม แสดงลิงก์ + ตัวเลือกลบ --}}
         @if (!empty($user?->officer_doc_path))
             <div class="alert alert-secondary d-flex align-items-center justify-content-between" role="alert">
                 <div>
@@ -164,39 +121,7 @@
 
     <hr class="my-4">
 
-    {{-- กำหนดสิทธิ์การใช้งาน (Role เดียว) --}}
-    @php
-        $allRoles = Spatie\Permission\Models\Role::query()
-            ->where('guard_name', 'web')
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-        // ค่าที่เลือกไว้ล่าสุด
-        $selectedRoleId = old('role_id');
-
-        // ถ้ายังไม่มี old ให้ใช้ role ปัจจุบันของ user (กรณีหน้า edit)
-        if ($selectedRoleId === null && isset($user)) {
-            $selectedRoleId = optional($user->roles->first())->id;
-        }
-    @endphp
-
-    <div class="col-md-6">
-        <label for="role" class="form-label required">สิทธิ์การใช้งาน</label>
-        <select name="role_id" id="role" class="form-select @error('role_id') is-invalid @enderror">
-            <option value="">--- เลือกสิทธิ์การใช้งาน ---</option>
-            @foreach ($allRoles ?? [] as $role)
-                <option value="{{ $role->id }}" {{ (string) $selectedRoleId === (string) $role->id ? 'selected' : '' }}>
-                    {{ $role->name }}
-                </option>
-            @endforeach
-        </select>
-        @error('role_id')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
-
-
-    <div class="col-md-6">
+    <div class="col-12">
         <label for="username" class="form-label required">Username</label>
         <input type="text" name="username" id="username" value="{{ old('username', $user->username ?? '') }}" class="form-control">
         @error('username')
@@ -223,13 +148,41 @@
         </div>
     </div>
 
-    {{-- สถานะการลงทะเบียน --}}
-    <div class="col-md-6">
+    <hr class="my-4">
+
+    {{-- ===== สิทธิ์การใช้งาน: ย้ายลงมาก่อนสถานะการลงทะเบียน ===== --}}
+    @php
+        $allRoles = Spatie\Permission\Models\Role::query()
+            ->where('guard_name', 'web')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $selectedRoleId = old('role_id');
+        if ($selectedRoleId === null && isset($user)) {
+            $selectedRoleId = optional($user->roles->first())->id;
+        }
+    @endphp
+
+    <div class="col-12">
+        <label for="role" class="form-label required">สิทธิ์การใช้งาน</label>
+        <select name="role_id" id="role" class="form-select @error('role_id') is-invalid @enderror">
+            <option value="">--- เลือกสิทธิ์การใช้งาน ---</option>
+            @foreach ($allRoles ?? [] as $role)
+                <option value="{{ $role->id }}" {{ (string) $selectedRoleId === (string) $role->id ? 'selected' : '' }}>
+                    {{ $role->name }}
+                </option>
+            @endforeach
+        </select>
+        @error('role_id')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+    </div>
+
+    {{-- ===== สถานะการลงทะเบียน ===== --}}
+    <div class="col-12">
         <label for="reg_status" class="form-label required">สถานะการลงทะเบียน</label>
         <select name="reg_status" id="reg_status" class="form-select">
-            @php
-                $status = old('reg_status', $user->reg_status ?? 'รอตรวจสอบ');
-            @endphp
+            @php $status = old('reg_status', $user->reg_status ?? 'รอตรวจสอบ'); @endphp
             <option value="รอตรวจสอบ" @selected($status === 'รอตรวจสอบ')>รอตรวจสอบ</option>
             <option value="อนุมัติ" @selected($status === 'อนุมัติ')>อนุมัติ</option>
             <option value="ไม่อนุมัติ" @selected($status === 'ไม่อนุมัติ')>ไม่อนุมัติ</option>
@@ -238,11 +191,15 @@
             <div class="text-danger small mt-1">{{ $message }}</div>
         @enderror
     </div>
-</div>
 
-<div class="mt-3">
-    <button type="submit" class="btn btn-primary">
-        <i class="ti ti-device-floppy"></i> {{ isset($user) ? 'อัปเดต' : 'บันทึก' }}
-    </button>
-    <a href="{{ route('backend.user.index') }}" class="btn btn-secondary">ยกเลิก</a>
+    {{-- ปุ่ม --}}
+    <div class="col-12 d-flex gap-2 justify-content-end pt-2">
+        <a href="{{ route('backend.user.index') }}" class="btn btn-light">
+            <i class="ti ti-arrow-left"></i> ย้อนกลับ
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="ti ti-device-floppy"></i>
+            {{ ($mode ?? 'create') === 'edit' ? 'บันทึกการแก้ไข' : 'บันทึก' }}
+        </button>
+    </div>
 </div>

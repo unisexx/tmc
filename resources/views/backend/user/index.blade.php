@@ -2,8 +2,8 @@
 @extends('layouts.main')
 
 @section('title', 'จัดการผู้ใช้งาน')
-@section('breadcrumb-item', 'ผู้ใช้งาน')
-@section('breadcrumb-item-active', 'รายการผู้ใช้งาน')
+@section('breadcrumb-item', 'ตั้งค่า')
+@section('breadcrumb-item-active', 'ผู้ใช้งาน')
 
 @section('content')
     <div class="row">

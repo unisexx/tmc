@@ -53,4 +53,30 @@ class AssessmentForm extends Model
     {
         return $this->suLevel?->approval_status;
     } // pending|...
+
+    public function services()
+    {
+        return $this->belongsToMany(StHealthService::class, 'assessment_form_service')
+            ->withPivot('is_enabled')
+            ->withTimestamps();
+    }
+
+    /** คืนรายการบริการสำหรับระดับของฟอร์ม พร้อมสถานะเปิด/ปิดที่ resolve แล้ว */
+    public function resolvedServices()
+    {
+        $level = $this->level_code;
+        $base  = StHealthService::active()->forLevel($level)
+            ->orderBy('ordering')->orderBy('id')->get();
+
+        // แผนที่สถานะจาก pivot
+        $pivotMap = $this->services->pluck('pivot.is_enabled', 'id');
+
+        return $base->map(function ($svc) use ($pivotMap) {
+            $enabled = $pivotMap->has($svc->id)
+                ? (bool) $pivotMap->get($svc->id)
+                : (bool) $svc->default_enabled;
+            $svc->resolved_enabled = $enabled;
+            return $svc;
+        });
+    }
 }

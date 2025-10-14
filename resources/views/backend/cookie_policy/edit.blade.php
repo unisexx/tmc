@@ -1,12 +1,13 @@
 @extends('layouts.main')
 
 @section('title', 'นโยบายคุกกี้')
-@section('breadcrumb-item', 'เนื้อหา')
+@section('breadcrumb-item', 'จัดการข้อมูลหน้าแรก')
 @section('breadcrumb-item-active', 'นโยบายคุกกี้')
 
 @section('content')
     <div class="row">
         <div class="col-12">
+            <x-error-summary :errors="$errors" />
             <div class="card">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h5 class="mb-0">นโยบายคุกกี้</h5>

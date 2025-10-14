@@ -2,7 +2,7 @@
 @extends('layouts.main')
 
 @section('title', 'แก้ไขสิทธิ์การใช้งาน')
-@section('breadcrumb-item', 'ผู้ใช้งาน')
+@section('breadcrumb-item', 'ตั้งค่า')
 @section('breadcrumb-item-active', 'แก้ไขสิทธิ์การใช้งาน')
 
 @section('css')
@@ -13,6 +13,7 @@
     <!-- [ Main Content ] start -->
     <div class="row">
         <div class="col-12">
+            <x-error-summary :errors="$errors" />
             <div class="card">
                 <div class="card-header py-3">
                     <h5 class="mb-0">แก้ไขสิทธิ์การใช้งาน</h5>

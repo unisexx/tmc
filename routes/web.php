@@ -3,6 +3,7 @@
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\Backend\ActivityLogController;
 use App\Http\Controllers\Backend\ApplicationReviewController;
+use App\Http\Controllers\Backend\AssessmentFormServiceSettingController;
 use App\Http\Controllers\Backend\AssessmentReviewController;
 use App\Http\Controllers\Backend\ContactController;
 use App\Http\Controllers\Backend\CookiePolicyController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Backend\SelfAssessmentServiceUnitLevelController;
 use App\Http\Controllers\Backend\ServiceUnitController;
 use App\Http\Controllers\Backend\ServiceUnitProfileController;
 use App\Http\Controllers\Backend\StatController;
+use App\Http\Controllers\Backend\StHealthServiceController;
 use App\Http\Controllers\Backend\UploadController;
 use App\Http\Controllers\Backend\UserController;
 use App\Http\Controllers\GeoApiController;
@@ -143,8 +145,17 @@ Route::middleware(['auth'])->group(function () {
         // ประวัติการใช้งาน
         Route::get('/logs', [ActivityLogController::class, 'index'])->name('logs.index');
 
-        // Ajax ค้นหา user
-        // Route::get('ajax/users/lookup', [AjaxController::class, 'ajaxUserLookup'])->name('ajax.users.lookup');
+        // ตั้งค่า การให้บริการของหน่วยบริการ
+        Route::resource('st-health-services', StHealthServiceController::class)->except(['show']);
+        Route::post('/st-health-services/reorder', [StHealthServiceController::class, 'reorder'])
+            ->name('st-health-services.reorder');
+        // ตั้งค่าสวิตช์ต่อฟอร์มประเมินรายหน่วยรายรอบ
+        Route::get('/assessment-forms/{form}/services', [AssessmentFormServiceSettingController::class, 'edit'])
+            ->name('assessment-forms.services.edit');
+        Route::put('/assessment-forms/{form}/services', [AssessmentFormServiceSettingController::class, 'update'])
+            ->name('assessment-forms.services.update');
+        Route::patch('/assessment-forms/{form}/services/toggle', [AssessmentFormServiceSettingController::class, 'toggle'])
+            ->name('assessment-forms.services.toggle');
     });
 });
 

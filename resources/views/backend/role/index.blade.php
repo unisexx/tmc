@@ -2,7 +2,7 @@
 @extends('layouts.main')
 
 @section('title', 'สิทธิ์การใช้งาน')
-@section('breadcrumb-item', 'จัดการผู้ใช้งาน')
+@section('breadcrumb-item', 'ตั้งค่า')
 @section('breadcrumb-item-active', 'สิทธิ์การใช้งาน')
 
 @section('content')

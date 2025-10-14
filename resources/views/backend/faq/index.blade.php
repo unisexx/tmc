@@ -2,125 +2,130 @@
 @extends('layouts.main')
 
 @section('title', 'คำถามที่พบบ่อย')
-@section('breadcrumb-item', 'เนื้อหา')
+@section('breadcrumb-item', 'จัดการข้อมูลหน้าแรก')
 @section('breadcrumb-item-active', 'คำถามที่พบบ่อย')
 
 @section('content')
-    @php $query = $q ?? request('q'); @endphp
+    <div class="row">
+        <div class="col-12">
 
-    <div class="card">
-        {{-- <div class="card-header border-0 pb-0">
+            @php $query = $q ?? request('q'); @endphp
+
+            <div class="card">
+                {{-- <div class="card-header border-0 pb-0">
             <h5 class="mb-0">คำถามที่พบบ่อย (FAQ)</h5>
         </div> --}}
 
-        <div class="card-body">
-            {{-- Filter Bar (ย้ายมาอยู่ card-body) --}}
-            <form method="GET" action="{{ route('backend.faq.index') }}" class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <div class="card-body">
+                    {{-- Filter Bar (ย้ายมาอยู่ card-body) --}}
+                    <form method="GET" action="{{ route('backend.faq.index') }}" class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
 
-                {{-- ซ้าย: ค้นหา (ไม่ใช้ input-group) --}}
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <div class="input-group" style="width: min(420px, 90vw);">
-                        <span class="input-group-text">คำค้น</span>
-                        <input id="q" type="text" name="q" value="{{ $query }}" class="form-control" placeholder="คำถาม / คำตอบ">
-                    </div>
+                        {{-- ซ้าย: ค้นหา (ไม่ใช้ input-group) --}}
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <div class="input-group" style="width: min(420px, 90vw);">
+                                <span class="input-group-text">คำค้น</span>
+                                <input id="q" type="text" name="q" value="{{ $query }}" class="form-control" placeholder="คำถาม / คำตอบ">
+                            </div>
 
-                    <button class="btn btn-outline-primary" type="submit">
-                        <i class="ph-duotone ph-magnifying-glass"></i> ค้นหา
-                    </button>
-                </div>
+                            <button class="btn btn-outline-primary" type="submit">
+                                <i class="ph-duotone ph-magnifying-glass"></i> ค้นหา
+                            </button>
+                        </div>
 
-                {{-- ขวา: ปุ่มโหมดจัดเรียง + เพิ่มคำถาม --}}
-                <div class="d-flex justify-content-end mb-2">
-                    @if (!($reorder ?? false))
-                        <a href="{{ request()->fullUrlWithQuery(['reorder' => 1, 'page' => null]) }}" class="btn btn-outline-secondary">
-                            <i class="ti ti-arrows-sort"></i> โหมดจัดเรียง
-                        </a>
-                    @else
-                        <a href="{{ request()->fullUrlWithQuery(['reorder' => 0]) }}" class="btn btn-outline-secondary">
-                            <i class="ti ti-arrow-back-up"></i> ออกจากโหมดจัดเรียง
-                        </a>
-                    @endif
-
-                    <div class="ms-2">
-                        <a href="{{ route('backend.faq.create') }}" class="btn btn-primary">
-                            <i class="ti ti-plus"></i> เพิ่มคำถาม
-                        </a>
-                    </div>
-                </div>
-            </form>
-
-            {{-- Table --}}
-            <div class="table-responsive">
-                <table class="table table-hover table-striped align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            @if ($reorder ?? false)
-                                <th style="width:48px;"></th>
+                        {{-- ขวา: ปุ่มโหมดจัดเรียง + เพิ่มคำถาม --}}
+                        <div class="d-flex justify-content-end mb-2">
+                            @if (!($reorder ?? false))
+                                <a href="{{ request()->fullUrlWithQuery(['reorder' => 1, 'page' => null]) }}" class="btn btn-outline-secondary">
+                                    <i class="ti ti-arrows-sort"></i> โหมดจัดเรียง
+                                </a>
+                            @else
+                                <a href="{{ request()->fullUrlWithQuery(['reorder' => 0]) }}" class="btn btn-outline-secondary">
+                                    <i class="ti ti-arrow-back-up"></i> ออกจากโหมดจัดเรียง
+                                </a>
                             @endif
-                            <th style="width:72px;">#</th>
-                            <th>คำถาม / คำตอบ (ย่อ)</th>
-                            <th class="text-center" style="width:120px;">สถานะ</th>
-                            <th class="text-center" style="width:120px;">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="faqTbody">
-                        @forelse ($rs as $i => $row)
-                            <tr data-id="{{ $row->id }}">
-                                @if ($reorder ?? false)
-                                    <td class="text-muted">
-                                        <i class="ti ti-grip-vertical drag-handle"></i>
-                                    </td>
-                                @endif
 
-                                <td>{{ method_exists($rs, 'firstItem') ? $rs->firstItem() + $i : $loop->iteration }}</td>
+                            <div class="ms-2">
+                                <a href="{{ route('backend.faq.create') }}" class="btn btn-primary">
+                                    <i class="ti ti-plus"></i> เพิ่มคำถาม
+                                </a>
+                            </div>
+                        </div>
+                    </form>
 
-                                <td>
-                                    <h6 class="mb-1">{{ $row->question }}</h6>
-                                    @php
-                                        $preview = \Illuminate\Support\Str::limit(strip_tags($row->answer), 120);
-                                    @endphp
-                                    <small class="text-muted d-block">{{ $preview }}</small>
-                                </td>
-
-                                <td class="text-center">
-                                    @if ($row->is_active)
-                                        <i class="ph-duotone ph-check-circle text-primary fs-4" data-bs-toggle="tooltip" data-bs-title="เผยแพร่ (Active)"></i>
-                                    @else
-                                        <i class="ph-duotone ph-x-circle text-danger fs-4" data-bs-toggle="tooltip" data-bs-title="ฉบับร่าง (Inactive)"></i>
+                    {{-- Table --}}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    @if ($reorder ?? false)
+                                        <th style="width:48px;"></th>
                                     @endif
-                                </td>
+                                    <th style="width:72px;">#</th>
+                                    <th>คำถาม / คำตอบ (ย่อ)</th>
+                                    <th class="text-center" style="width:120px;">สถานะ</th>
+                                    <th class="text-center" style="width:120px;">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="faqTbody">
+                                @forelse ($rs as $i => $row)
+                                    <tr data-id="{{ $row->id }}">
+                                        @if ($reorder ?? false)
+                                            <td class="text-muted">
+                                                <i class="ti ti-grip-vertical drag-handle"></i>
+                                            </td>
+                                        @endif
 
-                                <td class="text-center">
-                                    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="จัดการคำถามที่พบบ่อย">
-                                        <a href="{{ route('backend.faq.edit', $row) }}" class="btn btn-sm btn-light border">
-                                            <i class="ti ti-edit me-1"></i> แก้ไข
-                                        </a>
+                                        <td>{{ method_exists($rs, 'firstItem') ? $rs->firstItem() + $i : $loop->iteration }}</td>
 
-                                        <form class="d-inline js-delete-form" method="post" action="{{ route('backend.faq.destroy', $row) }}" data-title="{{ \Illuminate\Support\Str::limit($row->question, 80) }}">
-                                            @csrf @method('delete')
-                                            <button type="submit" class="btn btn-sm btn-light border">
-                                                <i class="ti ti-trash me-1"></i> ลบ
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
+                                        <td>
+                                            <h6 class="mb-1">{{ $row->question }}</h6>
+                                            @php
+                                                $preview = \Illuminate\Support\Str::limit(strip_tags($row->answer), 120);
+                                            @endphp
+                                            <small class="text-muted d-block">{{ $preview }}</small>
+                                        </td>
 
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="{{ $reorder ?? false ? 6 : 5 }}" class="text-center text-muted">— ไม่มีข้อมูล —</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                                        <td class="text-center">
+                                            @if ($row->is_active)
+                                                <i class="ph-duotone ph-check-circle text-primary fs-4" data-bs-toggle="tooltip" data-bs-title="เผยแพร่ (Active)"></i>
+                                            @else
+                                                <i class="ph-duotone ph-x-circle text-danger fs-4" data-bs-toggle="tooltip" data-bs-title="ฉบับร่าง (Inactive)"></i>
+                                            @endif
+                                        </td>
 
-            {{-- Pagination (ซ่อนเมื่อโหมดจัดเรียง) --}}
-            @if (!($reorder ?? false) && method_exists($rs, 'links'))
-                <div class="mt-3 d-flex justify-content-end">
-                    {{ $rs->appends(['q' => $query])->links() }}
+                                        <td class="text-center">
+                                            <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="จัดการคำถามที่พบบ่อย">
+                                                <a href="{{ route('backend.faq.edit', $row) }}" class="btn btn-sm btn-light border">
+                                                    <i class="ti ti-edit me-1"></i> แก้ไข
+                                                </a>
+
+                                                <form class="d-inline js-delete-form" method="post" action="{{ route('backend.faq.destroy', $row) }}" data-title="{{ \Illuminate\Support\Str::limit($row->question, 80) }}">
+                                                    @csrf @method('delete')
+                                                    <button type="submit" class="btn btn-sm btn-light border">
+                                                        <i class="ti ti-trash me-1"></i> ลบ
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="{{ $reorder ?? false ? 6 : 5 }}" class="text-center text-muted">— ไม่มีข้อมูล —</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {{-- Pagination (ซ่อนเมื่อโหมดจัดเรียง) --}}
+                    @if (!($reorder ?? false) && method_exists($rs, 'links'))
+                        <div class="mt-3 d-flex justify-content-end">
+                            {{ $rs->appends(['q' => $query])->links() }}
+                        </div>
+                    @endif
                 </div>
-            @endif
+            </div>
         </div>
     </div>
 @endsection

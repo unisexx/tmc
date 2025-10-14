@@ -6,7 +6,6 @@
     $isServiceUnitActive = Route::is('backend.service-unit.*');
     $isUserActive = Route::is('backend.user.*');
     $isRoleActive = Route::is('backend.role.*');
-
     $isProfileActive = Route::is('backend.service-unit-profile.*');
     $isSelfAssessActive = Route::is('backend.self-assessment-service-unit-level.*');
 
@@ -16,9 +15,10 @@
     $isContactsActive = Route::is('backend.contact.*');
     $isPrivacyActive = Route::is('backend.privacy.*');
     $isCookieActive = Route::is('backend.cookie.*');
+    $isStHealthServiceActive = Route::is('backend.st-health-services.*');
 
     $isHomeMgmtGroupActive = $isHighlightsActive || $isNewsActive || $isFaqsActive || $isContactsActive || $isPrivacyActive || $isCookieActive;
-    $isSettingGroupActive = $isUserActive || $isRoleActive || $isServiceUnitActive;
+    $isSettingGroupActive = $isUserActive || $isRoleActive || $isServiceUnitActive || $isStHealthServiceActive;
 @endphp
 
 {{-- TMC Backend --}}
@@ -161,6 +161,12 @@
                     <a class="pc-link" href="{{ route('backend.service-unit.index') }}" data-i18n="จัดการหน่วยบริการ">จัดการหน่วยบริการ</a>
                 </li>
             @endcan
+
+            {{-- @can('st-health-services.view') --}}
+            <li class="pc-item {{ $isStHealthServiceActive ? 'active' : '' }}">
+                <a class="pc-link" href="{{ route('backend.st-health-services.index') }}" data-i18n="การให้บริการ">การให้บริการ</a>
+            </li>
+            {{-- @endcan --}}
         </ul>
     </li>
 @endcanany

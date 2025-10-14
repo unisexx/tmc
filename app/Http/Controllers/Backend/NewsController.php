@@ -5,19 +5,18 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\News;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage; // << เพิ่มบรรทัดนี้
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class NewsController extends Controller
 {
     public function index(Request $req)
     {
-        $filters      = $req->only(['q', 'is_active', 'category', 'from', 'to']);
-        $filters['q'] = isset($filters['q']) ? trim((string) $filters['q']) : null;
+        $filters = $req->only(['q', 'is_active', 'from', 'to', 'category']);
 
         $rs = News::query()
-            ->when($filters['q'] ?? null, function ($q, $kw) {
+            ->when(($filters['q'] ?? null), function ($q, $kw) {
                 $q->where(function ($w) use ($kw) {
                     $w->where('title', 'like', "%{$kw}%")
                         ->orWhere('excerpt', 'like', "%{$kw}%")
@@ -27,7 +26,7 @@ class NewsController extends Controller
             ->when(isset($filters['is_active']) && $filters['is_active'] !== '', fn($q) =>
                 $q->where('is_active', (bool) $filters['is_active'])
             )
-            ->when($filters['category'] ?? null, fn($q, $ct) => $q->where('category', $ct))
+            ->when(($filters['category'] ?? null), fn($q, $ct) => $q->where('category', $ct))
             ->when(($filters['from'] ?? null) && ($filters['to'] ?? null), function ($q) use ($filters) {
                 $q->whereBetween('created_at', [
                     $filters['from'] . ' 00:00:00',
@@ -35,12 +34,13 @@ class NewsController extends Controller
                 ]);
             })
             ->orderByDesc('id')
-            ->paginate(20)->withQueryString();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('backend.news.index', [
             'rs'      => $rs,
             'filters' => $filters,
-            'q'       => $filters['q'], // เผื่อใช้สะดวกใน view
+            'q'       => $filters['q'] ?? null,
         ]);
     }
 
@@ -53,16 +53,13 @@ class NewsController extends Controller
     {
         $data = $request->validate([
             'title'     => ['required', 'string', 'max:255'],
-            'slug'      => ['nullable', 'alpha_dash', 'max:255',
-                Rule::unique('news', 'slug')->whereNull('deleted_at')],
-            'category'  => ['nullable', 'string', 'max:100'],
             'excerpt'   => ['nullable', 'string', 'max:500'],
             'body'      => ['nullable', 'string'],
             'is_active' => ['required', 'boolean'],
             'image'     => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
         ]);
 
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+        $data['slug'] = $this->makeUniqueSlug($data['title']);
 
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('uploads/news', 'public');
@@ -83,16 +80,13 @@ class NewsController extends Controller
     {
         $data = $request->validate([
             'title'     => ['required', 'string', 'max:255'],
-            'slug'      => ['nullable', 'alpha_dash', 'max:255',
-                Rule::unique('news', 'slug')->ignore($news->id)->whereNull('deleted_at')],
-            'category'  => ['nullable', 'string', 'max:100'],
             'excerpt'   => ['nullable', 'string', 'max:500'],
             'body'      => ['nullable', 'string'],
             'is_active' => ['required', 'boolean'],
             'image'     => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
         ]);
 
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+        $data['slug'] = $this->makeUniqueSlug($data['title'], $news->id);
 
         if ($request->hasFile('image')) {
             if ($news->image_path) {
@@ -118,11 +112,32 @@ class NewsController extends Controller
         return back();
     }
 
-    /** toggle เปิด/ปิด is_active */
     public function toggle(News $news)
     {
         $news->update(['is_active' => !$news->is_active]);
         flash_notify('อัปเดตสถานะข่าวสำเร็จ', 'success');
         return back();
+    }
+
+    private function makeUniqueSlug(string $title, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($title) ?: 'post';
+        $slug = $base;
+        $i    = 1;
+
+        while (
+            News::query()
+            ->where('slug', $slug)
+            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+            ->when(
+                Schema::hasColumn('news', 'deleted_at'), // << เปลี่ยนเป็น Schema::
+                fn($q) => $q->whereNull('deleted_at')
+            )
+            ->exists()
+        ) {
+            $slug = $base . '-' . $i++;
+        }
+
+        return $slug;
     }
 }

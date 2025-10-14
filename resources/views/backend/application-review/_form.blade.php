@@ -18,8 +18,6 @@
     );
 @endphp
 
-<x-register.error-summary :errors="$errors" />
-
 <div class="row g-3">
     {{-- หัวข้อ 1: ในฐานะ + จังหวัด/เขต --}}
     <x-register.purpose :user="$user" :provinces="$provinces" :healthRegions="$healthRegions" id="reg" />

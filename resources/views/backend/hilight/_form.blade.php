@@ -1,7 +1,5 @@
 {{-- resources/views/backend/hilight/_form.blade.php --}}
-@php
-    // ใช้ $hilight จากหน้า create/edit
-@endphp
+
 
 <div class="row g-4">
     {{-- ชื่อเรื่อง --}}
@@ -14,31 +12,10 @@
     </div>
 
     {{-- ลิงก์ปลายทาง --}}
-    <div class="col-md-6">
+    <div class="col-12">
         <label for="linkUrlInput" class="form-label">ลิงก์ปลายทาง (ถ้ามี)</label>
         <input type="url" name="link_url" id="linkUrlInput" class="form-control @error('link_url') is-invalid @enderror" value="{{ old('link_url', $hilight->link_url) }}">
         @error('link_url')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
-
-    {{-- ลำดับแสดงผล --}}
-    <div class="col-md-3">
-        <label for="orderingInput" class="form-label">ลำดับแสดงผล</label>
-        <input type="number" name="ordering" id="orderingInput" class="form-control @error('ordering') is-invalid @enderror" min="0" value="{{ old('ordering', $hilight->ordering ?? 0) }}">
-        @error('ordering')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
-
-    {{-- สถานะ (เลือกเปิด/ปิด) --}}
-    <div class="col-md-3">
-        <label for="isActiveSelect" class="form-label">สถานะ</label>
-        <select name="is_active" id="isActiveSelect" class="form-select @error('is_active') is-invalid @enderror">
-            <option value="1" {{ old('is_active', $hilight->is_active ?? true) ? 'selected' : '' }}>เปิดใช้งาน</option>
-            <option value="0" {{ old('is_active', $hilight->is_active ?? true) ? '' : 'selected' }}>ปิดใช้งาน</option>
-        </select>
-        @error('is_active')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
@@ -65,6 +42,19 @@
                 <img src="{{ asset('storage/' . $hilight->image_path) }}" alt="preview" class="img-thumbnail" style="max-height:120px">
             </div>
         @endif
+    </div>
+
+    {{-- สถานะ: ย้ายมาแถวล่างสุด และเปลี่ยนเป็นสวิตช์ --}}
+    <div class="col-12">
+        <label class="form-label d-block mb-2" for="is_active">สถานะ</label>
+        <div class="form-check form-switch">
+            <input type="hidden" name="is_active" value="0">
+            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', $hilight->is_active ?? true) ? 'checked' : '' }}>
+            <label class="form-check-label" for="is_active">เปิดการใช้งานรายการนี้</label>
+        </div>
+        @error('is_active')
+            <div class="invalid-feedback d-block">{{ $message }}</div>
+        @enderror
     </div>
 
     {{-- ปุ่ม --}}

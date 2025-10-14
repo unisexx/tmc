@@ -1,17 +1,13 @@
 @extends('layouts.main')
 
 @section('title', 'ข่าวประชาสัมพันธ์')
-@section('breadcrumb-item', 'เนื้อหา')
+@section('breadcrumb-item', 'จัดการข้อมูลหน้าแรก')
 @section('breadcrumb-item-active', 'ข่าวประชาสัมพันธ์')
 
 @section('content')
     <div class="row">
         <div class="col-12">
             <div class="card">
-                {{-- <div class="card-header border-0 pb-0">
-                    <h5 class="mb-0">ข่าวประชาสัมพันธ์</h5>
-                </div> --}}
-
                 <div class="card-body">
                     {{-- Filter Bar (เหมือนของไฮไลท์) --}}
                     <form method="GET" action="{{ route('backend.news.index') }}" class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">

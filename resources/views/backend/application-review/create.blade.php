@@ -7,6 +7,7 @@
 @section('content')
     <div class="row">
         <div class="col-12">
+            <x-register.error-summary :errors="$errors" />
             <div class="card">
                 <div class="card-header">
                     <h5>เพิ่มผู้ใช้งาน</h5>

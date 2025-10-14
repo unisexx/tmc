@@ -2,7 +2,7 @@
 @extends('layouts.main')
 
 @section('title', 'จัดการหน่วยบริการ')
-@section('breadcrumb-item', 'หน่วยบริการ')
+@section('breadcrumb-item', 'ตั้งค่า')
 @section('breadcrumb-item-active', 'แก้ไขหน่วยบริการ')
 
 @section('content')

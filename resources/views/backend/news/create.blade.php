@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('title', 'ข่าวประชาสัมพันธ์')
-@section('breadcrumb-item', 'เนื้อหา')
+@section('breadcrumb-item', 'จัดการข้อมูลหน้าแรก')
 @section('breadcrumb-item-active', 'เพิ่มข่าวประชาสัมพันธ์')
 
 @section('css')
@@ -12,6 +12,7 @@
     <!-- [ Main Content ] start -->
     <div class="row">
         <div class="col-12">
+            <x-error-summary :errors="$errors" />
             <div class="card">
                 <div class="card-header d-flex align-items-center justify-content-between py-3">
                     <h5 class="mb-0">เพิ่มข่าวประชาสัมพันธ์</h5>

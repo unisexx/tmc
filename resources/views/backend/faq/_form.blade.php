@@ -20,7 +20,6 @@
         @error('answer')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
-        <small class="text-muted">รองรับข้อความยาวได้ตามต้องการ</small>
     </div>
 
     {{-- ลำดับแสดงผล --}}
@@ -34,15 +33,17 @@
 
     {{-- สถานะ --}}
     <div class="col-md-3">
-        <label for="isActiveSelect" class="form-label">สถานะ</label>
-        <select name="is_active" id="isActiveSelect" class="form-select @error('is_active') is-invalid @enderror">
-            <option value="1" {{ old('is_active', $faq->is_active ?? true) ? 'selected' : '' }}>เปิดใช้งาน</option>
-            <option value="0" {{ old('is_active', $faq->is_active ?? true) ? '' : 'selected' }}>ปิดใช้งาน</option>
-        </select>
+        <label for="is_active" class="form-label d-block">สถานะ</label>
+        <div class="form-check form-switch">
+            <input type="hidden" name="is_active" value="0">
+            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', $faq->is_active ?? true) ? 'checked' : '' }}>
+            <label class="form-check-label" for="is_active">เปิดใช้งานคำถามนี้</label>
+        </div>
         @error('is_active')
-            <div class="invalid-feedback">{{ $message }}</div>
+            <div class="invalid-feedback d-block">{{ $message }}</div>
         @enderror
     </div>
+
 
     {{-- ปุ่ม --}}
     <div class="col-12 d-flex gap-2 justify-content-end pt-2">

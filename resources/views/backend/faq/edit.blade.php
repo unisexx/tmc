@@ -2,7 +2,7 @@
 @extends('layouts.main')
 
 @section('title', 'แก้ไขคำถามที่พบบ่อย')
-@section('breadcrumb-item', 'เนื้อหา')
+@section('breadcrumb-item', 'จัดการข้อมูลหน้าแรก')
 @section('breadcrumb-item-active', 'แก้ไขคำถามที่พบบ่อย')
 
 @section('css')
@@ -13,6 +13,7 @@
     <!-- [ Main Content ] start -->
     <div class="row">
         <div class="col-12">
+            <x-error-summary :errors="$errors" />
             <div class="card">
                 <div class="card-header py-3">
                     <h5 class="mb-0">แก้ไขคำถามที่พบบ่อย (FAQ)</h5>
