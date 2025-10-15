@@ -103,7 +103,7 @@
                         <div class="card-body">
                             {{-- ข้อความแนะนำ --}}
                             <div class="alert alert-info py-2 small d-flex align-items-start gap-2">
-                                <i class="ph-duotone ph-info-circle mt-1"></i>
+                                <i class="ph-duotone ph-info mt-1"></i>
                                 <div>
                                     การตั้งค่านี้ใช้กำหนด “ส่วนบริการที่จะแสดงในหน้าบ้าน” ของหน่วยบริการ
                                     ให้เปิดเฉพาะบริการที่หน่วยของท่านมีให้บริการจริง
