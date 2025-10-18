@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\CrudActivity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class News extends Model
@@ -19,6 +20,8 @@ class News extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    protected $appends = ['image_url'];
 
     protected static function booted()
     {
@@ -45,7 +48,6 @@ class News extends Model
     /** ฟิลเตอร์ค้นหาแบบพื้นฐาน */
     public function scopeFilter($q, array $f)
     {
-        // คีย์เวิร์ด
         $q->when($f['q'] ?? null, function ($qq, $kw) {
             $qq->where(function ($w) use ($kw) {
                 $w->where('title', 'like', "%{$kw}%")
@@ -54,16 +56,13 @@ class News extends Model
             });
         });
 
-        // หมวดหมู่
         $q->when($f['category'] ?? null, fn($qq, $ct) => $qq->where('category', $ct));
 
-        // is_active: รับได้ทั้ง 0/1 หรือ true/false (string)
         $q->when(isset($f['is_active']) && $f['is_active'] !== '', function ($qq) use ($f) {
             $val = filter_var($f['is_active'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
             $qq->where('is_active', is_null($val) ? (int) $f['is_active'] : $val);
         });
 
-        // ช่วงวันที่อิง created_at (เพราะไม่มี published_at)
         if (($f['from'] ?? null) && ($f['to'] ?? null)) {
             $q->whereBetween('created_at', [
                 $f['from'] . ' 00:00:00',
@@ -72,5 +71,19 @@ class News extends Model
         }
 
         return $q;
+    }
+
+    /** URL รูปภาพพร้อม fallback (ใช้ disk 'public' ให้ตรงกับฝั่งอัปโหลด) */
+    public function getImageUrlAttribute(): string
+    {
+        $path = $this->image_path ? ltrim($this->image_path, '/') : null;
+
+        if ($path && Storage::disk('public')->exists($path)) {
+            // ไฟล์ถูกเก็บใน storage/app/public -> เข้าผ่าน /storage/*
+            return asset('storage/' . $path);
+        }
+
+        // รูปสำรองที่ public/images/placeholder-16x9.jpg
+        return asset('images/placeholder-16x9.jpg');
     }
 }

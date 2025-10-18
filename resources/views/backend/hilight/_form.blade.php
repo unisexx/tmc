@@ -1,11 +1,10 @@
 {{-- resources/views/backend/hilight/_form.blade.php --}}
 
-
 <div class="row g-4">
     {{-- ชื่อเรื่อง --}}
     <div class="col-12">
         <label for="titleInput" class="form-label">ชื่อเรื่อง <span class="text-danger">*</span></label>
-        <input type="text" name="title" id="titleInput" class="form-control @error('title') is-invalid @enderror" value="{{ old('title', $hilight->title) }}" required>
+        <input type="text" name="title" id="titleInput" class="form-control @error('title') is-invalid @enderror" value="{{ old('title', $hilight->title) }}" placeholder="เช่น โครงการประเมินหน่วยบริการสุขภาพผู้เดินทาง" required>
         @error('title')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
@@ -14,7 +13,7 @@
     {{-- ลิงก์ปลายทาง --}}
     <div class="col-12">
         <label for="linkUrlInput" class="form-label">ลิงก์ปลายทาง (ถ้ามี)</label>
-        <input type="url" name="link_url" id="linkUrlInput" class="form-control @error('link_url') is-invalid @enderror" value="{{ old('link_url', $hilight->link_url) }}">
+        <input type="url" name="link_url" id="linkUrlInput" class="form-control @error('link_url') is-invalid @enderror" value="{{ old('link_url', $hilight->link_url) }}" placeholder="เช่น https://tmc.ddc.moph.go.th">
         @error('link_url')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
@@ -23,7 +22,7 @@
     {{-- คำอธิบาย --}}
     <div class="col-12">
         <label for="descriptionInput" class="form-label">คำอธิบาย</label>
-        <textarea name="description" id="descriptionInput" class="form-control @error('description') is-invalid @enderror" rows="3">{{ old('description', $hilight->description) }}</textarea>
+        <textarea name="description" id="descriptionInput" rows="3" class="form-control @error('description') is-invalid @enderror" placeholder="ข้อความสั้น ๆ เพื่ออธิบายภาพไฮไลต์">{{ old('description', $hilight->description) }}</textarea>
         @error('description')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
@@ -33,6 +32,7 @@
     <div class="col-md-6">
         <label class="form-label" for="imageInput">รูปภาพ</label>
         <input type="file" name="image" id="imageInput" class="form-control @error('image') is-invalid @enderror" accept="image/*">
+        <small class="text-muted">ขนาดรูปภาพที่แนะนำ 1920 x 500 px (อัตราส่วน 3.84:1)</small>
         @error('image')
             <div class="invalid-feedback d-block">{{ $message }}</div>
         @enderror
@@ -44,7 +44,7 @@
         @endif
     </div>
 
-    {{-- สถานะ: ย้ายมาแถวล่างสุด และเปลี่ยนเป็นสวิตช์ --}}
+    {{-- สถานะ --}}
     <div class="col-12">
         <label class="form-label d-block mb-2" for="is_active">สถานะ</label>
         <div class="form-check form-switch">

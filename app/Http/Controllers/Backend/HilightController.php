@@ -13,8 +13,8 @@ use Intervention\Image\ImageManager;
 
 class HilightController extends Controller
 {
-    private int $defaultWidth  = 1200;
-    private int $defaultHeight = 630;
+    private int $defaultWidth  = 1920;
+    private int $defaultHeight = 500;
 
     public function index(Request $request)
     {

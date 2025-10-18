@@ -17,7 +17,11 @@
     $isCookieActive = Route::is('backend.cookie.*');
     $isStHealthServiceActive = Route::is('backend.st-health-services.*');
 
-    $isHomeMgmtGroupActive = $isHighlightsActive || $isNewsActive || $isFaqsActive || $isContactsActive || $isPrivacyActive || $isCookieActive;
+    // เพิ่มตัวตรวจเมนูกล่องข้อความ
+    $isContactMessagesActive = Route::is('backend.contact-messages.*');
+
+    $isHomeMgmtGroupActive = $isHighlightsActive || $isNewsActive || $isFaqsActive || $isContactsActive || $isPrivacyActive || $isCookieActive || $isContactMessagesActive; // รวมกล่องข้อความเข้า group นี้
+
     $isSettingGroupActive = $isUserActive || $isRoleActive || $isServiceUnitActive || $isStHealthServiceActive;
 @endphp
 
@@ -44,7 +48,6 @@
     </li>
 @endcan
 
-{{-- เมนูตรวจสอบใบสมัคร --}}
 @can('approve-application.view')
     <li class="pc-item {{ $isAppReviewActive ? 'active' : '' }}">
         <a class="pc-link" href="{{ route('backend.application-review.index') }}">
@@ -87,8 +90,8 @@
     </li>
 @endcan
 
-{{-- เมนู: จัดการข้อมูลหน้าแรก --}}
-@canany(['highlights.view', 'news.view', 'faqs.view', 'contacts.view', 'privacy-policy.view', 'cookie-policy.view'])
+{{-- จัดการข้อมูลหน้าแรก --}}
+@canany(['highlights.view', 'news.view', 'faqs.view', 'contacts.view', 'privacy-policy.view', 'cookie-policy.view', 'contact-messages.view'])
     <li class="pc-item pc-hasmenu {{ $isHomeMgmtGroupActive ? 'active pc-trigger' : '' }}">
         <a href="#!" class="pc-link">
             <span class="pc-micon"><i class="ph-duotone ph-desktop"></i></span>
@@ -120,6 +123,15 @@
                 </li>
             @endcan
 
+            {{-- เมนูใหม่: กล่องข้อความ --}}
+            {{-- @can('contact-messages.view') --}}
+            <li class="pc-item {{ $isContactMessagesActive ? 'active' : '' }}">
+                <a class="pc-link" href="{{ route('backend.contact-messages.index') }}" data-i18n="กล่องข้อความ">
+                    กล่องข้อความ
+                </a>
+            </li>
+            {{-- @endcan --}}
+
             @can('privacy-policy.view')
                 <li class="pc-item {{ $isPrivacyActive ? 'active' : '' }}">
                     <a class="pc-link" href="{{ route('backend.privacy.edit', 1) }}" data-i18n="นโยบายข้อมูลส่วนบุคคล">นโยบายข้อมูลส่วนบุคคล</a>
@@ -135,7 +147,7 @@
     </li>
 @endcanany
 
-{{-- เมนู: ตั้งค่า --}}
+{{-- ตั้งค่า --}}
 @canany(['users.view', 'roles-permissions.view', 'service-unit.view'])
     <li class="pc-item pc-hasmenu {{ $isSettingGroupActive ? 'active pc-trigger' : '' }}">
         <a href="#!" class="pc-link">
@@ -162,11 +174,9 @@
                 </li>
             @endcan
 
-            {{-- @can('st-health-services.view') --}}
             <li class="pc-item {{ $isStHealthServiceActive ? 'active' : '' }}">
                 <a class="pc-link" href="{{ route('backend.st-health-services.index') }}" data-i18n="การให้บริการ">การให้บริการ</a>
             </li>
-            {{-- @endcan --}}
         </ul>
     </li>
 @endcanany

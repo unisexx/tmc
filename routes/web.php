@@ -6,6 +6,7 @@ use App\Http\Controllers\Backend\ApplicationReviewController;
 use App\Http\Controllers\Backend\AssessmentFormServiceSettingController;
 use App\Http\Controllers\Backend\AssessmentReviewController;
 use App\Http\Controllers\Backend\ContactController;
+use App\Http\Controllers\Backend\ContactMessageController;
 use App\Http\Controllers\Backend\CookiePolicyController;
 use App\Http\Controllers\Backend\DashboardController;
 use App\Http\Controllers\Backend\FaqController;
@@ -23,21 +24,45 @@ use App\Http\Controllers\Backend\StatController;
 use App\Http\Controllers\Backend\StHealthServiceController;
 use App\Http\Controllers\Backend\UploadController;
 use App\Http\Controllers\Backend\UserController;
+use App\Http\Controllers\Frontend\ContactController as FrontContactController;
+use App\Http\Controllers\Frontend\FaqController as FrontFaqController;
+use App\Http\Controllers\Frontend\HomeController;
+use App\Http\Controllers\Frontend\NewsController as FrontNewsController;
+use App\Http\Controllers\Frontend\ServiceUnitMessageController as FrontServiceUnitMessage;
 use App\Http\Controllers\GeoApiController;
-use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Auth::routes();
 
+// ==============================
+// Frontend Routes
+// ==============================
+Route::get('/', [HomeController::class, 'home'])->name('home');
+Route::prefix('news')->name('frontend.news.')->group(function () {
+    Route::get('/', [FrontNewsController::class, 'index'])->name('index');
+    Route::get('/{slug}', [FrontNewsController::class, 'show'])->name('show');
+});
+Route::prefix('faq')->name('frontend.faq.')->group(function () {
+    Route::get('/', [FrontFaqController::class, 'index'])->name('index');
+});
+Route::prefix('contact')->name('frontend.contact.')->group(function () {
+    Route::get('/', [FrontContactController::class, 'index'])->name('index');
+    Route::post('/send', [FrontContactController::class, 'send'])
+        ->middleware('throttle:3,2')
+        ->name('send');
+});
+Route::post('/units/{serviceUnit}/messages', [FrontServiceUnitMessage::class, 'store'])
+    ->middleware('throttle:3,2')
+    ->name('frontend.units.messages.store');
+// ==============================
+// Backend Routes
+// ==============================
 Route::middleware(['auth'])->group(function () {
 
     // Root URL
-    Route::get('/', fn() => view('index'))->name('home');
+    // Route::get('/', fn() => view('index'))->name('home');
 
-    // ==============================
-    // Backend Routes (ตายตัว - production)
-    // ==============================
     Route::prefix('backend')->name('backend.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -156,6 +181,12 @@ Route::middleware(['auth'])->group(function () {
             ->name('assessment-forms.services.update');
         Route::patch('/assessment-forms/{form}/services/toggle', [AssessmentFormServiceSettingController::class, 'toggle'])
             ->name('assessment-forms.services.toggle');
+
+        // กล่องข้อความ
+        Route::get('/contact-messages', [ContactMessageController::class, 'index'])->name('contact-messages.index');
+        Route::get('/contact-messages/{contactMessage}', [ContactMessageController::class, 'show'])->name('contact-messages.show');
+        Route::patch('/contact-messages/{contactMessage}/done', [ContactMessageController::class, 'markDone'])->name('contact-messages.markDone');
+        Route::post('/contact-messages/{contactMessage}/reply', [ContactMessageController::class, 'reply'])->middleware('throttle:5,1')->name('contact-messages.reply');
     });
 });
 
@@ -171,6 +202,7 @@ Route::prefix('geo')->group(function () {
 // Ajax
 // lookup ผู้ใช้
 Route::get('/users/lookup', [AjaxController::class, 'ajaxUserLookup'])->name('ajax.users.lookup');
+
 // chain select: สคร. → จังหวัด → หน่วยบริการ
 Route::get('/regions/{region}/provinces', [AjaxController::class, 'ajaxProvincesByRegion'])->name('ajax.cascade.provinces');
 Route::get('/provinces/{province}/service-units', [AjaxController::class, 'ajaxServiceUnitsByProvince'])->name('ajax.cascade.serviceUnits');
@@ -178,9 +210,8 @@ Route::get('/provinces/{province}/service-units', [AjaxController::class, 'ajaxS
 // ==============================
 // Dynamic Routes (ใช้เฉพาะตอน dev) ของ Light Abel Template (อย่าลืมลบออก)
 // ==============================
-Route::middleware(['auth'])->group(function () {
-    // ... ทั้งหมดของ backend
-    if (app()->environment('local')) {
-        Route::get('{routeName}/{name?}', [HomeController::class, 'pageView']);
-    }
-});
+// Route::middleware(['auth'])->group(function () {
+//     if (app()->environment('local')) {
+//         Route::get('{routeName}/{name?}', [HomeController::class, 'pageView']);
+//     }
+// });

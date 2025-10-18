@@ -6,11 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\News;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage; // << เพิ่มบรรทัดนี้
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class NewsController extends Controller
 {
+    /** ขนาดแนะนำรูปภาพปกข่าว */
+    private int $coverWidth  = 448;
+    private int $coverHeight = 276;
+
     public function index(Request $req)
     {
         $filters = $req->only(['q', 'is_active', 'from', 'to', 'category']);
@@ -62,7 +68,11 @@ class NewsController extends Controller
         $data['slug'] = $this->makeUniqueSlug($data['title']);
 
         if ($request->hasFile('image')) {
-            $data['image_path'] = $request->file('image')->store('uploads/news', 'public');
+            $data['image_path'] = $this->resizeAndStore(
+                file: $request->file('image'),
+                width: $this->coverWidth,
+                height: $this->coverHeight
+            );
         }
 
         News::create($data);
@@ -92,7 +102,11 @@ class NewsController extends Controller
             if ($news->image_path) {
                 Storage::disk('public')->delete($news->image_path);
             }
-            $data['image_path'] = $request->file('image')->store('uploads/news', 'public');
+            $data['image_path'] = $this->resizeAndStore(
+                file: $request->file('image'),
+                width: $this->coverWidth,
+                height: $this->coverHeight
+            );
         }
 
         $news->update($data);
@@ -130,7 +144,7 @@ class NewsController extends Controller
             ->where('slug', $slug)
             ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
             ->when(
-                Schema::hasColumn('news', 'deleted_at'), // << เปลี่ยนเป็น Schema::
+                Schema::hasColumn('news', 'deleted_at'),
                 fn($q) => $q->whereNull('deleted_at')
             )
             ->exists()
@@ -139,5 +153,23 @@ class NewsController extends Controller
         }
 
         return $slug;
+    }
+
+    /**
+     * Resize เป็น 448x276 แบบครอบ (cover) แล้วบันทึกเป็น JPG คุณภาพ 85
+     */
+    private function resizeAndStore(\Illuminate\Http\UploadedFile $file, int $width, int $height): string
+    {
+        $manager = new ImageManager(new Driver());
+        $image   = $manager->read($file->getPathname());
+        $resized = $image->cover($width, $height);
+
+        $dir      = 'uploads/news';
+        $filename = uniqid('news_', true) . '.jpg';
+        $path     = $dir . '/' . $filename;
+
+        Storage::disk('public')->put($path, (string) $resized->toJpeg(85));
+
+        return $path;
     }
 }

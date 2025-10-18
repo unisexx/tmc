@@ -1,18 +1,18 @@
 @if ($paginator->hasPages())
     <nav role="navigation" aria-label="Pagination Navigation">
         <ul class="pagination justify-content-center my-3">
-            {{-- Previous --}}
+            {{-- ก่อนหน้า --}}
             @if ($paginator->onFirstPage())
                 <li class="page-item disabled">
-                    <span class="page-link">&laquo; Previous</span>
+                    <span class="page-link">&laquo; ก่อนหน้า</span>
                 </li>
             @else
                 <li class="page-item">
-                    <a class="page-link" href="{{ $paginator->previousPageUrl() }}">&laquo; Previous</a>
+                    <a class="page-link" href="{{ $paginator->previousPageUrl() }}">&laquo; ก่อนหน้า</a>
                 </li>
             @endif
 
-            {{-- Links --}}
+            {{-- ลิงก์เลขหน้า --}}
             @foreach ($elements as $element)
                 @if (is_string($element))
                     <li class="page-item disabled"><span class="page-link">{{ $element }}</span></li>
@@ -29,14 +29,14 @@
                 @endif
             @endforeach
 
-            {{-- Next --}}
+            {{-- ถัดไป --}}
             @if ($paginator->hasMorePages())
                 <li class="page-item">
-                    <a class="page-link" href="{{ $paginator->nextPageUrl() }}">Next &raquo;</a>
+                    <a class="page-link" href="{{ $paginator->nextPageUrl() }}">ถัดไป &raquo;</a>
                 </li>
             @else
                 <li class="page-item disabled">
-                    <span class="page-link">Next &raquo;</span>
+                    <span class="page-link">ถัดไป &raquo;</span>
                 </li>
             @endif
         </ul>
