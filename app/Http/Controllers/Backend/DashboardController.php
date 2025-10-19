@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\AssessmentForm;
 use App\Models\HealthRegion;
+use App\Models\ServiceUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -45,27 +46,34 @@ class DashboardController extends Controller
 
         // ===== โหมดรายหน่วยบริการ =====
         if ($serviceUnitId) {
-            // ข้อมูลหน่วย
-            $unit = DB::table('service_units AS su')
-                ->leftJoin('province AS p', 'p.code', '=', 'su.org_province_code')
-                ->leftJoin('district AS d', 'd.code', '=', 'su.org_district_code')
-                ->leftJoin('subdistrict AS s', 's.code', '=', 'su.org_subdistrict_code')
-                ->leftJoinSub($latestForm, 'lf', fn($j) => $j->on('lf.service_unit_id', '=', 'su.id'))
-                ->leftJoin('assessment_forms AS af', 'af.id', '=', 'lf.latest_id')
-                ->leftJoinSub($latestAsul, 'la', fn($j) => $j->on('la.service_unit_id', '=', 'su.id'))
-                ->leftJoin('assessment_service_unit_levels AS asul', 'asul.id', '=', 'la.latest_id')
-                ->where('su.id', $serviceUnitId)
-                ->select([
-                    'su.*',
-                    'p.title AS province_title',
-                    'd.title AS district_title',
-                    's.title AS subdistrict_title',
-                    'af.id AS form_id',
-                    'af.level_code',
-                    'asul.approval_status',
-                    'la.latest_id AS asul_id',
+            # ---------- ข้อมูลหน่วย (Eloquent) ----------
+            $unit = ServiceUnit::query()
+                ->with([
+                    'province:code,title',
+                    'district:code,title',
+                    'subdistrict:code,title',
+                    'assessmentForms'   => fn($q)   => $q
+                        ->where('assess_year', $filterYear)
+                        ->where('assess_round', $filterRound)
+                        ->latest('id')->limit(1),
+                    'serviceUnitLevels' => fn($q) => $q
+                        ->where('assess_year', $filterYear)
+                        ->where('assess_round', $filterRound)
+                        ->latest('id')->limit(1),
                 ])
-                ->first();
+                ->findOrFail($serviceUnitId);
+
+            $form = optional($unit->assessmentForms->first());
+            $asul = optional($unit->serviceUnitLevels->first());
+
+            # inject field ชื่อเดิมให้ view ใช้งานต่อได้ทันที
+            $unit->setAttribute('province_title', $unit->province->title ?? null);
+            $unit->setAttribute('district_title', $unit->district->title ?? null);
+            $unit->setAttribute('subdistrict_title', $unit->subdistrict->title ?? null);
+            $unit->setAttribute('form_id', $form?->id);
+            $unit->setAttribute('level', $asul?->level);
+            $unit->setAttribute('approval_status', $asul?->approval_status);
+            $unit->setAttribute('asul_id', $asul?->id);
 
             // เคสไม่พบข้อมูล
             if (!$unit) {

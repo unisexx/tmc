@@ -39,7 +39,7 @@ class ContactController extends Controller
         // ตรวจ honeypot ก่อน
         if ($request->filled('hp')) {
             return redirect()->route('frontend.contact.index')
-                ->withErrors(['hp' => 'Invalid request.'])
+                ->withErrors(['hp' => 'คำขอไม่ถูกต้อง'])
                 ->withInput();
         }
 
@@ -54,7 +54,30 @@ class ContactController extends Controller
             'hp'      => ['present', 'size:0'],
         ];
 
-        $v = Validator::make($request->all(), $rules);
+        // ข้อความ validate แบบกำหนดเอง
+        $messages = [
+            'required'         => 'กรุณากรอก:attribute',
+            'string'           => ':attribute ต้องเป็นตัวอักษร',
+            'email'            => 'รูปแบบอีเมลไม่ถูกต้อง',
+            'max'              => ':attribute ต้องไม่เกิน :max ตัวอักษร',
+            'numeric'          => ':attribute ต้องเป็นตัวเลข',
+            'present'          => 'คำขอไม่ถูกต้อง',
+            'size'             => 'คำขอไม่ถูกต้อง',
+            'captcha.required' => 'กรุณาตอบคำถามยืนยันตัวตน',
+            'captcha.numeric'  => 'คำตอบ CAPTCHA ต้องเป็นตัวเลข',
+        ];
+
+        // แทนชื่อฟิลด์ให้อ่านง่าย
+        $attributes = [
+            'name'    => 'ชื่อ-นามสกุลผู้ติดต่อ',
+            'email'   => 'อีเมล',
+            'phone'   => 'เบอร์โทรศัพท์',
+            'subject' => 'หัวข้อ',
+            'message' => 'ข้อความ',
+            'captcha' => 'CAPTCHA',
+        ];
+
+        $v = Validator::make($request->all(), $rules, $messages, $attributes);
 
         // ตรวจ CAPTCHA และอายุ
         $v->after(function ($v) use ($request) {
@@ -94,6 +117,7 @@ class ContactController extends Controller
         // รีเซ็ต CAPTCHA หลังส่งสำเร็จ
         session()->forget(['captcha_answer', 'captcha_expires']);
 
-        return redirect()->route('frontend.contact.index')->with('success', 'ส่งข้อความเรียบร้อยแล้ว');
+        flash_notify('ส่งข้อความเรียบร้อยแล้ว', 'success');
+        return redirect()->route('frontend.contact.index');
     }
 }

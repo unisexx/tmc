@@ -13,9 +13,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            AssessmentSectionsBasicSeed::class,
-            AssessmentSectionsMediumSeed::class,
-            AssessmentSectionsAdvancedSeed::class,
+            // AssessmentSectionsBasicSeed::class,
+            // AssessmentSectionsMediumSeed::class,
+            // AssessmentSectionsAdvancedSeed::class,
+            ServiceUnitDemoSeeder::class,
         ]);
     }
 }

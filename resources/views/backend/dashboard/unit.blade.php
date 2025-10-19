@@ -22,18 +22,17 @@
                         @php
                             $summaryRow = (object) [
                                 'serviceUnit' => (object) ['org_name' => $unit->org_name],
-                                'level' => $unit->level_code,
+                                'level' => $unit->level,
                                 'assess_year' => (int) ($filterYear ?? fiscalYearCE()),
                                 'assess_round' => (int) ($filterRound ?? fiscalRound()),
                             ];
                             $yearBE = ($summaryRow->assess_year ?? date('Y')) + 543;
                         @endphp
-
                         @include('backend.self_assessment_service_unit_level._summary', [
                             'row' => $summaryRow,
                             'yearBE' => $yearBE,
                             'form' => $form ?? null,
-                            'components' => $components ?? [],
+                            'approvalStatus' => $unit->approval_status,
                         ])
 
                         <div class="row g-2">
@@ -88,26 +87,48 @@
                 </div>
             </div>
 
+
             {{-- การตั้งค่าการแสดงผลหน้าบ้าน (แคบลง) --}}
             <div class="col-12 col-xl-4 d-flex">
-                @if (!empty($form))
-                    @php
-                        $services = $form->resolvedServices();
-                        $levelMap = ['basic' => 'หน่วยบริการระดับพื้นฐาน', 'medium' => 'หน่วยบริการระดับกลาง', 'advanced' => 'หน่วยบริการระดับสูง'];
-                        $cardTitle = $levelMap[$form->level_code] ?? 'การตั้งค่าการแสดงผลหน้าบ้าน';
-                    @endphp
+                @php
+                    use App\Models\StHealthService;
+                    use App\Models\AssessmentServiceConfig;
+
+                    // อ่านจาก $unit ที่ Controller ใส่ค่าไว้แล้ว
+                    $levelCode = $unit->level ?? null; // basic | medium | advanced
+                    $levelId = $unit->asul_id ?? null; // assessment_service_unit_levels.id
+
+                    $services = collect();
+                    if ($levelCode && $levelId) {
+                        $base = StHealthService::active()->forLevel($levelCode)->orderBy('ordering')->orderBy('id')->get();
+
+                        $pivot = AssessmentServiceConfig::where('assessment_service_unit_level_id', $levelId)->pluck('is_enabled', 'st_health_service_id');
+
+                        $services = $base->map(function ($svc) use ($pivot) {
+                            $svc->resolved_enabled = $pivot->has($svc->id) ? (bool) $pivot[$svc->id] : (bool) $svc->default_enabled;
+                            return $svc;
+                        });
+                    }
+
+                    $levelMap = [
+                        'basic' => 'หน่วยบริการระดับพื้นฐาน',
+                        'medium' => 'หน่วยบริการระดับกลาง',
+                        'advanced' => 'หน่วยบริการระดับสูง',
+                    ];
+                    $cardTitle = $levelMap[$levelCode] ?? 'การตั้งค่าการแสดงผลหน้าบ้าน';
+                @endphp
+
+                @if ($levelCode && $levelId)
                     <div class="card flex-fill h-100 border-2 border-primary-subtle">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <span><i class="ph-duotone ph-sliders-horizontal me-1"></i> {{ $cardTitle }}</span>
                         </div>
                         <div class="card-body">
-                            {{-- ข้อความแนะนำ --}}
                             <div class="alert alert-info py-2 small d-flex align-items-start gap-2">
                                 <i class="ph-duotone ph-info mt-1"></i>
                                 <div>
-                                    การตั้งค่านี้ใช้กำหนด “ส่วนบริการที่จะแสดงในหน้าบ้าน” ของหน่วยบริการ
-                                    ให้เปิดเฉพาะบริการที่หน่วยของท่านมีให้บริการจริง
-                                    การเปลี่ยนแปลงจะบันทึกอัตโนมัติทันทีเมื่อสลับสวิตช์
+                                    การตั้งค่านี้จะบันทึกลงตาราง <code>assessment_service_configs</code> ตามระดับของหน่วยบริการนี้
+                                    การเปลี่ยนแปลงบันทึกอัตโนมัติเมื่อสลับสวิตช์
                                 </div>
                             </div>
 
@@ -116,7 +137,7 @@
                                     <div class="col-12">
                                         <div class="d-flex align-items-start gap-2">
                                             <div class="form-check form-switch">
-                                                <input class="form-check-input js-svc-toggle" type="checkbox" @checked($svc->resolved_enabled) data-form-id="{{ $form->id }}" data-svc-id="{{ $svc->id }}">
+                                                <input class="form-check-input js-svc-toggle" type="checkbox" @checked($svc->resolved_enabled) data-level-id="{{ $levelId }}" data-svc-id="{{ $svc->id }}">
                                             </div>
                                             <div>
                                                 <div class="fw-semibold">{{ $svc->name }}</div>
@@ -136,6 +157,9 @@
                     </div>
                 @endif
             </div>
+
+
+
 
         </div>
 
@@ -231,46 +255,42 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // ต้องมี <meta name="csrf-token" content="{{ csrf_token() }}"> ใน layout
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
             function toggleService(el) {
-                const formId = el.dataset.formId;
+                const levelId = el.dataset.levelId;
                 const svcId = el.dataset.svcId;
                 const enabled = el.checked ? 1 : 0;
+                if (!levelId || !svcId) return;
 
-                if (!formId || !svcId) return;
-
-                el.disabled = true; // กันคลิกซ้ำ
-                fetch(@json(route('backend.assessment-forms.services.toggle', ':id')).replace(':id', formId), {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrf,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        service_id: svcId,
-                        enabled: enabled
+                el.disabled = true;
+                fetch(@json(route('backend.assessment-service-configs.services.toggle', ':id')).replace(':id', levelId), {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrf,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            service_id: svcId,
+                            enabled: enabled
+                        })
                     })
-                }).then(async (res) => {
-                    if (!res.ok) {
-                        throw new Error('HTTP ' + res.status);
-                    }
-                    return res.json();
-                }).then((json) => {
-                    // สำเร็จ เงียบ ๆ พอ
-                }).catch((err) => {
-                    // ผิดพลาด: ย้อนค่ากลับ
-                    el.checked = !enabled;
-                    alert('บันทึกไม่สำเร็จ กรุณาลองใหม่');
-                    console.error(err);
-                }).finally(() => {
-                    el.disabled = false;
-                });
+                    .then(async res => {
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        return res.json();
+                    })
+                    .catch(err => {
+                        el.checked = !enabled;
+                        alert('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+                        console.error(err);
+                    })
+                    .finally(() => {
+                        el.disabled = false;
+                    });
             }
 
-            document.querySelectorAll('.js-svc-toggle').forEach((el) => {
+            document.querySelectorAll('.js-svc-toggle').forEach(el => {
                 el.addEventListener('change', () => toggleService(el));
             });
         });

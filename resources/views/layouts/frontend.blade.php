@@ -67,6 +67,91 @@
         });
     </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @if (session('notify'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const n = @json(session('notify'));
+                const type = (n.type || 'success').toLowerCase();
+                const opts = n.options || {};
+                const isConfirm = !!opts.confirm;
+
+                const bgMap = {
+                    success: 'bg-success',
+                    error: 'bg-danger',
+                    danger: 'bg-danger',
+                    warning: 'bg-warning',
+                    info: 'bg-info',
+                    question: 'bg-primary'
+                };
+
+                // ค่าพื้นฐานของ Swal
+                const baseConfig = {
+                    icon: type === 'danger' ? 'error' : type,
+                    title: n.message || '',
+                    customClass: {
+                        popup: 'flash-notify-toast'
+                    }
+                };
+
+                if (isConfirm) {
+                    // โหมดยืนยัน: แสดงปุ่มและไม่ตั้ง timer
+                    Swal.fire({
+                        ...baseConfig,
+                        text: opts.subText || '', // ✅ เพิ่มข้อความรอง
+                        showConfirmButton: true,
+                        confirmButtonText: opts.confirmText || 'ตกลง',
+                        showCancelButton: !!opts.showCancel,
+                        cancelButtonText: opts.cancelText || 'ยกเลิก',
+                        allowOutsideClick: opts.allowOutsideClick ?? false,
+                        focusConfirm: opts.focusConfirm ?? true,
+                    });
+                } else {
+                    // โหมดเดิม (toast อัตโนมัติ)
+                    Swal.fire({
+                        ...baseConfig,
+                        showConfirmButton: false,
+                        timer: n.timeout || 3000,
+                        timerProgressBar: true,
+                        didOpen: () => {
+                            const bar = Swal.getTimerProgressBar();
+                            if (bar) {
+                                bar.classList.add(bgMap[type] || 'bg-primary', 'swal-timer-thick');
+                            }
+                        }
+                    });
+                }
+            });
+        </script>
+    @endif
+
+    <style>
+        .swal2-timer-progress-bar.swal-timer-thick {
+            height: 4px !important;
+            border-radius: 999px;
+        }
+
+        .swal2-timer-progress-bar.bg-primary {
+            background-color: var(--bs-primary) !important;
+        }
+
+        .swal2-timer-progress-bar.bg-success {
+            background-color: var(--bs-success) !important;
+        }
+
+        .swal2-timer-progress-bar.bg-info {
+            background-color: var(--bs-info) !important;
+        }
+
+        .swal2-timer-progress-bar.bg-warning {
+            background-color: var(--bs-warning) !important;
+        }
+
+        .swal2-timer-progress-bar.bg-danger {
+            background-color: var(--bs-danger) !important;
+        }
+    </style>
+
     @stack('scripts')
 </body>
 

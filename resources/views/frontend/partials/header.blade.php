@@ -35,7 +35,7 @@
                     <div class="collapse navbar-collapse custom-navbar-overlay" id="mainNav">
                         <ul class="navbar-nav ms-xl-5 d-flex align-items-start align-items-lg-center">
                             <li class="nav-item"><a class="nav-link {{ Request::is('/') ? 'active' : '' }}" href="{{ url('/') }}">หน้าแรก</a></li>
-                            <li class="nav-item"><a class="nav-link {{ Request::is('health-services*') ? 'active' : '' }}" href="{{ url('health-services') }}">ค้นหาหน่วยบริการสุขภาพผู้เดินทาง</a></li>
+                            <li class="nav-item"><a class="nav-link {{ Request::is('service-units*') ? 'active' : '' }}" href="{{ route('frontend.service-units.index') }}">ค้นหาหน่วยบริการสุขภาพผู้เดินทาง</a></li>
                             <li class="nav-item"><a class="nav-link {{ Request::is('news*') ? 'active' : '' }}" href="{{ route('frontend.news.index') }}">ข่าวประชาสัมพันธ์</a></li>
                             <li class="nav-item"><a class="nav-link {{ Request::is('faq*') ? 'active' : '' }}" href="{{ route('frontend.faq.index') }}">คำถามที่พบบ่อย</a></li>
                             <li class="nav-item"><a class="nav-link {{ Request::is('contact*') ? 'active' : '' }}" href="{{ route('frontend.contact.index') }}">ติดต่อเรา</a></li>

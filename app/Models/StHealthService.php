@@ -14,14 +14,17 @@ class StHealthService extends Model
         return $q->where('is_active', true);
     }
 
+    // app/Models/StHealthService.php
     public function scopeForLevel($q, ?string $level)
     {
         $key = match ($level) {
             'basic'    => 'basic',
-            'intermediate', 'medium' => 'intermediate',
+            'medium'   => 'medium',
             'advanced' => 'advanced',
             default    => null,
         };
+
         return $key ? $q->where('level_code', $key) : $q->whereRaw('1=0');
     }
+
 }

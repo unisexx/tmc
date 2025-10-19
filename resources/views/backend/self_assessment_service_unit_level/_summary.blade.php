@@ -37,4 +37,13 @@
         <span class="text-muted">รอบ</span>
         <span class="fw-semibold">{{ $roundTxt }}</span>
     </div>
+    {{-- ผลการประเมิน --}}
+    <div class="vr"></div>
+    <div class="d-inline-flex align-items-center gap-2">
+        <i class="ph-duotone ph-check-circle fs-5"></i>
+        <span class="text-muted">ผลการประเมิน</span>
+        <span id="summaryApprovalBadge">
+            <x-approval-badge :status="$approvalStatus ?? null" class="ms-1" />
+        </span>
+    </div>
 </div>

@@ -5,6 +5,7 @@ use App\Http\Controllers\Backend\ActivityLogController;
 use App\Http\Controllers\Backend\ApplicationReviewController;
 use App\Http\Controllers\Backend\AssessmentFormServiceSettingController;
 use App\Http\Controllers\Backend\AssessmentReviewController;
+use App\Http\Controllers\Backend\AssessmentServiceConfigController;
 use App\Http\Controllers\Backend\ContactController;
 use App\Http\Controllers\Backend\ContactMessageController;
 use App\Http\Controllers\Backend\CookiePolicyController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Frontend\ContactController as FrontContactController;
 use App\Http\Controllers\Frontend\FaqController as FrontFaqController;
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\NewsController as FrontNewsController;
+use App\Http\Controllers\Frontend\ServiceUnitController as FrontServiceUnit;
 use App\Http\Controllers\Frontend\ServiceUnitMessageController as FrontServiceUnitMessage;
 use App\Http\Controllers\GeoApiController;
 use Illuminate\Support\Facades\Auth;
@@ -51,6 +53,9 @@ Route::prefix('contact')->name('frontend.contact.')->group(function () {
     Route::post('/send', [FrontContactController::class, 'send'])
         ->middleware('throttle:3,2')
         ->name('send');
+});
+Route::prefix('service-units')->name('frontend.service-units.')->group(function () {
+    Route::get('/', [FrontServiceUnit::class, 'index'])->name('index');
 });
 Route::post('/units/{serviceUnit}/messages', [FrontServiceUnitMessage::class, 'store'])
     ->middleware('throttle:3,2')
@@ -174,13 +179,22 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('st-health-services', StHealthServiceController::class)->except(['show']);
         Route::post('/st-health-services/reorder', [StHealthServiceController::class, 'reorder'])
             ->name('st-health-services.reorder');
+
         // ตั้งค่าสวิตช์ต่อฟอร์มประเมินรายหน่วยรายรอบ
-        Route::get('/assessment-forms/{form}/services', [AssessmentFormServiceSettingController::class, 'edit'])
-            ->name('assessment-forms.services.edit');
-        Route::put('/assessment-forms/{form}/services', [AssessmentFormServiceSettingController::class, 'update'])
-            ->name('assessment-forms.services.update');
-        Route::patch('/assessment-forms/{form}/services/toggle', [AssessmentFormServiceSettingController::class, 'toggle'])
-            ->name('assessment-forms.services.toggle');
+        // Route::get('/assessment-forms/{form}/services', [AssessmentFormServiceSettingController::class, 'edit'])
+        //     ->name('assessment-forms.services.edit');
+        // Route::put('/assessment-forms/{form}/services', [AssessmentFormServiceSettingController::class, 'update'])
+        //     ->name('assessment-forms.services.update');
+        // Route::patch('/assessment-forms/{form}/services/toggle', [AssessmentFormServiceSettingController::class, 'toggle'])
+        //     ->name('assessment-forms.services.toggle');
+
+        // ตั้งค่าการให้บริการราย "ระดับหน่วยบริการ" ที่ผ่านการอนุมัติแล้ว approval_status = 'approved'
+        Route::get('/assessment-service-unit-level/{level}/services', [AssessmentServiceConfigController::class, 'edit'])
+            ->name('assessment-service-configs.services.edit');
+        Route::put('/assessment-service-unit-level/{level}/services', [AssessmentServiceConfigController::class, 'update'])
+            ->name('assessment-service-configs.services.update');
+        Route::patch('/assessment-service-unit-level/{level}/services/toggle', [AssessmentServiceConfigController::class, 'toggle'])
+            ->name('assessment-service-configs.services.toggle');
 
         // กล่องข้อความ
         Route::get('/contact-messages', [ContactMessageController::class, 'index'])->name('contact-messages.index');

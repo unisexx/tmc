@@ -150,14 +150,13 @@
                             @error('captcha')
                                 <div class="text-danger small">{{ $message }}</div>
                             @enderror
-                            <div class="form-text">ถ้าตอบผิดหรือหมดอายุ ระบบจะสร้างโจทย์ใหม่ให้</div>
+                            <div class="form-text">ถ้าตอบผิดหรือหมดอายุ ระบบจะสร้างคำถามใหม่ให้</div>
                         </div>
 
                         <div class="col-12 d-flex gap-2 mt-2">
                             <button class="btn btn-primary btn-lg" type="submit">
                                 <i class="bi bi-send me-2"></i>ส่งข้อความ
                             </button>
-                            <a href="{{ route('frontend.contact.index') }}" class="btn btn-outline-secondary btn-lg">รีเฟรชโจทย์</a>
                         </div>
                     </form>
 

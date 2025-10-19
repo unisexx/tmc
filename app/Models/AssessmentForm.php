@@ -54,6 +54,7 @@ class AssessmentForm extends Model
         return $this->suLevel?->approval_status;
     } // pending|...
 
+    // การให้บริการตามระดับของหน่วยบริการ (join ไปที่ตาราง StHealthService)
     public function services()
     {
         return $this->belongsToMany(StHealthService::class, 'assessment_form_service')
