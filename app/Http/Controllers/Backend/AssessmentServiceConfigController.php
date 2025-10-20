@@ -76,18 +76,17 @@ class AssessmentServiceConfigController extends Controller
             'enabled'    => ['required', 'boolean'],
         ]);
 
-        // ตรวจสอบว่าบริการอยู่ในระดับนี้จริง
-        $service = StHealthService::active()
-            ->forLevel($level->level_code)
-            ->whereKey($data['service_id'])
-            ->firstOrFail();
+        // ไม่กรองด้วย forLevel เพื่อให้ตรงกับรายการที่แสดงบนหน้า
+        $service = StHealthService::query()->whereKey($data['service_id'])->firstOrFail();
 
         AssessmentServiceConfig::updateOrCreate(
             [
                 'assessment_service_unit_level_id' => $level->id,
                 'st_health_service_id'             => $service->id,
             ],
-            ['is_enabled' => (bool) $data['enabled']]
+            [
+                'is_enabled' => (bool) $data['enabled'],
+            ]
         );
 
         return response()->json([

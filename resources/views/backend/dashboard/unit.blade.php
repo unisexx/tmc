@@ -116,6 +116,9 @@
                         'advanced' => 'หน่วยบริการระดับสูง',
                     ];
                     $cardTitle = $levelMap[$levelCode] ?? 'การตั้งค่าการแสดงผลหน้าบ้าน';
+
+                    // ใช้ URL จริงตั้งแต่ฝั่ง Blade เพื่อตัดปัญหา GET
+                    $toggleUrl = $levelCode && $levelId ? route('backend.assessment-service-configs.services.toggle', $levelId) : null;
                 @endphp
 
                 @if ($levelCode && $levelId)
@@ -137,7 +140,7 @@
                                     <div class="col-12">
                                         <div class="d-flex align-items-start gap-2">
                                             <div class="form-check form-switch">
-                                                <input class="form-check-input js-svc-toggle" type="checkbox" @checked($svc->resolved_enabled) data-level-id="{{ $levelId }}" data-svc-id="{{ $svc->id }}">
+                                                <input class="form-check-input js-svc-toggle" type="checkbox" @checked($svc->resolved_enabled) data-url="{{ $toggleUrl }}" data-svc-id="{{ $svc->id }}">
                                             </div>
                                             <div>
                                                 <div class="fw-semibold">{{ $svc->name }}</div>
@@ -258,13 +261,14 @@
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
             function toggleService(el) {
-                const levelId = el.dataset.levelId;
+                const url = el.dataset.url;
                 const svcId = el.dataset.svcId;
                 const enabled = el.checked ? 1 : 0;
-                if (!levelId || !svcId) return;
+                if (!url || !svcId) return;
 
                 el.disabled = true;
-                fetch(@json(route('backend.assessment-service-configs.services.toggle', ':id')).replace(':id', levelId), {
+
+                fetch(url, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -272,16 +276,19 @@
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({
-                            service_id: svcId,
-                            enabled: enabled
+                            service_id: Number(svcId),
+                            enabled: Boolean(enabled)
                         })
                     })
                     .then(async res => {
-                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        if (!res.ok) {
+                            // 405 = method not allowed, 419 = csrf
+                            throw new Error('HTTP ' + res.status);
+                        }
                         return res.json();
                     })
                     .catch(err => {
-                        el.checked = !enabled;
+                        el.checked = !enabled; // rollback
                         alert('บันทึกไม่สำเร็จ กรุณาลองใหม่');
                         console.error(err);
                     })

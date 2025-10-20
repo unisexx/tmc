@@ -193,7 +193,7 @@ Route::middleware(['auth'])->group(function () {
             ->name('assessment-service-configs.services.edit');
         Route::put('/assessment-service-unit-level/{level}/services', [AssessmentServiceConfigController::class, 'update'])
             ->name('assessment-service-configs.services.update');
-        Route::patch('/assessment-service-unit-level/{level}/services/toggle', [AssessmentServiceConfigController::class, 'toggle'])
+        Route::patch('assessment-service-unit-level/{level}/services/toggle', [AssessmentServiceConfigController::class, 'toggle'])
             ->name('assessment-service-configs.services.toggle');
 
         // กล่องข้อความ
