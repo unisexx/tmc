@@ -127,13 +127,15 @@
                             <span><i class="ph-duotone ph-sliders-horizontal me-1"></i> {{ $cardTitle }}</span>
                         </div>
                         <div class="card-body">
+                            {{-- คำอธิบายการตั้งค่าบริการที่จะแสดงหน้าบ้าน --}}
                             <div class="alert alert-info py-2 small d-flex align-items-start gap-2">
                                 <i class="ph-duotone ph-info mt-1"></i>
                                 <div>
-                                    การตั้งค่านี้จะบันทึกลงตาราง <code>assessment_service_configs</code> ตามระดับของหน่วยบริการนี้
-                                    การเปลี่ยนแปลงบันทึกอัตโนมัติเมื่อสลับสวิตช์
+                                    ปิด–เปิดบริการให้ตรงกับงานที่หน่วยงานให้บริการอยู่จริง การตั้งค่านี้จะถูกนำไปแสดงในหน้าเว็บไซต์ของหน่วยบริการทันที
+                                    {{-- และระบบจะบันทึกลงตาราง <code>assessment_service_configs</code> สำหรับระดับของหน่วยนี้โดยอัตโนมัติเมื่อสลับสวิตช์ --}}
                                 </div>
                             </div>
+
 
                             <div class="row g-3">
                                 @forelse($services as $svc)
@@ -160,16 +162,12 @@
                     </div>
                 @endif
             </div>
-
-
-
-
         </div>
 
 
 
         {{-- ===== เริ่มแถวใหม่: รายการ GAP ของหน่วยนี้ ===== --}}
-        <div class="col-12">
+        {{-- <div class="col-12">
             @php
                 $gaps = collect($unitGaps ?? [])->filter(fn($x) => (int) ($x->gap_count ?? 0) > 0);
                 $gapCount = $gaps->count();
@@ -190,10 +188,10 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
 
         {{-- ===== ตารางองค์ประกอบ 1–6 + แผนพัฒนา ===== --}}
-        <div class="col-12">
+        {{-- <div class="col-12">
             <div class="card">
                 <div class="card-header">องค์ประกอบของหน่วยบริการนี้</div>
                 <div class="card-body">
@@ -204,7 +202,7 @@
                     ])
                 </div>
             </div>
-        </div>
+        </div> --}}
     </div>
 @endsection
 
