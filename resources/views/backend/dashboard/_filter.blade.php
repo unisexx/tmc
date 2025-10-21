@@ -1,14 +1,37 @@
 {{-- resources/views/backend/dashboard/_filter.blade.php --}}
 @php
+    use App\Models\HealthRegion;
+
+    // ปี/รอบ
     $yearCE = $yearCE ?? fiscalYearCE();
     $roundNow = $roundNow ?? fiscalRound();
     $yearOpts = $yearOpts ?? fiscalYearOptionsBE(5);
     $filterYear = (int) ($filterYear ?? request('year', $yearCE));
     $filterRound = (int) ($filterRound ?? request('round', $roundNow));
 
+    // พารามิเตอร์ที่อาจถูกส่งมาจาก URL
     $regionId = $regionId ?? request('region');
     $provinceCode = $provinceCode ?? request('province_code');
     $serviceUnitId = $serviceUnitId ?? request('service_unit_id');
+
+    // โหลดรายการ “สคร.” ที่นี่ ถ้า Controller ไม่ได้ส่งมา
+    $regions =
+        $regions ??
+        HealthRegion::query()
+            ->orderBy('id')
+            ->get(['id', 'code', 'title', 'short_title']);
+
+    // ดึง “ระดับหน่วยบริการ” จาก config/tmc.php เฉพาะ 3 ระดับสำหรับฟิลเตอร์
+    $levels =
+        $levels ??
+        collect(config('tmc.assessment.level_text', []))
+            ->only(['basic', 'medium', 'advanced'])
+            ->values()
+            ->all(); // ['ระดับพื้นฐาน','ระดับกลาง','ระดับสูง']
+
+    // ดึง “สังกัด” จาก config/tmc.php
+    $affiliations = $affiliations ?? config('tmc.affiliations', []);
+
 @endphp
 
 <form method="GET" class="card mb-3 filter-bar">
@@ -81,6 +104,36 @@
                     </select>
                 </div>
             </div>
+
+            {{-- ปิดไว้: ระดับหน่วยบริการ (ยังไม่เรียกใช้) --}}
+            {{--
+            <div class="col-12 col-sm-6 col-lg-auto">
+                <div class="input-group w-100">
+                    <span class="input-group-text">ระดับ</span>
+                    <select name="level" class="form-select">
+                        <option value="">ทุกระดับ</option>
+                        @foreach ($levels as $lv)
+                            <option value="{{ $lv }}" @selected(request('level') === $lv)>{{ $lv }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            --}}
+
+            {{-- ปิดไว้: สังกัด (ยังไม่เรียกใช้) --}}
+            {{--
+            <div class="col-12 col-sm-6 col-lg-auto">
+                <div class="input-group w-100">
+                    <span class="input-group-text">สังกัด</span>
+                    <select name="affiliation" class="form-select">
+                        <option value="">ทั้งหมด</option>
+                        @foreach ($affiliations as $a)
+                            <option value="{{ $a }}" @selected(request('affiliation') === $a)>{{ $a }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            --}}
 
             {{-- ปุ่มค้นหา --}}
             <div class="col-12 col-sm-auto">
@@ -176,10 +229,6 @@
                 }
             }
 
-            // เงื่อนไขการแสดงหน่วยบริการ:
-            // - ไม่เลือก สคร + ไม่เลือกจังหวัด -> ทั้งหมด
-            // - เลือก สคร -> เฉพาะใน สคร นั้น
-            // - เลือก จังหวัด -> เฉพาะจังหวัดนั้น (override สคร)
             async function loadServiceUnits(provCode, regionId, keep = true) {
                 setLoading(unitEl, true);
                 try {

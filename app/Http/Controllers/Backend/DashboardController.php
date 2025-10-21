@@ -11,8 +11,26 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    /**
+     * เดิมเรียก /backend/dashboard -> ใช้งานได้ต่อ โดยชี้ไป overview()
+     */
     public function index(Request $request)
     {
+        return $this->overview($request);
+    }
+
+    /**
+     * ภาพรวมทั้งหมด => view('backend.dashboard.index')
+     */
+    public function overview(Request $request)
+    {
+        $serviceUnitId = $request->get('service_unit_id');
+
+        // ถ้ามีการเลือกหน่วยบริการ → เด้งไปหน้ารายหน่วยทันที
+        if (!empty($serviceUnitId)) {
+            return redirect()->route('backend.dashboard.unit', ['serviceUnitId' => $serviceUnitId] + $request->query());
+        }
+
         $filterYear  = (int) $request->input('year', fiscalYearCE());
         $filterRound = (int) $request->input('round', fiscalRound());
 
@@ -32,140 +50,11 @@ class DashboardController extends Controller
             ->get(['code', 'title']);
 
         // ---------- latest form / asul by year-round ----------
-        $latestForm = DB::table('assessment_forms')
-            ->when($filterYear, fn($q) => $q->where('assess_year', $filterYear))
-            ->when($filterRound, fn($q) => $q->where('assess_round', $filterRound))
-            ->select('service_unit_id', DB::raw('MAX(id) AS latest_id'))
-            ->groupBy('service_unit_id');
+        $latestForm = $this->buildLatestFormSubquery($filterYear, $filterRound);
+        $latestAsul = $this->buildLatestAsulSubquery($filterYear, $filterRound);
 
-        $latestAsul = DB::table('assessment_service_unit_levels')
-            ->when($filterYear, fn($q) => $q->where('assess_year', $filterYear))
-            ->when($filterRound, fn($q) => $q->where('assess_round', $filterRound))
-            ->select('service_unit_id', DB::raw('MAX(id) AS latest_id'))
-            ->groupBy('service_unit_id');
-
-        // ===== โหมดรายหน่วยบริการ =====
-        if ($serviceUnitId) {
-            # ---------- ข้อมูลหน่วย (Eloquent) ----------
-            $unit = ServiceUnit::query()
-                ->with([
-                    'province:code,title',
-                    'district:code,title',
-                    'subdistrict:code,title',
-                    'assessmentForms'   => fn($q)   => $q
-                        ->where('assess_year', $filterYear)
-                        ->where('assess_round', $filterRound)
-                        ->latest('id')->limit(1),
-                    'serviceUnitLevels' => fn($q) => $q
-                        ->where('assess_year', $filterYear)
-                        ->where('assess_round', $filterRound)
-                        ->latest('id')->limit(1),
-                ])
-                ->findOrFail($serviceUnitId);
-
-            $form = optional($unit->assessmentForms->first());
-            $asul = optional($unit->serviceUnitLevels->first());
-
-            # inject field ชื่อเดิมให้ view ใช้งานต่อได้ทันที
-            $unit->setAttribute('province_title', $unit->province->title ?? null);
-            $unit->setAttribute('district_title', $unit->district->title ?? null);
-            $unit->setAttribute('subdistrict_title', $unit->subdistrict->title ?? null);
-            $unit->setAttribute('form_id', $form?->id);
-            $unit->setAttribute('level', $asul?->level);
-            $unit->setAttribute('approval_status', $asul?->approval_status);
-            $unit->setAttribute('asul_id', $asul?->id);
-
-            // เคสไม่พบข้อมูล
-            if (!$unit) {
-                abort(404);
-            }
-
-            // GAP ของหน่วยนี้
-            $unitGaps = DB::table('assessment_answers AS ans')
-                ->joinSub($latestForm, 'lf', 'lf.latest_id', '=', 'ans.assessment_form_id')
-                ->where('lf.service_unit_id', $serviceUnitId)
-                ->where('ans.answer_bool', 0)
-                ->leftJoin('assessment_questions AS q', 'q.id', '=', 'ans.assessment_question_id')
-                ->groupBy('ans.assessment_question_id', 'q.text', 'q.code')
-                ->selectRaw('
-                    ans.assessment_question_id,
-                    COALESCE(q.text, q.code, CONCAT("คำถาม #", ans.assessment_question_id)) AS gap_label,
-                    COUNT(*) AS gap_count
-                ')
-                ->orderByDesc('gap_count')
-                ->get();
-
-            // มี/ไม่มี รวมของหน่วยนี้
-            $unitBool = DB::table('assessment_answers AS ans')
-                ->joinSub($latestForm, 'lf', 'lf.latest_id', '=', 'ans.assessment_form_id')
-                ->where('lf.service_unit_id', $serviceUnitId)
-                ->selectRaw('SUM(ans.answer_bool=1) AS haves, SUM(ans.answer_bool=0) AS gaps')
-                ->first();
-
-            // --- ดึง form ล่าสุด + ข้อมูลองค์ประกอบและข้อเสนอ ---
-            $form = AssessmentForm::with([
-                'answers' => fn($q) => $q->whereHas('question.component'),
-                'answers.question.component',
-                'suggestions',
-            ])
-                ->where('service_unit_id', $serviceUnitId)
-                ->where('assess_year', $filterYear)
-                ->where('assess_round', $filterRound)
-                ->first();
-
-            $components = [];
-            if ($form) {
-                foreach ($form->answers as $ans) {
-                    $q = $ans->question;
-                    if (!$q || !$q->component) {
-                        continue;
-                    }
-
-                    $cmp = $q->component;
-                    $key = (int) $cmp->no;
-                    $components[$key] ??= [
-                        'name' => $cmp->name,
-                        'has'  => [],
-                        'gaps' => [],
-                    ];
-
-                    $label = ($q->code ? "{$q->code}) " : '') . $q->text;
-                    if ($ans->answer_bool) {
-                        $components[$key]['has'][] = $label;
-                    } else {
-                        $components[$key]['gaps'][] = $label;
-                    }
-                }
-                ksort($components);
-            }
-
-            // regions, filters
-            $regions      = HealthRegion::query()->orderBy('id')->get(['id', 'code', 'title', 'short_title']);
-            $levels       = array_keys($levelMap);
-            $affiliations = [
-                'สำนักงานปลัดกระทรวงสาธารณสุข', 'กรมควบคุมโรค', 'กรมการแพทย์', 'กรมสุขภาพจิต', 'สภากาชาดไทย',
-                'สำนักการแพทย์ กรุงเทพมหานคร', 'กระทรวงอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม', 'กระทรวงกลาโหม',
-                'องค์กรปกครองส่วนท้องถิ่น', 'องค์การมหาชน', 'เอกชน', 'อื่น ๆ',
-            ];
-
-            return view('backend.dashboard.unit', compact(
-                'regions', 'levels', 'affiliations',
-                'regionId', 'provinceCode', 'serviceUnitId',
-                'levelLabel', 'affiliation',
-                'filterYear', 'filterRound',
-                'provinces',
-                'unit', 'unitGaps', 'unitBool', 'components', 'form'
-            ));
-
-        }
-
-        // ===== โหมดภาพรวมเดิม =====
-        $applyGeoFilters = function ($q) use ($regionId, $provinceCode, $serviceUnitId) {
-            return $q
-                ->when($regionId, fn($qq) => $qq->where('p.health_region_id', $regionId))
-                ->when($provinceCode, fn($qq) => $qq->where('su.org_province_code', $provinceCode))
-                ->when($serviceUnitId, fn($qq) => $qq->where('su.id', $serviceUnitId));
-        };
+        // ---------- base with joins ----------
+        $applyGeoFilters = fn($q) => $this->applyGeoFilters($q, $regionId, $provinceCode, $serviceUnitId);
 
         $unitsBase = DB::table('service_units AS su')
             ->leftJoin('province AS p', 'p.code', '=', 'su.org_province_code')
@@ -356,5 +245,77 @@ class DashboardController extends Controller
             'notAssessed',
             'gapBasic', 'gapIntermediate', 'gapAdvanced'
         ));
+    }
+
+    /**
+     * Dashboard รายหน่วยบริการ => view('backend.dashboard.unit')
+     */
+    public function unit(Request $request, int $serviceUnitId)
+    {
+        // ---------- ปีงบประมาณและรอบ ----------
+        $filterYear  = (int) $request->input('year', fiscalYearCE());
+        $filterRound = (int) $request->input('round', fiscalRound());
+
+        // ---------- latest form / asul ----------
+        // หมายเหตุ: สร้าง subquery ไว้หากต้องใช้ต่อยอดในอนาคต
+        $latestForm = $this->buildLatestFormSubquery($filterYear, $filterRound);
+        $latestAsul = $this->buildLatestAsulSubquery($filterYear, $filterRound);
+
+        // ---------- ข้อมูลหน่วย ----------
+        // ดึงความสัมพันธ์เฉพาะปี/รอบที่เลือก และจำกัด 1 เรคคอร์ดล่าสุด
+        $unit = ServiceUnit::query()
+            ->with([
+                'province:code,title',
+                'district:code,title',
+                'subdistrict:code,title',
+                'assessmentForms'   => fn($q)   => $q
+                    ->where('assess_year', $filterYear)
+                    ->where('assess_round', $filterRound)
+                    ->latest('id')->limit(1),
+                'serviceUnitLevels' => fn($q) => $q
+                    ->where('assess_year', $filterYear)
+                    ->where('assess_round', $filterRound)
+                    ->latest('id')->limit(1),
+            ])
+            ->findOrFail($serviceUnitId);
+
+        // หมายเหตุสำคัญ:
+        // เดิมเคย setAttribute เช่น province_title, level, approval_status, asul_id, form_id
+        // ตอนนี้ “ย้ายไปคำนวณใน Blade” ทั้งหมด เพื่อให้ Controller บางและทดสอบง่ายขึ้น
+
+        return view('backend.dashboard.unit', compact(
+            'serviceUnitId',
+            'filterYear',
+            'filterRound',
+            'unit',
+        ));
+    }
+
+    // ====================== shared helpers ======================
+
+    private function buildLatestFormSubquery(int $year, int $round)
+    {
+        return DB::table('assessment_forms')
+            ->when($year, fn($q) => $q->where('assess_year', $year))
+            ->when($round, fn($q) => $q->where('assess_round', $round))
+            ->select('service_unit_id', DB::raw('MAX(id) AS latest_id'))
+            ->groupBy('service_unit_id');
+    }
+
+    private function buildLatestAsulSubquery(int $year, int $round)
+    {
+        return DB::table('assessment_service_unit_levels')
+            ->when($year, fn($q) => $q->where('assess_year', $year))
+            ->when($round, fn($q) => $q->where('assess_round', $round))
+            ->select('service_unit_id', DB::raw('MAX(id) AS latest_id'))
+            ->groupBy('service_unit_id');
+    }
+
+    private function applyGeoFilters($q, $regionId, $provinceCode, $serviceUnitId)
+    {
+        return $q
+            ->when($regionId, fn($qq) => $qq->where('p.health_region_id', $regionId))
+            ->when($provinceCode, fn($qq) => $qq->where('su.org_province_code', $provinceCode))
+            ->when($serviceUnitId, fn($qq) => $qq->where('su.id', $serviceUnitId));
     }
 }

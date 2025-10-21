@@ -9,170 +9,204 @@
 @section('content')
     @include('backend.dashboard._filter')
 
-    <div class="row g-3">
-        {{-- ===== ข้อมูลหน่วยบริการ (กว้างขึ้น) + การตั้งค่าการแสดงผลหน้าบ้าน (แคบลง) ===== --}}
-        <div class="row align-items-stretch g-3">
-            {{-- ข้อมูลหน่วยบริการ --}}
-            <div class="col-12 col-xl-8 d-flex">
-                <div class="card flex-fill h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="ph-duotone ph-hospital"></i> ข้อมูลหน่วยบริการ</span>
-                    </div>
-                    <div class="card-body">
-                        @php
-                            $summaryRow = (object) [
-                                'serviceUnit' => (object) ['org_name' => $unit->org_name],
-                                'level' => $unit->level,
-                                'assess_year' => (int) ($filterYear ?? fiscalYearCE()),
-                                'assess_round' => (int) ($filterRound ?? fiscalRound()),
-                            ];
-                            $yearBE = ($summaryRow->assess_year ?? date('Y')) + 543;
-                        @endphp
-                        @include('backend.self_assessment_service_unit_level._summary', [
-                            'row' => $summaryRow,
-                            'yearBE' => $yearBE,
-                            'form' => $form ?? null,
-                            'approvalStatus' => $unit->approval_status,
-                        ])
+    @php
+        /*
+        |--------------------------------------------------------------------------
+        | สรุปแนวคิด: ย้ายทุกอย่างที่เคย setAttribute ใน Controller มา “คำนวณที่นี่”
+        | - form_id    => มาจาก $form?->id
+        | - level      => มาจาก $asul?->level
+        | - approval_status => มาจาก $asul?->approval_status
+        | - asul_id    => มาจาก $asul?->id
+        | - province_title / district_title / subdistrict_title => จาก relation ที่ eager loaded
+        |--------------------------------------------------------------------------
+        */
 
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <div class="border rounded p-3 h-100">
-                                    <div class="mb-2"><strong>ชื่อหน่วย:</strong> {{ $unit->org_name ?? '-' }}</div>
-                                    <div class="mb-2">
-                                        <strong>สังกัด:</strong> {{ $unit->org_affiliation ?? '-' }}
-                                        @if (($unit->org_affiliation ?? '') === 'อื่น ๆ' && !empty($unit->org_affiliation_other))
-                                            ({{ $unit->org_affiliation_other }})
+        // ดึง 1 เรคคอร์ดล่าสุดของแบบประเมิน และระดับหน่วย จากความสัมพันธ์ที่โหลดมาแล้ว
+        $form = optional($unit->assessmentForms->first()); // แทน $unit->getAttribute('form_id')
+        $asul = optional($unit->serviceUnitLevels->first()); // แทน $unit->getAttribute('level', 'approval_status', 'asul_id')
+
+        // อ่านชื่อจังหวัด/อำเภอ/ตำบลจากความสัมพันธ์ (แทน province_title ฯลฯ)
+        $provinceTitle = $unit->province->title ?? null;
+        $districtTitle = $unit->district->title ?? null;
+        $subdistrictTitle = $unit->subdistrict->title ?? null;
+
+        // ค่าที่ใช้ในสรุปผลด้านบนการ์ด
+        $summaryRow = (object) [
+            'serviceUnit' => (object) ['org_name' => $unit->org_name],
+            'level' => $asul?->level, // เดิม $unit->level
+            'assess_year' => (int) ($filterYear ?? fiscalYearCE()),
+            'assess_round' => (int) ($filterRound ?? fiscalRound()),
+            // 'approval_status' ไม่ได้ใช้ใน _summary โดยตรง แต่ส่งผ่านแยกเป็น $approvalStatus ด้านล่าง
+        ];
+        $yearBE = ($summaryRow->assess_year ?? date('Y')) + 543;
+
+        // ใช้ซ้ำหลายจุด
+        $formId = $form?->id; // เดิม $unit->form_id
+        $levelCode = $asul?->level; // เดิม $unit->level
+        $approvalStatus = $asul?->approval_status; // เดิม $unit->approval_status
+        $asulId = $asul?->id; // เดิม $unit->asul_id
+    @endphp
+
+    {{-- ===== การ์ดหลัก: สรุปผลการประเมิน (เต็มกว้าง) + แถวซ้าย/ขวาในใบเดียวกัน ===== --}}
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card border-2 border-primary-subtle">
+                <div class="card-body p-3 p-lg-4">
+
+                    {{-- ===== สรุปผลการประเมิน (เต็มความกว้างบนสุด) ===== --}}
+                    @include('backend.self_assessment_service_unit_level._summary', [
+                        'row' => $summaryRow,
+                        'yearBE' => $yearBE,
+                        'form' => $form ?? null, // เปลี่ยนจากเดิมที่ส่ง $form ใน Controller
+                        'approvalStatus' => $approvalStatus, // เดิม $unit->approval_status
+                    ])
+
+                    <hr class="my-4">
+
+                    {{-- ===== แถวเดียวกัน: ซ้ายข้อมูลหน่วยบริการ + ขวาการตั้งค่าหน้าบ้าน ===== --}}
+                    <div class="row g-3 align-items-stretch">
+                        {{-- ซ้าย: ข้อมูลหน่วยบริการ --}}
+                        <div class="col-12 col-xl-8 d-flex">
+                            <div class="border rounded p-3 flex-fill h-100">
+                                <div class="mb-3 d-flex align-items-center gap-2">
+                                    <i class="ph-duotone ph-hospital"></i>
+                                    <span class="fw-semibold">ข้อมูลหน่วยบริการ</span>
+                                </div>
+
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="mb-2"><strong>ชื่อหน่วย:</strong> {{ $unit->org_name ?? '-' }}</div>
+                                        <div class="mb-2">
+                                            <strong>สังกัด:</strong> {{ $unit->org_affiliation ?? '-' }}
+                                            @if (($unit->org_affiliation ?? '') === 'อื่น ๆ' && !empty($unit->org_affiliation_other))
+                                                ({{ $unit->org_affiliation_other }})
+                                            @endif
+                                        </div>
+                                        <div class="mb-2"><strong>โทรศัพท์:</strong> {{ $unit->org_tel ?? '-' }}</div>
+                                        <div class="mb-2">
+                                            <strong>ที่อยู่:</strong>
+                                            <div>{{ $unit->org_address ?? '-' }}</div>
+                                            <div class="small text-muted">
+                                                จ.{{ $provinceTitle ?? '-' }}
+                                                อ.{{ $districtTitle ?? '-' }}
+                                                ต.{{ $subdistrictTitle ?? '-' }}
+                                                {{ $unit->org_postcode ?? '' }}
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <strong>พิกัด:</strong>
+                                            @if ($unit->org_lat && $unit->org_lng)
+                                                {{ $unit->org_lat }}, {{ $unit->org_lng }}
+                                                <a class="ms-2 small" target="_blank" href="https://www.google.com/maps?q={{ $unit->org_lat }},{{ $unit->org_lng }}">
+                                                    เปิดแผนที่
+                                                </a>
+                                            @else
+                                                -
+                                            @endif
+                                        </div>
+                                        @if ($unit->org_lat && $unit->org_lng)
+                                            <div id="unit-mini-map" class="rounded border" style="height:220px;"></div>
                                         @endif
                                     </div>
-                                    <div class="mb-2"><strong>โทรศัพท์:</strong> {{ $unit->org_tel ?? '-' }}</div>
-                                    <div class="mb-2">
-                                        <strong>ที่อยู่:</strong>
-                                        <div>{{ $unit->org_address ?? '-' }}</div>
-                                        <div class="small text-muted">
-                                            จ.{{ $unit->province_title ?? '-' }}
-                                            อ.{{ $unit->district_title ?? '-' }}
-                                            ต.{{ $unit->subdistrict_title ?? '-' }}
-                                            {{ $unit->org_postcode ?? '' }}
+
+                                    <div class="col-md-6">
+                                        <div class="mb-2"><strong>วัน-เวลาทำการ:</strong></div>
+                                        {!! renderWorkingHoursTable($unit->org_working_hours_json ?? null) !!}
+                                    </div>
+                                </div>
+
+                                <div class="map-wrap mt-3">
+                                    <div id="map"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- การตั้งค่าการแสดงผลหน้าบ้าน (แคบลง) --}}
+                        <div class="col-12 col-xl-4 d-flex">
+                            @php
+                                use App\Models\StHealthService;
+                                use App\Models\AssessmentServiceConfig;
+
+                                // เดิมอ่านจาก $unit->level และ $unit->asul_id ที่ setAttribute ใน Controller
+                                // ปรับมาอ่านจาก $levelCode และ $asulId ที่คำนวณด้านบนแทน
+                                $services = collect();
+                                if ($levelCode && $asulId) {
+                                    $base = StHealthService::active()->forLevel($levelCode)->orderBy('ordering')->orderBy('id')->get();
+                                    $pivot = AssessmentServiceConfig::where('assessment_service_unit_level_id', $asulId)->pluck('is_enabled', 'st_health_service_id');
+
+                                    $services = $base->map(function ($svc) use ($pivot) {
+                                        $svc->resolved_enabled = $pivot->has($svc->id) ? (bool) $pivot[$svc->id] : (bool) $svc->default_enabled;
+                                        return $svc;
+                                    });
+                                }
+
+                                $levelMap = [
+                                    'basic' => 'หน่วยบริการระดับพื้นฐาน',
+                                    'medium' => 'หน่วยบริการระดับกลาง',
+                                    'advanced' => 'หน่วยบริการระดับสูง',
+                                ];
+                                $cardTitle = $levelMap[$levelCode] ?? 'การตั้งค่าการแสดงผลหน้าบ้าน';
+
+                                // ใช้ URL จริงตั้งแต่ฝั่ง Blade
+                                $toggleUrl = $levelCode && $asulId ? route('backend.assessment-service-configs.services.toggle', $asulId) : null;
+                            @endphp
+
+                            @if ($levelCode && $asulId)
+                                <div class="border rounded p-3 flex-fill h-100 border-2 border-primary-subtle">
+                                    <div class="mb-3 d-flex align-items-center gap-2">
+                                        <i class="ph-duotone ph-sliders-horizontal"></i>
+                                        <span class="fw-semibold">{{ $cardTitle }}</span>
+                                    </div>
+
+                                    {{-- คำอธิบายการตั้งค่าบริการที่จะแสดงหน้าบ้าน --}}
+                                    <div class="alert alert-info py-2 d-flex align-items-start gap-2">
+                                        <i class="ph-duotone ph-info mt-1"></i>
+                                        <div>
+                                            โปรดเปิด–ปิดบริการให้ตรงกับงานที่หน่วยบริการดำเนินการจริง การตั้งค่านี้จะแสดงบนหน้าเว็บไซต์ของหน่วยบริการทันที
+                                            {{-- ตารางปลายทาง: assessment_service_configs (อัปเดตเมื่อสลับสวิตช์) --}}
                                         </div>
                                     </div>
-                                    <div class="mb-2">
-                                        <strong>พิกัด:</strong>
-                                        @if ($unit->org_lat && $unit->org_lng)
-                                            {{ $unit->org_lat }}, {{ $unit->org_lng }}
-                                            <a class="ms-2 small" target="_blank" href="https://www.google.com/maps?q={{ $unit->org_lat }},{{ $unit->org_lng }}">
-                                                เปิดแผนที่
-                                            </a>
-                                        @else
-                                            -
-                                        @endif
-                                    </div>
-                                    @if ($unit->org_lat && $unit->org_lng)
-                                        <div id="unit-mini-map" class="rounded border" style="height:220px;"></div>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="border rounded p-3 h-100">
-                                    <div class="mb-2"><strong>วัน-เวลาทำการ:</strong></div>
-                                    {!! renderWorkingHoursTable($unit->org_working_hours_json ?? null) !!}
-                                </div>
-                            </div>
-                        </div>
 
-                        <div class="map-wrap mt-3">
-                            <div id="map"></div>
+                                    <div class="row g-3">
+                                        @forelse($services as $svc)
+                                            <div class="col-12">
+                                                <div class="d-flex align-items-start gap-2">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input js-svc-toggle" type="checkbox" @checked($svc->resolved_enabled) data-url="{{ $toggleUrl }}" data-svc-id="{{ $svc->id }}">
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-semibold">{{ $svc->name }}</div>
+                                                        @if ($svc->description)
+                                                            <div class="small text-muted">{{ $svc->description }}</div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="col-12">
+                                                <div class="text-muted">ยังไม่มีการกำหนดบริการสำหรับระดับนี้</div>
+                                            </div>
+                                        @endforelse
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
+                    {{-- ===== จบแถวภายในการ์ดเดียวกัน ===== --}}
+
                 </div>
             </div>
-
-
-            {{-- การตั้งค่าการแสดงผลหน้าบ้าน (แคบลง) --}}
-            <div class="col-12 col-xl-4 d-flex">
-                @php
-                    use App\Models\StHealthService;
-                    use App\Models\AssessmentServiceConfig;
-
-                    // อ่านจาก $unit ที่ Controller ใส่ค่าไว้แล้ว
-                    $levelCode = $unit->level ?? null; // basic | medium | advanced
-                    $levelId = $unit->asul_id ?? null; // assessment_service_unit_levels.id
-
-                    $services = collect();
-                    if ($levelCode && $levelId) {
-                        $base = StHealthService::active()->forLevel($levelCode)->orderBy('ordering')->orderBy('id')->get();
-
-                        $pivot = AssessmentServiceConfig::where('assessment_service_unit_level_id', $levelId)->pluck('is_enabled', 'st_health_service_id');
-
-                        $services = $base->map(function ($svc) use ($pivot) {
-                            $svc->resolved_enabled = $pivot->has($svc->id) ? (bool) $pivot[$svc->id] : (bool) $svc->default_enabled;
-                            return $svc;
-                        });
-                    }
-
-                    $levelMap = [
-                        'basic' => 'หน่วยบริการระดับพื้นฐาน',
-                        'medium' => 'หน่วยบริการระดับกลาง',
-                        'advanced' => 'หน่วยบริการระดับสูง',
-                    ];
-                    $cardTitle = $levelMap[$levelCode] ?? 'การตั้งค่าการแสดงผลหน้าบ้าน';
-
-                    // ใช้ URL จริงตั้งแต่ฝั่ง Blade เพื่อตัดปัญหา GET
-                    $toggleUrl = $levelCode && $levelId ? route('backend.assessment-service-configs.services.toggle', $levelId) : null;
-                @endphp
-
-                @if ($levelCode && $levelId)
-                    <div class="card flex-fill h-100 border-2 border-primary-subtle">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="ph-duotone ph-sliders-horizontal me-1"></i> {{ $cardTitle }}</span>
-                        </div>
-                        <div class="card-body">
-                            {{-- คำอธิบายการตั้งค่าบริการที่จะแสดงหน้าบ้าน --}}
-                            <div class="alert alert-info py-2 small d-flex align-items-start gap-2">
-                                <i class="ph-duotone ph-info mt-1"></i>
-                                <div>
-                                    ปิด–เปิดบริการให้ตรงกับงานที่หน่วยงานให้บริการอยู่จริง การตั้งค่านี้จะถูกนำไปแสดงในหน้าเว็บไซต์ของหน่วยบริการทันที
-                                    {{-- และระบบจะบันทึกลงตาราง <code>assessment_service_configs</code> สำหรับระดับของหน่วยนี้โดยอัตโนมัติเมื่อสลับสวิตช์ --}}
-                                </div>
-                            </div>
-
-
-                            <div class="row g-3">
-                                @forelse($services as $svc)
-                                    <div class="col-12">
-                                        <div class="d-flex align-items-start gap-2">
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input js-svc-toggle" type="checkbox" @checked($svc->resolved_enabled) data-url="{{ $toggleUrl }}" data-svc-id="{{ $svc->id }}">
-                                            </div>
-                                            <div>
-                                                <div class="fw-semibold">{{ $svc->name }}</div>
-                                                @if ($svc->description)
-                                                    <div class="small text-muted">{{ $svc->description }}</div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="col-12">
-                                        <div class="text-muted">ยังไม่มีการกำหนดบริการสำหรับระดับนี้</div>
-                                    </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    </div>
-                @endif
-            </div>
         </div>
+    </div>
 
-
-
-        {{-- ===== เริ่มแถวใหม่: รายการ GAP ของหน่วยนี้ ===== --}}
-        {{-- <div class="col-12">
-            @php
-                $gaps = collect($unitGaps ?? [])->filter(fn($x) => (int) ($x->gap_count ?? 0) > 0);
-                $gapCount = $gaps->count();
-            @endphp
-
+    {{-- ===== เริ่มแถวใหม่: รายการ GAP ของหน่วยนี้ ===== --}}
+    {{-- @php
+        // เดิมเคยคอมเมนต์ปิดไว้ นำกลับมาใช้งาน
+        $gaps = collect($unitGaps ?? [])->filter(fn($x) => (int) ($x->gap_count ?? 0) > 0);
+        $gapCount = $gaps->count();
+    @endphp
+    <div class="row g-3">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>รายการ GAP ของหน่วยนี้</span>
@@ -188,27 +222,30 @@
                     </div>
                 </div>
             </div>
-        </div> --}}
+        </div>
+    </div> --}}
 
-        {{-- ===== ตารางองค์ประกอบ 1–6 + แผนพัฒนา ===== --}}
-        {{-- <div class="col-12">
+    {{-- ===== ตารางองค์ประกอบ 1–6 + แผนพัฒนา ===== --}}
+    {{-- <div class="row g-3">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header">องค์ประกอบของหน่วยบริการนี้</div>
                 <div class="card-body">
                     @include('backend.self_assessment_service_unit_level._summary_table', [
                         'components' => $components ?? [],
-                        'form' => $form ?? null,
-                        'row' => (object) ['id' => $unit->asul_id],
+                        'form'       => $form ?? null,         // ใช้ $form จากด้านบน (แทนเดิมที่ Controller set)
+                        'row'        => (object) ['id' => $asulId], // เดิม $unit->asul_id
                     ])
                 </div>
             </div>
-        </div> --}}
-    </div>
+        </div>
+    </div> --}}
 @endsection
 
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // แผนที่หลัก + mini map
             const lat = Number(@json($unit->org_lat ?? 0));
             const lng = Number(@json($unit->org_lng ?? 0));
             const hasCoord = isFinite(lat) && isFinite(lng) && (lat !== 0 || lng !== 0);
@@ -218,7 +255,6 @@
                 zoom: 6
             };
 
-            // แผนที่หลัก
             const map = L.map('map', {
                 scrollWheelZoom: false
             });
@@ -226,6 +262,7 @@
                 maxZoom: 19,
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
+
             if (hasCoord) {
                 L.marker([lat, lng]).addTo(map).bindPopup(@json($unit->org_name));
                 map.setView([lat, lng], 16);
@@ -234,7 +271,6 @@
             }
             setTimeout(() => map.invalidateSize(), 200);
 
-            // mini map
             const mini = document.getElementById('unit-mini-map');
             if (mini && hasCoord) {
                 const miniMap = L.map(mini, {
@@ -256,6 +292,7 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Toggle สวิตช์บริการหน้าบ้าน
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
             function toggleService(el) {
@@ -279,10 +316,7 @@
                         })
                     })
                     .then(async res => {
-                        if (!res.ok) {
-                            // 405 = method not allowed, 419 = csrf
-                            throw new Error('HTTP ' + res.status);
-                        }
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
                         return res.json();
                     })
                     .catch(err => {
