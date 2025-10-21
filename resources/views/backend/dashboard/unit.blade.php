@@ -10,62 +10,40 @@
     @include('backend.dashboard._filter')
 
     @php
-        /*
-        |--------------------------------------------------------------------------
-        | สรุปแนวคิด: ย้ายทุกอย่างที่เคย setAttribute ใน Controller มา “คำนวณที่นี่”
-        | - form_id    => มาจาก $form?->id
-        | - level      => มาจาก $asul?->level
-        | - approval_status => มาจาก $asul?->approval_status
-        | - asul_id    => มาจาก $asul?->id
-        | - province_title / district_title / subdistrict_title => จาก relation ที่ eager loaded
-        |--------------------------------------------------------------------------
-        */
+        $filterYear = (int) request('year');
+        $filterRound = (int) request('round');
 
-        // ดึง 1 เรคคอร์ดล่าสุดของแบบประเมิน และระดับหน่วย จากความสัมพันธ์ที่โหลดมาแล้ว
-        $form = optional($unit->assessmentForms->first()); // แทน $unit->getAttribute('form_id')
-        $asul = optional($unit->serviceUnitLevels->first()); // แทน $unit->getAttribute('level', 'approval_status', 'asul_id')
+        /** @var \App\Models\ServiceUnit $unit */
+        $asul = optional($unit->assessmentLevelFor($filterYear, $filterRound)->first());
 
-        // อ่านชื่อจังหวัด/อำเภอ/ตำบลจากความสัมพันธ์ (แทน province_title ฯลฯ)
         $provinceTitle = $unit->province->title ?? null;
         $districtTitle = $unit->district->title ?? null;
         $subdistrictTitle = $unit->subdistrict->title ?? null;
 
-        // ค่าที่ใช้ในสรุปผลด้านบนการ์ด
         $summaryRow = (object) [
             'serviceUnit' => (object) ['org_name' => $unit->org_name],
-            'level' => $asul?->level, // เดิม $unit->level
-            'assess_year' => (int) ($filterYear ?? fiscalYearCE()),
-            'assess_round' => (int) ($filterRound ?? fiscalRound()),
-            // 'approval_status' ไม่ได้ใช้ใน _summary โดยตรง แต่ส่งผ่านแยกเป็น $approvalStatus ด้านล่าง
+            'level' => $asul?->level,
+            'assess_year' => $filterYear,
+            'assess_round' => $filterRound,
+            'approval_status' => $asul?->approval_status,
         ];
-        $yearBE = ($summaryRow->assess_year ?? date('Y')) + 543;
 
-        // ใช้ซ้ำหลายจุด
-        $formId = $form?->id; // เดิม $unit->form_id
-        $levelCode = $asul?->level; // เดิม $unit->level
-        $approvalStatus = $asul?->approval_status; // เดิม $unit->approval_status
-        $asulId = $asul?->id; // เดิม $unit->asul_id
+        $levelCode = $asul?->level;
+        $asulId = $asul?->id;
     @endphp
 
-    {{-- ===== การ์ดหลัก: สรุปผลการประเมิน (เต็มกว้าง) + แถวซ้าย/ขวาในใบเดียวกัน ===== --}}
     <div class="row g-3">
         <div class="col-12">
             <div class="card border-2 border-primary-subtle">
                 <div class="card-body p-3 p-lg-4">
 
-                    {{-- ===== สรุปผลการประเมิน (เต็มความกว้างบนสุด) ===== --}}
-                    @include('backend.self_assessment_service_unit_level._summary', [
-                        'row' => $summaryRow,
-                        'yearBE' => $yearBE,
-                        'form' => $form ?? null, // เปลี่ยนจากเดิมที่ส่ง $form ใน Controller
-                        'approvalStatus' => $approvalStatus, // เดิม $unit->approval_status
-                    ])
+                    {{-- สรุปผลการประเมิน --}}
+                    @include('backend.self_assessment_service_unit_level._summary', ['row' => $summaryRow])
 
                     <hr class="my-4">
 
-                    {{-- ===== แถวเดียวกัน: ซ้ายข้อมูลหน่วยบริการ + ขวาการตั้งค่าหน้าบ้าน ===== --}}
                     <div class="row g-3 align-items-stretch">
-                        {{-- ซ้าย: ข้อมูลหน่วยบริการ --}}
+                        {{-- ซ้าย: ข้อมูลหน่วยบริการ (คอลัมน์เดียว) --}}
                         <div class="col-12 col-xl-8 d-flex">
                             <div class="border rounded p-3 flex-fill h-100">
                                 <div class="mb-3 d-flex align-items-center gap-2">
@@ -73,62 +51,52 @@
                                     <span class="fw-semibold">ข้อมูลหน่วยบริการ</span>
                                 </div>
 
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <div class="mb-2"><strong>ชื่อหน่วย:</strong> {{ $unit->org_name ?? '-' }}</div>
-                                        <div class="mb-2">
-                                            <strong>สังกัด:</strong> {{ $unit->org_affiliation ?? '-' }}
-                                            @if (($unit->org_affiliation ?? '') === 'อื่น ๆ' && !empty($unit->org_affiliation_other))
-                                                ({{ $unit->org_affiliation_other }})
-                                            @endif
-                                        </div>
-                                        <div class="mb-2"><strong>โทรศัพท์:</strong> {{ $unit->org_tel ?? '-' }}</div>
-                                        <div class="mb-2">
-                                            <strong>ที่อยู่:</strong>
-                                            <div>{{ $unit->org_address ?? '-' }}</div>
-                                            <div class="small text-muted">
-                                                จ.{{ $provinceTitle ?? '-' }}
-                                                อ.{{ $districtTitle ?? '-' }}
-                                                ต.{{ $subdistrictTitle ?? '-' }}
-                                                {{ $unit->org_postcode ?? '' }}
-                                            </div>
-                                        </div>
-                                        <div class="mb-2">
-                                            <strong>พิกัด:</strong>
-                                            @if ($unit->org_lat && $unit->org_lng)
-                                                {{ $unit->org_lat }}, {{ $unit->org_lng }}
-                                                <a class="ms-2 small" target="_blank" href="https://www.google.com/maps?q={{ $unit->org_lat }},{{ $unit->org_lng }}">
-                                                    เปิดแผนที่
-                                                </a>
-                                            @else
-                                                -
-                                            @endif
-                                        </div>
-                                        @if ($unit->org_lat && $unit->org_lng)
-                                            <div id="unit-mini-map" class="rounded border" style="height:220px;"></div>
-                                        @endif
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="mb-2"><strong>วัน-เวลาทำการ:</strong></div>
-                                        {!! renderWorkingHoursTable($unit->org_working_hours_json ?? null) !!}
+                                {{-- บล็อกรายละเอียดพื้นฐาน --}}
+                                <div class="mb-2"><strong>ชื่อหน่วย:</strong> {{ $unit->org_name ?? '-' }}</div>
+                                <div class="mb-2">
+                                    <strong>สังกัด:</strong> {{ $unit->org_affiliation ?? '-' }}
+                                    @if (($unit->org_affiliation ?? '') === 'อื่น ๆ' && !empty($unit->org_affiliation_other))
+                                        ({{ $unit->org_affiliation_other }})
+                                    @endif
+                                </div>
+                                <div class="mb-2"><strong>โทรศัพท์:</strong> {{ $unit->org_tel ?? '-' }}</div>
+                                <div class="mb-2">
+                                    <strong>ที่อยู่:</strong>
+                                    <div>{{ $unit->org_address ?? '-' }}</div>
+                                    <div class="small text-muted">
+                                        จ.{{ $provinceTitle ?? '-' }}
+                                        อ.{{ $districtTitle ?? '-' }}
+                                        ต.{{ $subdistrictTitle ?? '-' }}
+                                        {{ $unit->org_postcode ?? '' }}
                                     </div>
                                 </div>
-
-                                <div class="map-wrap mt-3">
-                                    <div id="map"></div>
+                                <div class="mb-3">
+                                    <strong>พิกัด:</strong>
+                                    @if ($unit->org_lat && $unit->org_lng)
+                                        {{ $unit->org_lat }}, {{ $unit->org_lng }}
+                                        <a class="ms-2 small" target="_blank" href="https://www.google.com/maps?q={{ $unit->org_lat }},{{ $unit->org_lng }}">เปิดแผนที่</a>
+                                    @else
+                                        -
+                                    @endif
                                 </div>
+
+                                {{-- แผนที่หลัก --}}
+                                <div class="rounded border position-relative mb-3">
+                                    <div id="map" style="height:300px;"></div>
+                                </div>
+
+                                {{-- วัน-เวลาทำการ: ย้ายมาต่อจากแผนที่ --}}
+                                <div class="mb-2"><strong>วัน-เวลาทำการ:</strong></div>
+                                {!! renderWorkingHoursTable($unit->org_working_hours_json ?? null) !!}
                             </div>
                         </div>
 
-                        {{-- การตั้งค่าการแสดงผลหน้าบ้าน (แคบลง) --}}
+                        {{-- ขวา: การตั้งค่าการแสดงผลหน้าบ้าน --}}
                         <div class="col-12 col-xl-4 d-flex">
                             @php
                                 use App\Models\StHealthService;
                                 use App\Models\AssessmentServiceConfig;
 
-                                // เดิมอ่านจาก $unit->level และ $unit->asul_id ที่ setAttribute ใน Controller
-                                // ปรับมาอ่านจาก $levelCode และ $asulId ที่คำนวณด้านบนแทน
                                 $services = collect();
                                 if ($levelCode && $asulId) {
                                     $base = StHealthService::active()->forLevel($levelCode)->orderBy('ordering')->orderBy('id')->get();
@@ -140,14 +108,11 @@
                                     });
                                 }
 
-                                $levelMap = [
-                                    'basic' => 'หน่วยบริการระดับพื้นฐาน',
-                                    'medium' => 'หน่วยบริการระดับกลาง',
-                                    'advanced' => 'หน่วยบริการระดับสูง',
-                                ];
-                                $cardTitle = $levelMap[$levelCode] ?? 'การตั้งค่าการแสดงผลหน้าบ้าน';
-
-                                // ใช้ URL จริงตั้งแต่ฝั่ง Blade
+                                $levelText = config('tmc.assessment.level_text', []);
+                                $cardTitle =
+                                    $levelCode && isset($levelText[$levelCode])
+                                        ? 'หน่วยบริการ' . $levelText[$levelCode] // ได้ "หน่วยบริการระดับพื้นฐาน/กลาง/สูง"
+                                        : 'การตั้งค่าการแสดงผลหน้าบ้าน';
                                 $toggleUrl = $levelCode && $asulId ? route('backend.assessment-service-configs.services.toggle', $asulId) : null;
                             @endphp
 
@@ -158,13 +123,9 @@
                                         <span class="fw-semibold">{{ $cardTitle }}</span>
                                     </div>
 
-                                    {{-- คำอธิบายการตั้งค่าบริการที่จะแสดงหน้าบ้าน --}}
                                     <div class="alert alert-info py-2 d-flex align-items-start gap-2">
                                         <i class="ph-duotone ph-info mt-1"></i>
-                                        <div>
-                                            โปรดเปิด–ปิดบริการให้ตรงกับงานที่หน่วยบริการดำเนินการจริง การตั้งค่านี้จะแสดงบนหน้าเว็บไซต์ของหน่วยบริการทันที
-                                            {{-- ตารางปลายทาง: assessment_service_configs (อัปเดตเมื่อสลับสวิตช์) --}}
-                                        </div>
+                                        <div>โปรดเปิด–ปิดบริการให้ตรงกับงานที่หน่วยบริการดำเนินการจริง การตั้งค่านี้จะแสดงบนหน้าเว็บไซต์ของหน่วยบริการทันที</div>
                                     </div>
 
                                     <div class="row g-3">
@@ -183,80 +144,76 @@
                                                 </div>
                                             </div>
                                         @empty
-                                            <div class="col-12">
-                                                <div class="text-muted">ยังไม่มีการกำหนดบริการสำหรับระดับนี้</div>
-                                            </div>
+                                            <div class="col-12 text-muted">ยังไม่มีการกำหนดบริการสำหรับระดับนี้</div>
                                         @endforelse
                                     </div>
                                 </div>
                             @endif
                         </div>
-                    </div>
-                    {{-- ===== จบแถวภายในการ์ดเดียวกัน ===== --}}
+                    </div>{{-- /row --}}
 
                 </div>
             </div>
         </div>
     </div>
-
-    {{-- ===== เริ่มแถวใหม่: รายการ GAP ของหน่วยนี้ ===== --}}
-    {{-- @php
-        // เดิมเคยคอมเมนต์ปิดไว้ นำกลับมาใช้งาน
-        $gaps = collect($unitGaps ?? [])->filter(fn($x) => (int) ($x->gap_count ?? 0) > 0);
-        $gapCount = $gaps->count();
-    @endphp
-    <div class="row g-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>รายการ GAP ของหน่วยนี้</span>
-                    <span class="badge bg-danger-subtle text-danger fw-semibold">{{ $gapCount }}</span>
-                </div>
-                <div class="card-body">
-                    <div class="list-group">
-                        @forelse ($gaps as $g)
-                            <div class="list-group-item">{{ $g->gap_label }}</div>
-                        @empty
-                            <div class="text-muted">ไม่มี GAP</div>
-                        @endforelse
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div> --}}
-
-    {{-- ===== ตารางองค์ประกอบ 1–6 + แผนพัฒนา ===== --}}
-    {{-- <div class="row g-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">องค์ประกอบของหน่วยบริการนี้</div>
-                <div class="card-body">
-                    @include('backend.self_assessment_service_unit_level._summary_table', [
-                        'components' => $components ?? [],
-                        'form'       => $form ?? null,         // ใช้ $form จากด้านบน (แทนเดิมที่ Controller set)
-                        'row'        => (object) ['id' => $asulId], // เดิม $unit->asul_id
-                    ])
-                </div>
-            </div>
-        </div>
-    </div> --}}
 @endsection
 
+@push('styles')
+    {{-- Leaflet CSS --}}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <style>
+        #map.is-fullscreen {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 1060 !important;
+            border-radius: 0 !important
+        }
+
+        body.map-fs-hide-scroll {
+            overflow: hidden
+        }
+
+        .leaflet-control-fullscreen {
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, .15);
+            border-radius: .375rem;
+            box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .08);
+            overflow: hidden
+        }
+
+        .leaflet-control-fullscreen a {
+            display: block;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            text-align: center;
+            color: #212529;
+            text-decoration: none
+        }
+
+        .leaflet-control-fullscreen a:hover {
+            background: rgba(13, 110, 253, .08);
+            color: #0d6efd
+        }
+    </style>
+@endpush
+
 @push('scripts')
+    {{-- Leaflet JS --}}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // แผนที่หลัก + mini map
             const lat = Number(@json($unit->org_lat ?? 0));
             const lng = Number(@json($unit->org_lng ?? 0));
             const hasCoord = isFinite(lat) && isFinite(lng) && (lat !== 0 || lng !== 0);
-            const fallback = {
-                lat: 13.7563,
-                lng: 100.5018,
-                zoom: 6
-            };
 
-            const map = L.map('map', {
-                scrollWheelZoom: false
+            const mapEl = document.getElementById('map');
+            const map = L.map(mapEl, {
+                zoomControl: true,
+                scrollWheelZoom: true
             });
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -265,34 +222,99 @@
 
             if (hasCoord) {
                 L.marker([lat, lng]).addTo(map).bindPopup(@json($unit->org_name));
-                map.setView([lat, lng], 16);
+                map.setView([lat, lng], 15);
             } else {
-                map.setView([fallback.lat, fallback.lng], fallback.zoom);
+                map.setView([13.7563, 100.5018], 6);
             }
             setTimeout(() => map.invalidateSize(), 200);
 
-            const mini = document.getElementById('unit-mini-map');
-            if (mini && hasCoord) {
-                const miniMap = L.map(mini, {
-                    scrollWheelZoom: false,
-                    zoomControl: true
-                });
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap contributors'
-                }).addTo(miniMap);
-                L.marker([lat, lng]).addTo(miniMap);
-                miniMap.setView([lat, lng], 14);
-                setTimeout(() => miniMap.invalidateSize(), 300);
+            const FullscreenControl = L.Control.extend({
+                options: {
+                    position: 'topleft',
+                    titleEnter: 'แสดงเต็มจอ (F)',
+                    titleExit: 'ออกจากเต็มจอ (Esc)'
+                },
+                onAdd: function(m) {
+                    const box = L.DomUtil.create('div', 'leaflet-control-fullscreen');
+                    const link = L.DomUtil.create('a', '', box);
+                    link.href = '#';
+                    link.innerHTML = '⛶';
+                    link.title = this._isFs() ? this.options.titleExit : this.options.titleEnter;
+
+                    L.DomEvent.disableClickPropagation(box);
+                    L.DomEvent.on(link, 'click', e => {
+                        L.DomEvent.preventDefault(e);
+                        toggleFs();
+                    });
+
+                    L.DomEvent.on(document, 'keydown', e => {
+                        if (e.key.toLowerCase() === 'f' && document.activeElement === document.body) {
+                            e.preventDefault();
+                            toggleFs();
+                        }
+                    });
+
+                    document.addEventListener('fullscreenchange', updateUi);
+                    document.addEventListener('webkitfullscreenchange', updateUi);
+
+                    function updateUi() {
+                        const fs = isFsApiOn();
+                        link.innerHTML = fs ? '🗗' : '⛶';
+                        link.title = fs ? 'ออกจากเต็มจอ (Esc)' : 'แสดงเต็มจอ (F)';
+                        setTimeout(() => m.invalidateSize(), 200);
+                    }
+                    return box;
+                },
+                _isFs: function() {
+                    return isFsApiOn() || mapEl.classList.contains('is-fullscreen');
+                }
+            });
+            map.addControl(new FullscreenControl());
+
+            function isFsApiOn() {
+                return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
             }
+
+            function requestFs(el) {
+                return (el.requestFullscreen?.call(el) || el.webkitRequestFullscreen?.call(el) || el.msRequestFullscreen?.call(el));
+            }
+
+            function exitFs() {
+                return (document.exitFullscreen?.call(document) || document.webkitExitFullscreen?.call(document) || document.msExitFullscreen?.call(document));
+            }
+
+            function toggleFs() {
+                if (isFsApiOn() || mapEl.classList.contains('is-fullscreen')) {
+                    if (isFsApiOn()) exitFs();
+                    mapEl.classList.remove('is-fullscreen');
+                    document.body.classList.remove('map-fs-hide-scroll');
+                    setTimeout(() => map.invalidateSize(), 200);
+                } else {
+                    const ok = requestFs(mapEl);
+                    if (ok === undefined) {
+                        mapEl.classList.add('is-fullscreen');
+                        document.body.classList.add('map-fs-hide-scroll');
+                        setTimeout(() => map.invalidateSize(), 200);
+                    }
+                }
+            }
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && mapEl.classList.contains('is-fullscreen')) {
+                    mapEl.classList.remove('is-fullscreen');
+                    document.body.classList.remove('map-fs-hide-scroll');
+                    setTimeout(() => map.invalidateSize(), 200);
+                }
+            });
+            window.addEventListener('resize', () => setTimeout(() => map.invalidateSize(), 200));
         });
     </script>
 @endpush
 
 @push('scripts')
+    {{-- Toggle service --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Toggle สวิตช์บริการหน้าบ้าน
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
             function toggleService(el) {
@@ -320,7 +342,7 @@
                         return res.json();
                     })
                     .catch(err => {
-                        el.checked = !enabled; // rollback
+                        el.checked = !enabled;
                         alert('บันทึกไม่สำเร็จ กรุณาลองใหม่');
                         console.error(err);
                     })

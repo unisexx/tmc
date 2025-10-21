@@ -34,9 +34,10 @@ class ServiceUnit extends Model
 
     protected $casts = [
         'org_working_hours_json' => 'array',
+        'org_lat'                => 'float',
+        'org_lng'                => 'float',
     ];
 
-    // ให้พร้อมใช้งานเป็น attribute ใน array/json
     protected $appends = [
         'province_title',
         'district_title',
@@ -44,7 +45,7 @@ class ServiceUnit extends Model
         'geo_titles',
     ];
 
-    /** หน่วยบริการ ↔ ผู้ใช้ (ผ่าน service_unit_users) */
+    /* ===== ความสัมพันธ์ผู้ใช้ ===== */
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'service_unit_users')
@@ -52,7 +53,7 @@ class ServiceUnit extends Model
             ->withTimestamps();
     }
 
-    // จังหวัด/อำเภอ/ตำบล
+    /* ===== จังหวัด/อำเภอ/ตำบล ===== */
     public function province()
     {return $this->belongsTo(Province::class, 'org_province_code', 'code');}
     public function district()
@@ -60,7 +61,6 @@ class ServiceUnit extends Model
     public function subdistrict()
     {return $this->belongsTo(Subdistrict::class, 'org_subdistrict_code', 'code');}
 
-    // Accessors ชื่อพื้นที่
     public function getProvinceTitleAttribute(): ?string
     {return $this->province->title ?? null;}
     public function getDistrictTitleAttribute(): ?string
@@ -77,29 +77,22 @@ class ServiceUnit extends Model
         ])->filter()->implode(' / ');
     }
 
-    /* =========================
-     * ความสัมพันธ์ผลประเมิน
-     * ========================= */
-
-    /** แบบฟอร์มประเมิน 6 องค์ประกอบ ทั้งหมดของหน่วย */
+    /* ===== ผลประเมิน ===== */
     public function assessmentForms(): HasMany
     {
         return $this->hasMany(AssessmentForm::class, 'service_unit_id');
     }
 
-    /** ระดับหน่วยบริการ (ASUL) ทั้งหมดของหน่วย */
     public function assessmentLevels(): HasMany
     {
         return $this->hasMany(AssessmentServiceUnitLevel::class, 'service_unit_id');
     }
 
-    /** alias: ให้เรียกชื่อสอดคล้องกับที่ controller ใช้ */
     public function serviceUnitLevels(): HasMany
     {
         return $this->hasMany(AssessmentServiceUnitLevel::class, 'service_unit_id');
     }
 
-    /** ระบุปีงบ + รอบที่ต้องการ (assess_year/assess_round) */
     public function assessmentLevelFor(int $fiscalYear, int $round): HasOne
     {
         return $this->hasOne(AssessmentServiceUnitLevel::class, 'service_unit_id')
@@ -107,13 +100,11 @@ class ServiceUnit extends Model
             ->where('assess_round', $round);
     }
 
-    /** รอบ–ปีงบปัจจุบัน */
     public function assessmentLevelCurrent(): HasOne
     {
         return $this->assessmentLevelFor(fiscalYearCE(), fiscalRound());
     }
 
-    /** รอบประเมินล่าสุด */
     public function assessmentLevelLatest(): HasOne
     {
         return $this->hasOne(AssessmentServiceUnitLevel::class, 'service_unit_id')
@@ -123,7 +114,6 @@ class ServiceUnit extends Model
             ]);
     }
 
-    /** รอบประเมินที่ “อนุมัติแล้ว” ล่าสุด */
     public function assessmentLevelApprovedLatest(): HasOne
     {
         return $this->hasOne(AssessmentServiceUnitLevel::class, 'service_unit_id')
@@ -134,7 +124,6 @@ class ServiceUnit extends Model
             ]);
     }
 
-    /** รอบ–ปีงบปัจจุบันที่ “อนุมัติแล้ว” */
     public function assessmentLevelApprovedCurrent(): HasOne
     {
         return $this->hasOne(AssessmentServiceUnitLevel::class, 'service_unit_id')

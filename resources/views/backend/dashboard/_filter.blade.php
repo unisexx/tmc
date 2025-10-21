@@ -42,7 +42,7 @@
             <div class="col-12 col-sm-6 col-lg-auto">
                 <div class="input-group w-100">
                     <span class="input-group-text">ปีงบประมาณ</span>
-                    <select name="year" class="form-select">
+                    <select id="filter-year" name="year" class="form-select">
                         @foreach ($yearOpts as $y)
                             <option value="{{ $y['ce'] }}" @selected($filterYear === (int) $y['ce'])>
                                 {{ $y['be'] }}
@@ -56,7 +56,7 @@
             <div class="col-12 col-sm-6 col-lg-auto">
                 <div class="input-group w-100">
                     <span class="input-group-text">รอบ</span>
-                    <select name="round" class="form-select">
+                    <select id="filter-round" name="round" class="form-select">
                         <option value="1" @selected($filterRound === 1)>รอบที่ 1 (ต.ค. – มี.ค.)</option>
                         <option value="2" @selected($filterRound === 2)>รอบที่ 2 (เม.ย. – ก.ย.)</option>
                     </select>
@@ -145,29 +145,90 @@
     </div>
 </form>
 
-@push('styles')
-    <style>
-        .filter-bar .input-group>.form-select {
-            min-width: 0;
-        }
-
-        @media (max-width: 576.98px) {
-
-            .filter-bar .input-group-text,
-            .filter-bar .form-select {
-                font-size: .875rem;
-            }
-        }
-    </style>
-@endpush
-
 @push('scripts')
     <script>
         (function() {
-            const regionEl = document.getElementById('filter-region');
-            const provEl = document.getElementById('filter-province');
-            const unitEl = document.getElementById('filter-service-unit');
+            // ====== ตัวแปร dropdown ======
+            const yearEl = document.getElementById('filter-year'); // ปีงบประมาณ
+            const roundEl = document.getElementById('filter-round'); // รอบ
+            const regionEl = document.getElementById('filter-region'); // สคร.
+            const provEl = document.getElementById('filter-province'); // จังหวัด
+            const unitEl = document.getElementById('filter-service-unit'); // หน่วยบริการ
 
+            // ====== ค่าปัจจุบันจากเซิร์ฟเวอร์ ======
+            const CURRENT_FY_CE = {{ (int) fiscalYearCE() }}; // ปีงบประมาณปัจจุบัน (ค.ศ.)
+            const CURRENT_MONTH = {{ (int) now()->month }}; // เดือนปัจจุบัน 1-12
+            const SELECTED_ROUND = parseInt(roundEl?.value || '{{ (int) $filterRound }}', 10) || 1;
+
+            // ====== ช่วยสร้าง option ใน <select> ======
+            function setOptions(selectEl, items, placeholder = null) {
+                const frag = document.createDocumentFragment();
+                if (placeholder !== null) {
+                    const first = document.createElement('option');
+                    first.value = '';
+                    first.textContent = placeholder;
+                    frag.appendChild(first);
+                }
+                items.forEach(({
+                    value,
+                    text,
+                    selected
+                }) => {
+                    const o = document.createElement('option');
+                    o.value = value;
+                    o.textContent = text;
+                    if (selected) o.selected = true;
+                    frag.appendChild(o);
+                });
+                selectEl.replaceChildren(frag);
+            }
+
+            // ====== ตรรกะจำนวนรอบตามปีที่เลือก ======
+            // ปีที่ผ่านมา (< CURRENT_FY_CE) => มี 2 รอบ
+            // ปีปัจจุบัน (=== CURRENT_FY_CE) => ถ้าเดือน 10-3 มี 1 รอบ, ถ้า 4-9 มี 2 รอบ
+            function roundsAvailableFor(yearCE) {
+                if (yearCE < CURRENT_FY_CE) return 2;
+                if (yearCE > CURRENT_FY_CE) return 0; // เผื่ออนาคต (ปกติไม่มีให้เลือก)
+                const inRound1 = (CURRENT_MONTH >= 10 || CURRENT_MONTH <= 3);
+                return inRound1 ? 1 : 2;
+            }
+
+            // ====== เติมรอบตามปีที่เลือก พร้อมรักษาค่าที่เคยเลือกถ้าอยู่ในช่วงที่ใช้ได้ ======
+            function rebuildRoundOptions() {
+                const yearCE = parseInt(yearEl?.value || CURRENT_FY_CE, 10);
+                const count = roundsAvailableFor(yearCE);
+
+                // ถ้าไม่มีรอบให้เลือก (อนาคต) ให้ใส่ placeholder และ disabled
+                if (count === 0) {
+                    setOptions(roundEl, [], 'ไม่มีรอบให้เลือก');
+                    roundEl.disabled = true;
+                    return;
+                }
+
+                roundEl.disabled = false;
+
+                const opts = [];
+                const keep = parseInt(roundEl.value || SELECTED_ROUND, 10);
+                const chosen = (keep >= 1 && keep <= count) ? keep : count; // ถ้า keep หลุดช่วง ให้ชี้ตัวเลือกสูงสุดที่มี
+
+                if (count >= 1) {
+                    opts.push({
+                        value: '1',
+                        text: 'รอบที่ 1 (ต.ค. – มี.ค.)',
+                        selected: chosen === 1
+                    });
+                }
+                if (count >= 2) {
+                    opts.push({
+                        value: '2',
+                        text: 'รอบที่ 2 (เม.ย. – ก.ย.)',
+                        selected: chosen === 2
+                    });
+                }
+                setOptions(roundEl, opts);
+            }
+
+            // ====== ส่วน chain-select เดิม: สคร. -> จังหวัด -> หน่วยบริการ ======
             const selProv = provEl?.dataset.selected || '';
             const selUnit = unitEl?.dataset.selected || '';
 
@@ -243,6 +304,13 @@
                 }
             }
 
+            // ====== events ======
+            // เปลี่ยนปีงบประมาณ → คำนวณจำนวนรอบ แล้ว rebuild รอบ
+            yearEl?.addEventListener('change', () => {
+                rebuildRoundOptions();
+            });
+
+            // เปลี่ยนเขต → โหลดจังหวัดและหน่วยบริการใหม่
             regionEl?.addEventListener('change', async e => {
                 const rid = e.target.value || 'all';
                 await loadProvinces(rid, false);
@@ -250,13 +318,19 @@
                 await loadServiceUnits(pcode, rid, false);
             });
 
+            // เปลี่ยนจังหวัด → โหลดหน่วยบริการใหม่
             provEl?.addEventListener('change', async e => {
                 const pcode = e.target.value || 'all';
                 const rid = regionEl?.value || 'all';
                 await loadServiceUnits(pcode, rid, false);
             });
 
+            // ====== init ======
             (async function init() {
+                // ตั้งค่ารอบตามปีเริ่มต้น
+                rebuildRoundOptions();
+
+                // โหลดจังหวัดและหน่วยบริการตามค่าเดิม
                 const rid = regionEl?.value || 'all';
                 await loadProvinces(rid, true);
                 const pcode = provEl?.value || 'all';

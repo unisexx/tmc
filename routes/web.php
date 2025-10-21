@@ -72,7 +72,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('backend')->name('backend.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'overview'])->name('dashboard');
-        Route::get('/dashboard/unit/{serviceUnitId}', [DashboardController::class, 'unit'])->name('dashboard.unit');
+        Route::get('/dashboard/unit', [DashboardController::class, 'unit'])->name('dashboard.unit');
 
         // สถิติการเข้าเว็บ
         Route::get('/stat', [StatController::class, 'index'])->name('stat');
