@@ -4,8 +4,9 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\HealthRegion;
+use App\Models\AssessmentServiceConfig;
 use App\Models\ServiceUnit;
+use App\Models\StHealthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,9 +20,6 @@ class DashboardController extends Controller
         return $this->overview($request);
     }
 
-    /**
-     * ภาพรวมทั้งหมด => view('backend.dashboard.index')
-     */
     public function overview(Request $request)
     {
         if ($serviceUnitId = $request->get('service_unit_id')) {
@@ -34,27 +32,89 @@ class DashboardController extends Controller
         $filterRegion       = (int) $request->input('region');
         $filterProvinceCode = $request->input('province_code');
 
-        $serviceUnits = ServiceUnit::with([
-            'assessmentLevels' => fn($q) => $q
-                ->when($filterYear, fn($qq) => $qq->where('assess_year', $filterYear))
-                ->when($filterRound, fn($qq) => $qq->where('assess_round', $filterRound))
-                ->select('id', 'service_unit_id', 'assess_year', 'assess_round', 'level', 'approval_status'),
-            'province:code,title,health_region_id',
-        ])
+        $mapLevel = fn($v) => match (strtolower((string) $v)) {
+            'พื้นฐาน', 'ระดับพื้นฐาน', 'basic' => 'basic',
+            'กลาง', 'ระดับกลาง', 'medium'      => 'medium',
+            'สูง', 'ระดับสูง', 'advanced'      => 'advanced',
+            default => null,
+        };
+        $prefer = ['advanced', 'medium', 'basic'];
+
+        $serviceUnits = ServiceUnit::query()
+            ->with([
+                'assessmentLevels' => function ($q) use ($filterYear, $filterRound) {
+                    $q->when($filterYear, fn($qq) => $qq->where('assess_year', $filterYear))
+                        ->when($filterRound, fn($qq) => $qq->where('assess_round', $filterRound))
+                        ->where('approval_status', 'approved')
+                        ->select('id', 'service_unit_id', 'assess_year', 'assess_round', 'level', 'approval_status');
+                },
+                'province:code,title,health_region_id',
+                'district:code,title',
+                'subdistrict:code,title',
+            ])
             ->when($filterProvinceCode, fn($q) => $q->where('org_province_code', $filterProvinceCode))
             ->when($filterRegion, fn($q) => $q->whereHas('province', fn($qq) => $qq->where('health_region_id', $filterRegion)))
-        // ต้องมี lat/lng สำหรับแผนที่
             ->get([
-                'id',
-                'org_name',
-                'org_province_code',
-                'org_district_code',
-                'org_subdistrict_code',
-                'org_lat',
-                'org_lng',
+                'id', 'org_name', 'org_address', 'org_tel', 'org_email',
+                'org_province_code', 'org_district_code', 'org_subdistrict_code',
+                'org_lat', 'org_lng',
             ]);
 
-        return view('backend.dashboard.index', compact('serviceUnits'));
+        // เลือกระดับที่สูงสุดและ asul_id ต่อหน่วย
+        $bestByUnit = $serviceUnits->mapWithKeys(function ($su) use ($mapLevel, $prefer) {
+            $approved = collect($su->assessmentLevels)
+                ->map(fn($a) => ['id' => $a->id, 'key' => $mapLevel($a->level)])
+                ->filter(fn($x) => $x['key']);
+
+            foreach ($prefer as $k) {
+                $row = $approved->firstWhere('key', $k);
+                if ($row) {
+                    return [$su->id => $row];
+                }
+                // ['id'=>asul_id,'key'=>basic|medium|advanced]
+            }
+            return [$su->id => ['id' => null, 'key' => null]];
+        });
+
+        // บริการพื้นฐานตามระดับ
+        $servicesByLevel = StHealthService::query()
+            ->active()
+            ->orderBy('ordering')
+            ->get(['id', 'name', 'level_code'])
+            ->groupBy('level_code'); // basic|medium|advanced => collection
+
+        // ค่าปิด/เปิดเฉพาะหน่วย
+        $asulIds = $bestByUnit->pluck('id')->filter()->values();
+        $configs = AssessmentServiceConfig::query()
+            ->whereIn('assessment_service_unit_level_id', $asulIds)
+            ->get(['assessment_service_unit_level_id', 'st_health_service_id', 'is_enabled'])
+            ->groupBy('assessment_service_unit_level_id');
+
+        // สร้างรายชื่อบริการหลัง apply config: is_enabled = 0 ตัดทิ้ง, ถ้าไม่มี config ใช้ตาม st_health_services
+        $servicesByUnit = $bestByUnit->map(function ($best) use ($servicesByLevel, $configs) {
+            if (!$best['key']) {
+                return collect();
+            }
+            // ไม่มีอนุมัติ
+            $base = collect($servicesByLevel->get($best['key']) ?? []);
+            $map  = collect($configs->get($best['id']) ?? [])
+                ->keyBy('st_health_service_id')
+                ->map->is_enabled;
+
+            return $base->filter(function ($svc) use ($map) {
+                return $map->has($svc->id) ? (bool) $map->get($svc->id) : true; // ไม่มี config => แสดง
+            })->values()->pluck('name');
+        });
+
+        // โครงระดับที่อนุมัติ ใช้สำหรับสีหมุด
+        $approvedByUnit = $serviceUnits->mapWithKeys(function ($su) use ($mapLevel) {
+            $levels = collect($su->assessmentLevels)
+                ->map(fn($a) => $mapLevel($a->level))
+                ->filter()->unique()->values();
+            return [$su->id => ['levels' => $levels]];
+        });
+
+        return view('backend.dashboard.index', compact('serviceUnits', 'approvedByUnit', 'bestByUnit', 'servicesByUnit'));
     }
 
     // public function overview(Request $request)

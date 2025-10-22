@@ -319,52 +319,60 @@
         </div>
     </div>
 
+    {{-- ====== MAP: หน่วยบริการทั่วประเทศ (Leaflet) ====== --}}
     @php
-        // ===== MAP: หน่วยบริการทั่วประเทศ (Leaflet) =====
+        $LEVEL_TEXTS = ['basic' => 'พื้นฐาน', 'medium' => 'กลาง', 'advanced' => 'สูง', 'unassessed' => 'ยังไม่ได้ประเมิน'];
 
-        // เลือกระดับที่สูงสุดจากรายการ approved ของแต่ละหน่วย
         $prefer = ['advanced', 'medium', 'basic'];
         $pickLevel = function ($unitId) use ($approvedByUnit, $prefer) {
             $lvCol = collect(data_get($approvedByUnit, "{$unitId}.levels", collect()));
             foreach ($prefer as $k) {
                 if ($lvCol->contains($k)) {
-                    return $k; // advanced > medium > basic
+                    return $k;
                 }
             }
-            return 'unassessed'; // ✅ ถ้าไม่มี approved level ใดเลย
+            return 'unassessed';
         };
 
-        // map ข้อความและสี
-        $LEVEL_TEXTS = ['basic' => 'พื้นฐาน', 'medium' => 'กลาง', 'advanced' => 'สูง', 'unassessed' => 'ยังไม่ได้ประเมิน'];
-        $LEVEL_COLORS = ['basic' => '#ef83c2', 'medium' => '#f0c419', 'advanced' => '#0dcc93', 'unassessed' => '#9aa0a6'];
-
-        // เตรียมข้อมูลสำหรับ JS
         $facilities = $serviceUnits
-            ->map(function ($su) use ($pickLevel, $LEVEL_TEXTS) {
+            ->map(function ($su) use ($pickLevel, $LEVEL_TEXTS, $bestByUnit, $servicesByUnit) {
                 $key = $pickLevel($su->id);
+                $approved = data_get($bestByUnit, "{$su->id}.key") !== null;
+                $svcList = collect($servicesByUnit->get($su->id) ?? collect())
+                    ->values()
+                    ->all();
+
                 return [
                     'id' => (int) $su->id,
                     'name' => (string) $su->org_name,
+                    'address' => (string) $su->org_address,
+                    'provinceCode' => (string) $su->org_province_code,
+                    'districtCode' => (string) $su->org_district_code,
+                    'subdistrictCode' => (string) $su->org_subdistrict_code,
                     'province' => (string) optional($su->province)->title,
+                    'district' => (string) optional($su->district)->title,
+                    'subdistrict' => (string) optional($su->subdistrict)->title,
                     'lat' => $su->org_lat !== null ? (float) $su->org_lat : null,
                     'lon' => $su->org_lng !== null ? (float) $su->org_lng : null,
                     'phone' => (string) $su->org_tel,
-                    'address' => (string) $su->org_address,
-                    'levelKey' => $key, // basic|medium|advanced|unassessed
+                    'email' => (string) ($su->org_email ?? ''),
+                    'levelKey' => $key,
                     'levelText' => $LEVEL_TEXTS[$key] ?? 'ยังไม่ได้ประเมิน',
+                    'approved' => (bool) $approved,
+                    'services' => $svcList, // array ของชื่อบริการที่ผ่านเงื่อนไข
                 ];
             })
             ->values()
             ->all();
     @endphp
 
+
     <div class="card">
         <div class="card-header d-flex align-items-center justify-content-between">
             <div><i class="ph-duotone ph-map-pin"></i> <span class="ms-1">แผนที่หน่วยบริการสุขภาพผู้เดินทาง</span></div>
-            <div class="small text-muted">สีหมุดและป้ายเหมือนหน้าบ้าน • หมุดเท่า = ยังไม่ได้ประเมิน</div>
         </div>
         <div class="card-body p-0">
-            <div id="tmc-map" style="height:520px;"></div>
+            <div id="tmc-map" style="height:560px;"></div>
         </div>
     </div>
 
@@ -373,24 +381,25 @@
         <link rel="stylesheet" href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css">
         <style>
             #tmc-map {
-                height: 560px
+                height: 560px;
             }
 
+            /* ===== ป้ายชื่อหมุด ===== */
             .flabel {
                 --c: #0d6efd;
                 position: relative;
                 display: inline-flex;
                 align-items: center;
                 gap: .5rem;
-                background: color-mix(in srgb, var(--c) 18%, white);
-                border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+                background: color-mix(in srgb, var(--c)18%, white);
+                border: 1px solid color-mix(in srgb, var(--c)45%, transparent);
                 color: #0b2e13;
                 padding: .35rem .75rem;
                 border-radius: 999px;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
                 white-space: nowrap;
                 font-size: .9rem;
-                line-height: 1
+                line-height: 1;
             }
 
             .flabel:before {
@@ -401,7 +410,7 @@
                 transform: translateY(-50%);
                 border-top: 7px solid transparent;
                 border-bottom: 7px solid transparent;
-                border-right: 10px solid color-mix(in srgb, var(--c) 45%, transparent)
+                border-right: 10px solid color-mix(in srgb, var(--c)45%, transparent);
             }
 
             .flabel .dot {
@@ -409,29 +418,20 @@
                 height: .66rem;
                 border-radius: 4px;
                 background: var(--c);
-                box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08)
+                box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
             }
 
             .flabel .name {
-                font-weight: 600
-            }
-
-            .flabel .level {
                 font-weight: 600;
-                font-size: .78rem;
-                padding: .15rem .45rem;
-                border-radius: .5rem;
-                background: color-mix(in srgb, var(--c) 12%, transparent);
-                border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
-                color: #222
             }
 
+            /* ===== แผงรายชื่อหน่วยบริการ ===== */
             .facility-label {
-                transition: opacity .2s ease
+                transition: opacity .2s ease;
             }
 
             .opacity-0 {
-                opacity: 0
+                opacity: 0;
             }
 
             .tmc-list {
@@ -440,7 +440,7 @@
                 background: #fff;
                 border-radius: 12px;
                 box-shadow: 0 10px 30px rgba(0, 0, 0, .12);
-                overflow: hidden
+                overflow: hidden;
             }
 
             .tmc-list .hdr {
@@ -449,7 +449,7 @@
                 gap: .5rem;
                 padding: .6rem .75rem;
                 border-bottom: 1px solid #e9ecef;
-                font-weight: 600
+                font-weight: 600;
             }
 
             .tmc-list .hdr .toggle {
@@ -457,12 +457,12 @@
                 cursor: pointer;
                 font-size: .95rem;
                 border: 0;
-                background: transparent
+                background: transparent;
             }
 
             .tmc-list .srch {
                 padding: .5rem .75rem;
-                border-bottom: 1px solid #f1f3f5
+                border-bottom: 1px solid #f1f3f5;
             }
 
             .tmc-list input[type="search"] {
@@ -470,12 +470,12 @@
                 padding: .45rem .6rem;
                 border: 1px solid #dee2e6;
                 border-radius: 8px;
-                font-size: .9rem
+                font-size: .9rem;
             }
 
             .tmc-list .body {
                 max-height: 360px;
-                overflow: auto
+                overflow: auto;
             }
 
             .tmc-item {
@@ -485,11 +485,11 @@
                 padding: .55rem .75rem;
                 border-bottom: 1px dashed #f1f3f5;
                 cursor: pointer;
-                border-left: 4px solid transparent
+                border-left: 4px solid transparent;
             }
 
             .tmc-item:last-child {
-                border-bottom: 0
+                border-bottom: 0;
             }
 
             .tmc-item .dot {
@@ -497,38 +497,76 @@
                 height: .66rem;
                 border-radius: 50%;
                 margin-top: .25rem;
-                flex: 0 0 auto
+                flex: 0 0 auto;
             }
 
             .tmc-item .tit {
                 font-size: .92rem;
                 font-weight: 600;
-                line-height: 1.1
+                line-height: 1.1;
             }
 
             .tmc-item .sub {
                 font-size: .78rem;
-                color: #6c757d
+                color: #6c757d;
             }
 
             .tmc-empty {
                 padding: .75rem .75rem;
                 color: #6c757d;
-                font-size: .9rem
+                font-size: .9rem;
             }
 
             .tmc-item.active {
                 background: #fffbea;
                 box-shadow: inset 0 0 0 1px #ffe08a;
-                border-left-color: var(--c)
+                border-left-color: var(--c);
             }
 
             .tmc-list.min .srch,
             .tmc-list.min .body {
-                display: none
+                display: none;
+            }
+
+            /* ===== ปรับขนาดตัวหนังสือใน popup ===== */
+            .tmc-pop {
+                font-size: 1rem;
+                /* ใหญ่ขึ้นชัดเจน (≈16px) */
+                line-height: 1.45;
+                color: #212529;
+            }
+
+            .tmc-pop h6 {
+                font-size: 1.15rem;
+                /* หัวข้อเด่นขึ้น */
+                font-weight: 700;
+                color: #0d6efd;
+            }
+
+            .tmc-pop p {
+                margin-bottom: .5rem;
+                font-size: 1rem;
+            }
+
+            .tmc-pop ul {
+                margin: 0 0 .5rem 1rem;
+            }
+
+            .tmc-pop li {
+                font-size: 1rem;
+                line-height: 1.4;
+            }
+
+            .tmc-pop .fw-semibold {
+                font-size: 1.05rem;
+            }
+
+            .tmc-pop small {
+                font-size: .9rem;
             }
         </style>
     @endpush
+
 
     @push('scripts')
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
@@ -564,8 +602,8 @@
 
                 const markers = [],
                     labels = [],
-                    markerById = new Map();
-                const elByKey = new Map();
+                    markerById = new Map(),
+                    elByKey = new Map();
                 let activeKey = null,
                     activeEl = null;
 
@@ -573,41 +611,68 @@
                     if (f.lat == null || f.lon == null) return;
                     const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
                     const key = String(f.id ?? `${f.lat},${f.lon}`);
-                    const lvlText = f.levelKey === 'unassessed' ? 'ยังไม่ได้ประเมิน' : `ระดับ${esc(f.levelText)}`;
-
                     const mk = L.marker([f.lat, f.lon], {
                         icon: coloredPin(c)
                     }).addTo(map);
                     mk._tmcKey = key;
+
+                    const contactLine = [f.phone, f.email].filter(Boolean).join(' / ');
+                    const isBkk = String(f.provinceCode) === '10';
+                    const districtLabel = isBkk ? 'เขต' : 'อำเภอ';
+                    const subdistrictLabel = isBkk ? 'แขวง' : 'ตำบล';
+
+                    // ✅ แสดง “การให้บริการของหน่วยงาน” เฉพาะหน่วยที่ approved และมีรายการ services
+                    const svcHtml = (f.approved && Array.isArray(f.services) && f.services.length) ?
+                        `<div class="mt-2">
+                            <div class="fw-semibold mb-1">บริการ</div>
+                            <ul class="mb-2 ps-3">
+                                ${f.services.map(s => `<li class="small">${esc(s)}</li>`).join('')}
+                            </ul>
+                            </div>` :
+                        '';
+
                     mk.bindPopup(`
-                    <div style="min-width:240px;">
-                        <h6 class="mb-1 text-primary">${esc(f.name)}</h6>
-                        <p class="text-muted small mb-1">${esc(f.address||'-')}${f.province?' • '+esc(f.province):''}</p>
-                        <span class="badge" style="background:${c}20;border:1px solid ${c}50;color:#333;">${lvlText}</span>
-                        ${f.phone?`<p class="text-muted small mt-2 mb-0"><strong>ติดต่อ:</strong> ${esc(f.phone)}</p>`:''}
-                    </div>
-                `, {
-                        maxWidth: 320,
+                        <div class="tmc-pop" style="min-width:260px;">
+                            <h6 class="mb-2 text-primary">${esc(f.name)}</h6>
+
+                            ${f.address ? `<p class="mb-1"><span class="text-muted">ที่อยู่:</span> ${esc(f.address)}</p>` : ''}
+
+                            <p class="mb-2">
+                            <span class="text-muted">จังหวัด:</span> ${esc(f.province || '-')}
+                            <span class="ms-2 text-muted">${districtLabel}:</span> ${esc(f.district || '-')}
+                            <span class="ms-2 text-muted">${subdistrictLabel}:</span> ${esc(f.subdistrict || '-')}
+                            </p>
+
+                            ${svcHtml}
+
+                            ${contactLine ? `<p class="text-muted small mt-2 mb-2"><strong>ติดต่อ:</strong> ${esc(contactLine)}</p>` : ''}
+
+                            <button type="button" class="btn btn-primary btn-sm w-100" disabled>
+                            <i class="ph-duotone ph-paper-plane-tilt me-1"></i> ส่งข้อความ
+                            </button>
+                        </div>
+                        `, {
+                        maxWidth: 480,
                         autoPan: true
                     });
 
                     mk.on('popupopen', () => {
                         setActiveByKey(key, true);
                         ensureVisibleWithPanel(mk);
+                        panToOffset(mk.getLatLng(), L.point(-100, 200)); // ขยับลง 200px
                     });
-
                     markers.push(mk);
                     markerById.set(key, mk);
 
+                    // label ไม่มี badge ระดับ
                     const lbl = L.marker([f.lat, f.lon], {
                         interactive: true,
                         icon: L.divIcon({
                             className: 'facility-label',
                             html: `<div class="flabel" style="--c:${c}">
-                                <span class="dot"></span>
-                                <span class="name">${esc(f.name)}</span>
-                                <span class="level">${lvlText}</span>
-                              </div>`,
+                <span class="dot"></span>
+                <span class="name">${esc(f.name)}</span>
+              </div>`,
                             iconSize: null,
                             iconAnchor: [-6, 18]
                         }),
@@ -628,19 +693,29 @@
                 map.whenReady(updateLabels);
                 map.on('zoomend', updateLabels);
 
-                // ===== ซูม–แพนช้า และหลบแผงลิสต์ =====
                 function flyPanZoom(mk) {
                     if (!mk) return;
-                    const target = mk.getLatLng(),
-                        cur = map.getCenter();
-                    const distM = map.distance(cur, target);
+
+                    const latlng = mk.getLatLng();
+                    const cur = map.getCenter();
+                    const distM = map.distance(cur, latlng);
+
                     let z;
                     if (distM > 600000) z = 8;
                     else if (distM > 200000) z = 10;
                     else if (distM > 50000) z = 12;
                     else z = Math.max(map.getZoom(), 14);
+
                     const needZoom = Math.abs(map.getZoom() - z) > 0.6;
                     const done = () => mk.openPopup();
+
+                    // ✅ คำนวณตำแหน่ง offset ล่วงหน้า (ให้หมุดอยู่ต่ำกว่ากึ่งกลาง)
+                    const offsetPx = L.point(-100, 200);
+                    const target = (() => {
+                        const zoom = z;
+                        const pt = map.project(latlng, zoom).subtract(offsetPx);
+                        return map.unproject(pt, zoom);
+                    })();
 
                     if (distM > 1500 || needZoom) {
                         map.flyTo(target, z, {
@@ -648,22 +723,17 @@
                             duration: 3,
                             easeLinearity: 0.1
                         });
-                        map.once('moveend', () => {
-                            ensureVisibleWithPanel(mk);
-                            done();
-                        });
+                        map.once('moveend', done);
                     } else {
                         map.panTo(target, {
                             animate: true,
                             duration: 1.2,
                             easeLinearity: 0.2
                         });
-                        map.once('moveend', () => {
-                            ensureVisibleWithPanel(mk);
-                            done();
-                        });
+                        map.once('moveend', done);
                     }
                 }
+
 
                 function ensureVisibleWithPanel(mk) {
                     const panel = document.querySelector('.tmc-list');
@@ -685,14 +755,24 @@
                     }
                 }
 
-                // ===== แผงลิสต์
+                function panToOffset(latlng, offsetPx) {
+                    // offsetPx: L.point(x, y). y ติดลบ = ขยับหมุดลง
+                    const z = map.getZoom();
+                    const pt = map.project(latlng, z).subtract(offsetPx);
+                    const ll = map.unproject(pt, z);
+                    map.panTo(ll, {
+                        animate: true,
+                        duration: 0.6,
+                        easeLinearity: 0.2
+                    });
+                }
+
                 const listCtrl = L.control({
                     position: 'topright'
                 });
                 listCtrl.onAdd = function() {
                     const wrap = L.DomUtil.create('div', 'tmc-list');
-                    wrap.innerHTML = `
-                    <div class="hdr"><span>หน่วยบริการทั้งหมด</span><button class="toggle" type="button" title="ย่อ/ขยาย">▣</button></div>
+                    wrap.innerHTML = `<div class="hdr"><span>หน่วยบริการทั้งหมด</span><button class="toggle" type="button" title="ย่อ/ขยาย">▣</button></div>
                     <div class="srch"><input type="search" placeholder="ค้นหาชื่อ/จังหวัด"></div>
                     <div class="body"></div>`;
                     L.DomEvent.disableClickPropagation(wrap);
@@ -701,6 +781,23 @@
                     const body = wrap.querySelector('.body'),
                         input = wrap.querySelector('input[type="search"]'),
                         toggleBtn = wrap.querySelector('.toggle');
+
+                    // กันโฟกัสหลุด
+                    // ป้องกัน Leaflet แย่งโฟกัสและคีย์บอร์ด
+                    L.DomEvent.disableClickPropagation(input);
+                    L.DomEvent.disableScrollPropagation(input);
+                    ['keydown', 'keypress', 'keyup', 'input', 'click', 'mousedown', 'dblclick', 'touchstart', 'pointerdown', 'wheel', 'contextmenu']
+                    .forEach(evt => L.DomEvent.on(input, evt, e => e.stopPropagation()));
+
+                    // ระงับ keyboard handler ของแผนที่ตอนโฟกัสช่องค้นหา
+                    input.addEventListener('focus', () => map.keyboard && map.keyboard.disable());
+                    input.addEventListener('blur', () => map.keyboard && map.keyboard.enable());
+
+                    // ปิด autocomplete และ spellcheck
+                    input.setAttribute('autocomplete', 'off');
+                    input.setAttribute('spellcheck', 'false');
+                    input.setAttribute('autocapitalize', 'off');
+
 
                     const rowsData = facilities.filter(f => f.lat != null && f.lon != null).map(f => {
                         const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
@@ -720,9 +817,8 @@
                         el.className = 'tmc-item';
                         el.dataset.key = row.key;
                         el.style.setProperty('--c', row.color);
-                        el.innerHTML = `
-                        <span class="dot" style="background:${row.color}"></span>
-                        <div><div class="tit">${esc(row.name)}</div><div class="sub">${esc(row.province)} • ${esc(row.levelText)}</div></div>`;
+                        el.innerHTML = `<span class="dot" style="background:${row.color}"></span>
+                    <div><div class="tit">${esc(row.name)}</div><div class="sub">${esc(row.province)} • ${esc(row.levelText)}</div></div>`;
                         el.addEventListener('click', () => {
                             setActive(el, true);
                             const mk = markerById.get(row.key);
@@ -750,7 +846,6 @@
                         }
                         if (activeKey) setActiveByKey(activeKey, false);
                     }
-
                     input.addEventListener('input', e => render(e.target.value));
                     toggleBtn.addEventListener('click', () => {
                         wrap.classList.toggle('min');
@@ -763,19 +858,6 @@
                     return wrap;
                 };
                 listCtrl.addTo(map);
-
-                window.addEventListener('resize', () => {
-                    if (activeKey) {
-                        const mk = markerById.get(activeKey);
-                        if (mk) ensureVisibleWithPanel(mk);
-                    }
-                });
-                map.on('enterFullscreen exitFullscreen', () => {
-                    if (activeKey) {
-                        const mk = markerById.get(activeKey);
-                        if (mk) setTimeout(() => ensureVisibleWithPanel(mk), 10);
-                    }
-                });
 
                 function setActive(el, scrollIntoView) {
                     if (activeEl) activeEl.classList.remove('active');
@@ -812,9 +894,9 @@
                     return L.icon({
                         iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(
                             `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38" fill="none">
-                            <path d="M14 1C9 1 4 5.6 4 11.6 4 21.8 14 37 14 37s10-15.2 10-25.4C24 5.6 19 1 14 1z" fill="${c}"/>
-                            <circle cx="14" cy="11.6" r="3.6" fill="#fff"/>
-                        </svg>`),
+           <path d="M14 1C9 1 4 5.6 4 11.6 4 21.8 14 37 14 37s10-15.2 10-25.4C24 5.6 19 1 14 1z" fill="${c}"/>
+           <circle cx="14" cy="11.6" r="3.6" fill="#fff"/>
+         </svg>`),
                         iconSize: [28, 38],
                         iconAnchor: [14, 37],
                         popupAnchor: [0, -38]
@@ -833,4 +915,7 @@
             })();
         </script>
     @endpush
+
+
+
 @endsection

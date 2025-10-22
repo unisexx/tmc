@@ -22,6 +22,7 @@ class ServiceUnit extends Model
         'org_affiliation_other',
         'org_address',
         'org_tel',
+        'org_email',
         'org_lat',
         'org_lng',
         'org_working_hours',
