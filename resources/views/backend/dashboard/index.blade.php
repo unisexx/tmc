@@ -71,6 +71,19 @@
         $levelText = config('assessment.level_badge_text_color');
     @endphp
 
+    {{-- --------------------------------------------------------------------------------------------------------------------------------
+
+    ███████╗██╗   ██╗███╗   ███╗███╗   ███╗ █████╗ ██████╗ ██╗   ██╗     ██████╗ █████╗ ██████╗ ██████╗
+    ██╔════╝██║   ██║████╗ ████║████╗ ████║██╔══██╗██╔══██╗╚██╗ ██╔╝    ██╔════╝██╔══██╗██╔══██╗██╔══██╗
+    ███████╗██║   ██║██╔████╔██║██╔████╔██║███████║██████╔╝ ╚████╔╝     ██║     ███████║██████╔╝██║  ██║
+    ╚════██║██║   ██║██║╚██╔╝██║██║╚██╔╝██║██╔══██║██╔══██╗  ╚██╔╝      ██║     ██╔══██║██╔══██╗██║  ██║
+    ███████║╚██████╔╝██║ ╚═╝ ██║██║ ╚═╝ ██║██║  ██║██║  ██║   ██║       ╚██████╗██║  ██║██║  ██║██████╔╝
+    ╚══════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝        ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
+
+        SECTION 1: SUMMARY CARDS (การ์ดสรุประดับ + ยังไม่ได้ประเมิน)
+        - การ์ด 4 ใบ (พื้นฐาน/กลาง/สูง/ยังไม่ได้ประเมิน)
+        - เปิด modal รายชื่อเมื่อคลิกการ์ด
+    -------------------------------------------------------------------------------------------------------------------------------- --}}
 
     <div class="row g-3 mb-3">
         {{-- การ์ดพื้นฐาน --}}
@@ -319,7 +332,20 @@
         </div>
     </div>
 
-    {{-- ====== MAP: หน่วยบริการทั่วประเทศ (Leaflet) ====== --}}
+    {{-- --------------------------------------------------------------------------------------------------------------------------------
+        ███╗   ███╗ █████╗ ██████╗
+        ████╗ ████║██╔══██╗██╔══██╗
+        ██╔████╔██║███████║██████╔╝
+        ██║╚██╔╝██║██╔══██║██╔═══╝
+        ██║ ╚═╝ ██║██║  ██║██║
+        ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝
+
+        SECTION 2: MAP (แผนที่หน่วยบริการ + CSS/JS)
+        - เตรียมข้อมูล facilities
+        - แสดงแผนที่ Leaflet + ป้ายชื่อ + popup
+        - แผงรายชื่อ (list panel) + ค้นหา + fly/pan/zoom
+    -------------------------------------------------------------------------------------------------------------------------------- --}}
+
     @php
         $LEVEL_TEXTS = ['basic' => 'พื้นฐาน', 'medium' => 'กลาง', 'advanced' => 'สูง', 'unassessed' => 'ยังไม่ได้ประเมิน'];
 
@@ -366,7 +392,6 @@
             ->all();
     @endphp
 
-
     <div class="card">
         <div class="card-header d-flex align-items-center justify-content-between">
             <div><i class="ph-duotone ph-map-pin"></i> <span class="ms-1">แผนที่หน่วยบริการสุขภาพผู้เดินทาง</span></div>
@@ -379,6 +404,10 @@
     @push('styles')
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
         <link rel="stylesheet" href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css">
+
+        {{-- ----------------------------------------------------------------------------------------------------------------------------
+          MAP: STYLES (CSS เฉพาะของแผนที่/ป้าย/แผงรายชื่อ/ขนาด popup)
+        ---------------------------------------------------------------------------------------------------------------------------- --}}
         <style>
             #tmc-map {
                 height: 560px;
@@ -531,14 +560,12 @@
             /* ===== ปรับขนาดตัวหนังสือใน popup ===== */
             .tmc-pop {
                 font-size: 1rem;
-                /* ใหญ่ขึ้นชัดเจน (≈16px) */
                 line-height: 1.45;
                 color: #212529;
             }
 
             .tmc-pop h6 {
                 font-size: 1.15rem;
-                /* หัวข้อเด่นขึ้น */
                 font-weight: 700;
                 color: #0d6efd;
             }
@@ -571,6 +598,10 @@
     @push('scripts')
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
         <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
+
+        {{-- ----------------------------------------------------------------------------------------------------------------------------
+          MAP: SCRIPTS (สร้างแผนที่, หมุด, ป้าย, popup, แผงรายชื่อ, การเลื่อนกล้อง)
+        ---------------------------------------------------------------------------------------------------------------------------- --}}
         <script>
             (function() {
                 const facilities = @json($facilities);
@@ -624,34 +655,29 @@
                     // ✅ แสดง “การให้บริการของหน่วยงาน” เฉพาะหน่วยที่ approved และมีรายการ services
                     const svcHtml = (f.approved && Array.isArray(f.services) && f.services.length) ?
                         `<div class="mt-2">
-                            <div class="fw-semibold mb-1">บริการ</div>
-                            <ul class="mb-2 ps-3">
-                                ${f.services.map(s => `<li class="small">${esc(s)}</li>`).join('')}
-                            </ul>
-                            </div>` :
+                               <div class="fw-semibold mb-1">บริการ</div>
+                               <ul class="mb-2 ps-3">
+                                   ${f.services.map(s => `<li class="small">${esc(s)}</li>`).join('')}
+                               </ul>
+                           </div>` :
                         '';
 
                     mk.bindPopup(`
                         <div class="tmc-pop" style="min-width:260px;">
                             <h6 class="mb-2 text-primary">${esc(f.name)}</h6>
-
                             ${f.address ? `<p class="mb-1"><span class="text-muted">ที่อยู่:</span> ${esc(f.address)}</p>` : ''}
-
                             <p class="mb-2">
-                            <span class="text-muted">จังหวัด:</span> ${esc(f.province || '-')}
-                            <span class="ms-2 text-muted">${districtLabel}:</span> ${esc(f.district || '-')}
-                            <span class="ms-2 text-muted">${subdistrictLabel}:</span> ${esc(f.subdistrict || '-')}
+                              <span class="text-muted">จังหวัด:</span> ${esc(f.province || '-')}
+                              <span class="ms-2 text-muted">${districtLabel}:</span> ${esc(f.district || '-')}
+                              <span class="ms-2 text-muted">${subdistrictLabel}:</span> ${esc(f.subdistrict || '-')}
                             </p>
-
                             ${svcHtml}
-
                             ${contactLine ? `<p class="text-muted small mt-2 mb-2"><strong>ติดต่อ:</strong> ${esc(contactLine)}</p>` : ''}
-
                             <button type="button" class="btn btn-primary btn-sm w-100" disabled>
-                            <i class="ph-duotone ph-paper-plane-tilt me-1"></i> ส่งข้อความ
+                                <i class="ph-duotone ph-paper-plane-tilt me-1"></i> ส่งข้อความ
                             </button>
                         </div>
-                        `, {
+                    `, {
                         maxWidth: 480,
                         autoPan: true
                     });
@@ -670,9 +696,9 @@
                         icon: L.divIcon({
                             className: 'facility-label',
                             html: `<div class="flabel" style="--c:${c}">
-                <span class="dot"></span>
-                <span class="name">${esc(f.name)}</span>
-              </div>`,
+                                     <span class="dot"></span>
+                                     <span class="name">${esc(f.name)}</span>
+                                   </div>`,
                             iconSize: null,
                             iconAnchor: [-6, 18]
                         }),
@@ -734,7 +760,6 @@
                     }
                 }
 
-
                 function ensureVisibleWithPanel(mk) {
                     const panel = document.querySelector('.tmc-list');
                     if (!panel) return;
@@ -773,8 +798,8 @@
                 listCtrl.onAdd = function() {
                     const wrap = L.DomUtil.create('div', 'tmc-list');
                     wrap.innerHTML = `<div class="hdr"><span>หน่วยบริการทั้งหมด</span><button class="toggle" type="button" title="ย่อ/ขยาย">▣</button></div>
-                    <div class="srch"><input type="search" placeholder="ค้นหาชื่อ/จังหวัด"></div>
-                    <div class="body"></div>`;
+                                      <div class="srch"><input type="search" placeholder="ค้นหาชื่อ/จังหวัด"></div>
+                                      <div class="body"></div>`;
                     L.DomEvent.disableClickPropagation(wrap);
                     L.DomEvent.disableScrollPropagation(wrap);
 
@@ -782,35 +807,31 @@
                         input = wrap.querySelector('input[type="search"]'),
                         toggleBtn = wrap.querySelector('.toggle');
 
-                    // กันโฟกัสหลุด
-                    // ป้องกัน Leaflet แย่งโฟกัสและคีย์บอร์ด
+                    // กันโฟกัสหลุด / ป้องกัน Leaflet แย่งโฟกัสและคีย์บอร์ด
                     L.DomEvent.disableClickPropagation(input);
                     L.DomEvent.disableScrollPropagation(input);
                     ['keydown', 'keypress', 'keyup', 'input', 'click', 'mousedown', 'dblclick', 'touchstart', 'pointerdown', 'wheel', 'contextmenu']
                     .forEach(evt => L.DomEvent.on(input, evt, e => e.stopPropagation()));
-
-                    // ระงับ keyboard handler ของแผนที่ตอนโฟกัสช่องค้นหา
                     input.addEventListener('focus', () => map.keyboard && map.keyboard.disable());
                     input.addEventListener('blur', () => map.keyboard && map.keyboard.enable());
-
-                    // ปิด autocomplete และ spellcheck
                     input.setAttribute('autocomplete', 'off');
                     input.setAttribute('spellcheck', 'false');
                     input.setAttribute('autocapitalize', 'off');
 
-
-                    const rowsData = facilities.filter(f => f.lat != null && f.lon != null).map(f => {
-                        const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
-                        const key = String(f.id ?? `${f.lat},${f.lon}`);
-                        const lvlText = f.levelKey === 'unassessed' ? 'ยังไม่ได้ประเมิน' : `ระดับ${String(f.levelText||'-')}`;
-                        return {
-                            key,
-                            name: f.name,
-                            province: f.province || '-',
-                            levelText: lvlText,
-                            color: c
-                        };
-                    });
+                    const rowsData = facilities
+                        .filter(f => f.lat != null && f.lon != null)
+                        .map(f => {
+                            const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
+                            const key = String(f.id ?? `${f.lat},${f.lon}`);
+                            const lvlText = f.levelKey === 'unassessed' ? 'ยังไม่ได้ประเมิน' : `ระดับ${String(f.levelText||'-')}`;
+                            return {
+                                key,
+                                name: f.name,
+                                province: f.province || '-',
+                                levelText: lvlText,
+                                color: c
+                            };
+                        });
 
                     function buildRow(row) {
                         const el = document.createElement('div');
@@ -818,7 +839,10 @@
                         el.dataset.key = row.key;
                         el.style.setProperty('--c', row.color);
                         el.innerHTML = `<span class="dot" style="background:${row.color}"></span>
-                    <div><div class="tit">${esc(row.name)}</div><div class="sub">${esc(row.province)} • ${esc(row.levelText)}</div></div>`;
+                                        <div>
+                                           <div class="tit">${esc(row.name)}</div>
+                                           <div class="sub">${esc(row.province)} • ${esc(row.levelText)}</div>
+                                        </div>`;
                         el.addEventListener('click', () => {
                             setActive(el, true);
                             const mk = markerById.get(row.key);
@@ -831,7 +855,9 @@
                         const s = q.trim().toLowerCase();
                         body.innerHTML = '';
                         elByKey.clear();
-                        const list = s ? rowsData.filter(r => (r.name + ' ' + r.province + ' ' + r.levelText).toLowerCase().includes(s)) : rowsData;
+                        const list = s ?
+                            rowsData.filter(r => (r.name + ' ' + r.province + ' ' + r.levelText).toLowerCase().includes(s)) :
+                            rowsData;
                         if (!list.length) {
                             const emp = document.createElement('div');
                             emp.className = 'tmc-empty';
@@ -894,9 +920,9 @@
                     return L.icon({
                         iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(
                             `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38" fill="none">
-           <path d="M14 1C9 1 4 5.6 4 11.6 4 21.8 14 37 14 37s10-15.2 10-25.4C24 5.6 19 1 14 1z" fill="${c}"/>
-           <circle cx="14" cy="11.6" r="3.6" fill="#fff"/>
-         </svg>`),
+                               <path d="M14 1C9 1 4 5.6 4 11.6 4 21.8 14 37 14 37s10-15.2 10-25.4C24 5.6 19 1 14 1z" fill="${c}"/>
+                               <circle cx="14" cy="11.6" r="3.6" fill="#fff"/>
+                             </svg>`),
                         iconSize: [28, 38],
                         iconAnchor: [14, 37],
                         popupAnchor: [0, -38]
@@ -917,5 +943,605 @@
     @endpush
 
 
+
+    {{-- --------------------------------------------------------------------------------------------------------------------------------
+         ██████╗  █████╗ ██████╗
+        ██╔════╝ ██╔══██╗██╔══██╗
+        ██║  ███╗███████║██████╔╝
+        ██║   ██║██╔══██║██╔═══╝
+        ╚██████╔╝██║  ██║██║
+        ╚═════╝ ╚═╝  ╚═╝╚═╝
+
+        SECTION 3: GAP SUMMARY & GAP UNITS (การ์ดสรุป GAP + Modal รายชื่อหน่วยที่มี GAP + Script ดึงข้อมูล)
+    -------------------------------------------------------------------------------------------------------------------------------- --}}
+
+    @php
+        // ความสูงพื้นที่เลื่อน (ปรับได้)
+        $gapScrollMaxHeight = 360; // px
+    @endphp
+
+    <div class="row g-3 mb-3">
+
+        {{-- ===== GAP: ระดับพื้นฐาน ===== --}}
+        <div class="col-lg-4">
+            <div class="card h-100 position-relative">
+                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['basic'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
+
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="text-{{ $levelText['basic'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับพื้นฐาน</span>
+                    <span class="badge bg-{{ $levelBg['basic'] }} text-{{ $levelText['basic'] }}">
+                        {{ number_format($gapBasic->count()) }}
+                    </span>
+                </div>
+
+                {{-- ★ แสดงครบทุกแถว + มี scrollbar ภายในการ์ด --}}
+                <div class="card-body p-0" style="max-height: {{ $gapScrollMaxHeight }}px; overflow: auto;">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th style="width:60%">รายการ GAP</th>
+                                <th class="text-end" style="width:40%">จำนวนหน่วยบริการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($gapBasic as $row)
+                                <tr class="gap-row" data-level="basic" data-qid="{{ $row->question_id }}" data-label="{{ e($row->gap_label) }}" style="cursor:pointer;">
+                                    <td class="text-wrap">{{ $row->gap_label }}</td>
+                                    <td class="text-end">{{ number_format($row->unit_count) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted">ไม่พบข้อมูล</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===== GAP: ระดับกลาง ===== --}}
+        <div class="col-lg-4">
+            <div class="card h-100 position-relative">
+                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['medium'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
+
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="text-{{ $levelText['medium'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับกลาง</span>
+                    <span class="badge bg-{{ $levelBg['medium'] }} text-{{ $levelText['medium'] }}">
+                        {{ number_format($gapIntermediate->count()) }}
+                    </span>
+                </div>
+
+                <div class="card-body p-0" style="max-height: {{ $gapScrollMaxHeight }}px; overflow: auto;">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th style="width:60%">รายการ GAP</th>
+                                <th class="text-end" style="width:40%">จำนวนหน่วยบริการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($gapIntermediate as $row)
+                                <tr class="gap-row" data-level="medium" data-qid="{{ $row->question_id }}" data-label="{{ e($row->gap_label) }}" style="cursor:pointer;">
+                                    <td class="text-wrap">{{ $row->gap_label }}</td>
+                                    <td class="text-end">{{ number_format($row->unit_count) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted">ไม่พบข้อมูล</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===== GAP: ระดับสูง ===== --}}
+        <div class="col-lg-4">
+            <div class="card h-100 position-relative">
+                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['advanced'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
+
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="text-{{ $levelText['advanced'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับสูง</span>
+                    <span class="badge bg-{{ $levelBg['advanced'] }} text-{{ $levelText['advanced'] }}">
+                        {{ number_format($gapAdvanced->count()) }}
+                    </span>
+                </div>
+
+                <div class="card-body p-0" style="max-height: {{ $gapScrollMaxHeight }}px; overflow: auto;">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th style="width:60%">รายการ GAP</th>
+                                <th class="text-end" style="width:40%">จำนวนหน่วยบริการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($gapAdvanced as $row)
+                                <tr class="gap-row" data-level="advanced" data-qid="{{ $row->question_id }}" data-label="{{ e($row->gap_label) }}" style="cursor:pointer;">
+                                    <td class="text-wrap">{{ $row->gap_label }}</td>
+                                    <td class="text-end">{{ number_format($row->unit_count) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted">ไม่พบข้อมูล</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    {{-- ==== Modal: รายชื่อหน่วยบริการที่มี GAP ==== --}}
+    <div class="modal fade" id="modal-gap-units" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title">หน่วยบริการที่มี GAP</h5>
+                        <div class="small text-muted"><span id="gap-meta"></span></div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="gap-loading" class="p-3 text-center d-none">
+                        <div class="spinner-border" role="status" aria-hidden="true"></div>
+                        <div class="mt-2">กำลังโหลด...</div>
+                    </div>
+
+                    <div id="gap-empty" class="p-3 text-center text-muted d-none">ไม่พบบันทึก</div>
+
+                    <div id="gap-table-wrap" class="table-responsive d-none">
+                        <table class="table table-sm table-striped mb-0 align-middle">
+                            <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                                <tr>
+                                    <th style="width:5%">#</th>
+                                    <th style="width:65%">ชื่อหน่วยบริการ</th>
+                                    <th>จังหวัด</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gap-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- ----------------------------------------------------------------------------------------------------------------------------
+      GAP: SCRIPT (โหลดรายชื่อหน่วยบริการที่มี GAP ตาม level + question_id ตามฟิลเตอร์ปี/รอบ/เขต/จังหวัด)
+    ---------------------------------------------------------------------------------------------------------------------------- --}}
+    <script>
+        (function() {
+            // ฟิลเตอร์ปัจจุบัน (มาจาก Controller; ถ้าไม่ได้ส่งมาก็เป็น null)
+            const FILTERS = {
+                year: {{ isset($filterYear) ? (int) $filterYear : 'null' }},
+                round: {{ isset($filterRound) ? (int) $filterRound : 'null' }},
+                region: {{ isset($filterRegion) && $filterRegion ? (int) $filterRegion : 'null' }},
+                province_code: {!! isset($filterProvinceCode) && $filterProvinceCode ? "'" . $filterProvinceCode . "'" : 'null' !!}
+            };
+
+            const routeGapUnits = "{{ route('backend.dashboard.gap-units') }}";
+            const $modal = document.getElementById('modal-gap-units');
+            const $tbody = document.getElementById('gap-tbody');
+            const $wrap = document.getElementById('gap-table-wrap');
+            const $loading = document.getElementById('gap-loading');
+            const $empty = document.getElementById('gap-empty');
+            const $meta = document.getElementById('gap-meta');
+
+            function showState(state) {
+                // state: 'loading' | 'empty' | 'table'
+                $loading.classList.toggle('d-none', state !== 'loading');
+                $empty.classList.toggle('d-none', state !== 'empty');
+                $wrap.classList.toggle('d-none', state !== 'table');
+            }
+
+            function esc(s) {
+                return String(s ?? '').replace(/[&<>\"']/g, m => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                } [m]));
+            }
+
+            async function openGapModal(level, qid, label) {
+                // heading/meta
+                const LVL = {
+                    basic: 'ระดับพื้นฐาน',
+                    medium: 'ระดับกลาง',
+                    advanced: 'ระดับสูง'
+                };
+                $meta.textContent = `${LVL[level] || '-'} • ${label}`;
+
+                // reset UI
+                $tbody.innerHTML = '';
+                showState('loading');
+
+                // build query
+                const params = new URLSearchParams({
+                    level,
+                    qid,
+                    year: FILTERS.year ?? '',
+                    round: FILTERS.round ?? '',
+                });
+                if (FILTERS.region) params.set('region', FILTERS.region);
+                if (FILTERS.province_code) params.set('province_code', FILTERS.province_code);
+
+                try {
+                    const res = await fetch(`${routeGapUnits}?${params.toString()}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    const rows = Array.isArray(data.rows) ? data.rows : [];
+
+                    if (!rows.length) {
+                        showState('empty');
+                    } else {
+                        let i = 1;
+                        $tbody.innerHTML = rows.map(r => `
+                            <tr>
+                                <td class="text-center">${i++}</td>
+                                <td>${esc(r.name)}</td>
+                                <td>${esc(r.province)}</td>
+                            </tr>
+                        `).join('');
+                        showState('table');
+                    }
+
+                    // เปิด modal
+                    const bsModal = bootstrap.Modal.getOrCreateInstance($modal);
+                    bsModal.show();
+                } catch (err) {
+                    console.error(err);
+                    $empty.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
+                    showState('empty');
+                    const bsModal = bootstrap.Modal.getOrCreateInstance($modal);
+                    bsModal.show();
+                }
+            }
+
+            // delegate คลิกในทุกตาราง GAP
+            document.addEventListener('click', function(e) {
+                const tr = e.target.closest('tr.gap-row');
+                if (!tr) return;
+                const level = tr.dataset.level;
+                const qid = tr.dataset.qid;
+                const label = tr.dataset.label || '';
+                if (!level || !qid) return;
+                openGapModal(level, qid, label);
+            });
+        })();
+    </script>
+
+
+
+    {{-- --------------------------------------------------------------------------------------------------------------------------------
+
+    ██╗  ██╗     █████╗ ██████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗ █████╗ ██╗         ███████╗████████╗ █████╗ ████████╗██╗   ██╗███████╗
+    ╚██╗██╔╝    ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔═══██╗██║   ██║██╔══██╗██║         ██╔════╝╚══██╔══╝██╔══██╗╚══██╔══╝██║   ██║██╔════╝
+     ╚███╔╝     ███████║██████╔╝██████╔╝██████╔╝██║   ██║██║   ██║███████║██║         ███████╗   ██║   ███████║   ██║   ██║   ██║███████╗
+     ██╔██╗     ██╔══██║██╔═══╝ ██╔═══╝ ██╔══██╗██║   ██║╚██╗ ██╔╝██╔══██║██║         ╚════██║   ██║   ██╔══██║   ██║   ██║   ██║╚════██║
+    ██╔╝ ██╗    ██║  ██║██║     ██║     ██║  ██║╚██████╔╝ ╚████╔╝ ██║  ██║███████╗    ███████║   ██║   ██║  ██║   ██║   ╚██████╔╝███████║
+    ╚═╝  ╚═╝    ╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝  ╚═╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝╚══════╝    ╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚══════╝
+
+    ██████╗  █████╗ ████████╗ █████╗
+    ██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗
+    ██║  ██║███████║   ██║   ███████║
+    ██║  ██║██╔══██║   ██║   ██╔══██║
+    ██████╔╝██║  ██║   ██║   ██║  ██║
+    ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
+
+    SECTION X: STATUS DATA (เตรียมข้อมูลสถานะ) -> ใช้ร่วมกันทั้ง CHART และ CARD
+    -------------------------------------------------------------------------------------------------------------------------------- --}}
+    @php
+        use App\Models\AssessmentServiceUnitLevel;
+
+        // ลำดับ/ป้าย/สี ของสถานะ (ใช้ร่วมกันทั้ง Chart และ Card)
+        $displayOrder = ['pending', 'reviewing', 'returned', 'approved', 'rejected', 'no_form'];
+
+        $labels = [
+            'pending' => 'รอดำเนินการ',
+            'reviewing' => 'อยู่ระหว่างการพิจารณา',
+            'returned' => 'ส่งกลับแก้ไข',
+            'approved' => 'อนุมัติ',
+            'rejected' => 'ไม่อนุมัติ',
+            'no_form' => 'ยังไม่ได้ทำแบบประเมิน',
+        ];
+
+        // สีสำหรับการ์ด (Light Able utility classes)
+        $bgMap = [
+            'pending' => 'gray-100',
+            'reviewing' => 'blue-100',
+            'returned' => 'yellow-100',
+            'approved' => 'green-100',
+            'rejected' => 'red-100',
+            'no_form' => 'indigo-100',
+        ];
+        $fgMap = [
+            'pending' => 'gray-900',
+            'reviewing' => 'blue-900',
+            'returned' => 'yellow-900',
+            'approved' => 'green-900',
+            'rejected' => 'red-900',
+            'no_form' => 'indigo-900',
+        ];
+
+        // สีสำหรับกราฟ (HEX)
+        $chartColors = [
+            'pending' => '#9aa0a6', // gray-500
+            'reviewing' => '#60a5fa', // blue-400
+            'returned' => '#fbbf24', // amber-400
+            'approved' => '#34d399', // emerald-400
+            'rejected' => '#f87171', // red-400
+            'no_form' => '#a78bfa', // indigo-400
+        ];
+
+        // สถานะที่ถูกต้องตามฐานข้อมูล
+        $dbStatuses = ['pending', 'reviewing', 'returned', 'approved', 'rejected'];
+
+        // หาเรคคอร์ดล่าสุดของแต่ละหน่วย ในปี/รอบที่เลือก
+        $unitIds = $serviceUnits->pluck('id')->all();
+        $latestAll = collect();
+        if (!empty($unitIds)) {
+            $latestAll = AssessmentServiceUnitLevel::select('id', 'service_unit_id', 'assess_year', 'assess_round', 'approval_status')->whereIn('service_unit_id', $unitIds)->where('assess_year', $filterYear)->where('assess_round', $filterRound)->whereNull('deleted_at')->orderByDesc('id')->get()->groupBy('service_unit_id')->map->first();
+        }
+
+        // สร้าง buckets ของสถานะ
+        $status = [];
+        foreach ($displayOrder as $key) {
+            $status[$key] = ['count' => 0, 'units' => collect()];
+        }
+
+        foreach ($serviceUnits as $su) {
+            $record = $latestAll->get($su->id);
+
+            if (!$record) {
+                $bucket = 'no_form';
+            } else {
+                $st = $record->approval_status;
+                if ($st === 'pending' || $st === null || $st === '') {
+                    $bucket = 'pending'; // รวมค่าว่างเข้าที่ pending
+                } elseif (in_array($st, $dbStatuses, true)) {
+                    $bucket = $st;
+                } else {
+                    continue; // ข้ามสถานะอื่นที่ไม่รองรับ
+                }
+            }
+
+            $status[$bucket]['count']++;
+            $status[$bucket]['units']->push(
+                (object) [
+                    'org_name' => $su->org_name ?? ($su->name ?? '—'),
+                ],
+            );
+        }
+
+        // เรียงชื่อหน่วยในแต่ละสถานะ
+        foreach ($status as $k => $it) {
+            $status[$k]['units'] = $it['units']->sortBy('org_name')->values();
+        }
+
+        // ----- เตรียมชุดข้อมูลสำหรับกราฟ -----
+        $seriesCounts = collect($displayOrder)->map(fn($k) => (int) data_get($status, "$k.count", 0))->all();
+        $seriesLabels = collect($displayOrder)->map(fn($k) => $labels[$k])->all();
+        $seriesColors = collect($displayOrder)->map(fn($k) => $chartColors[$k])->all();
+    @endphp
+
+
+    {{-- --------------------------------------------------------------------------------------------------------------------------------
+
+     █████╗      █████╗ ██████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗ █████╗ ██╗         ███████╗████████╗ █████╗ ████████╗██╗   ██╗███████╗
+    ██╔══██╗    ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔═══██╗██║   ██║██╔══██╗██║         ██╔════╝╚══██╔══╝██╔══██╗╚══██╔══╝██║   ██║██╔════╝
+    ███████║    ███████║██████╔╝██████╔╝██████╔╝██║   ██║██║   ██║███████║██║         ███████╗   ██║   ███████║   ██║   ██║   ██║███████╗
+    ██╔══██║    ██╔══██║██╔═══╝ ██╔═══╝ ██╔══██╗██║   ██║╚██╗ ██╔╝██╔══██║██║         ╚════██║   ██║   ██╔══██║   ██║   ██║   ██║╚════██║
+    ██║  ██║    ██║  ██║██║     ██║     ██║  ██║╚██████╔╝ ╚████╔╝ ██║  ██║███████╗    ███████║   ██║   ██║  ██║   ██║   ╚██████╔╝███████║
+    ╚═╝  ╚═╝    ╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝  ╚═╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝╚══════╝    ╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚══════╝
+
+     ██████╗██╗  ██╗ █████╗ ██████╗ ████████╗
+    ██╔════╝██║  ██║██╔══██╗██╔══██╗╚══██╔══╝
+    ██║     ███████║███████║██████╔╝   ██║
+    ██║     ██╔══██║██╔══██║██╔══██╗   ██║
+    ╚██████╗██║  ██║██║  ██║██║  ██║   ██║
+     ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝
+
+    SECTION A: CHART – สรุปสถานะด้วย ApexCharts (ย้ายขึ้นมาก่อน CARD)
+    -------------------------------------------------------------------------------------------------------------------------------- --}}
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0">จำนวนหน่วยบริการตามสถานะ (Bar)</h6>
+                </div>
+                <div class="card-body">
+                    <div id="chart-status-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <script>
+            (function() {
+                const seriesCounts = @json($seriesCounts);
+                const seriesLabels = @json($seriesLabels);
+                const seriesColors = @json($seriesColors);
+
+                // เรียงข้อมูลจากมากไปน้อย พร้อมคงสี
+                const zipped = seriesLabels.map((label, i) => ({
+                    label,
+                    count: seriesCounts[i],
+                    color: seriesColors[i]
+                })).sort((a, b) => b.count - a.count);
+
+                const el = document.querySelector("#chart-status-bar");
+                if (!el) return;
+
+                const options = {
+                    chart: {
+                        type: 'bar',
+                        height: 420,
+                        toolbar: {
+                            show: false
+                        },
+                        animations: {
+                            enabled: true
+                        },
+                        events: {
+                            dataPointSelection: function(event, chartContext, config) {
+                                // ❌ ไม่ให้คลิกทำอะไรเลย
+                                event.stopPropagation();
+                                return false;
+                            }
+                        }
+                    },
+                    series: [{
+                        name: 'จำนวนหน่วยบริการ',
+                        data: zipped.map(z => z.count)
+                    }],
+                    xaxis: {
+                        categories: zipped.map(z => z.label),
+                        labels: {
+                            rotate: -10,
+                            trim: true
+                        },
+                        title: { // ✅ เพิ่มคำอธิบายแนวนอน
+                            text: 'จำนวนหน่วยบริการ',
+                            style: {
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                color: '#333'
+                            }
+                        }
+                    },
+                    colors: zipped.map(z => z.color),
+                    plotOptions: {
+                        bar: {
+                            horizontal: true,
+                            barHeight: '60%',
+                            distributed: true,
+                            // ✅ ปิดการ hover และการคลิก
+                            dataPointSelection: false
+                        }
+                    },
+                    dataLabels: {
+                        enabled: true,
+                        formatter: (val) => new Intl.NumberFormat().format(val),
+                        style: {
+                            fontSize: '12px'
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        y: {
+                            formatter: (val) => new Intl.NumberFormat().format(val)
+                        }
+                    },
+                    grid: {
+                        strokeDashArray: 4
+                    },
+                    states: {
+                        hover: {
+                            filter: {
+                                type: 'none'
+                            }
+                        },
+                        active: {
+                            filter: {
+                                type: 'none'
+                            }
+                        }
+                    },
+                    legend: {
+                        show: false
+                    }
+                };
+
+                const bar = new ApexCharts(el, options);
+                bar.render();
+            })();
+        </script>
+    @endpush
+
+
+
+    {{-- --------------------------------------------------------------------------------------------------------------------------------
+
+    ██████╗      █████╗ ██████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗ █████╗ ██╗         ███████╗████████╗ █████╗ ████████╗██╗   ██╗███████╗
+    ██╔══██╗    ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔═══██╗██║   ██║██╔══██╗██║         ██╔════╝╚══██╔══╝██╔══██╗╚══██╔══╝██║   ██║██╔════╝
+    ██████╔╝    ███████║██████╔╝██████╔╝██████╔╝██║   ██║██║   ██║███████║██║         ███████╗   ██║   ███████║   ██║   ██║   ██║███████╗
+    ██╔══██╗    ██╔══██║██╔═══╝ ██╔═══╝ ██╔══██╗██║   ██║╚██╗ ██╔╝██╔══██║██║         ╚════██║   ██║   ██╔══██║   ██║   ██║   ██║╚════██║
+    ██████╔╝    ██║  ██║██║     ██║     ██║  ██║╚██████╔╝ ╚████╔╝ ██║  ██║███████╗    ███████║   ██║   ██║  ██║   ██║   ╚██████╔╝███████║
+    ╚═════╝     ╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝  ╚═╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝╚══════╝    ╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚══════╝
+
+     ██████╗ █████╗ ██████╗ ██████╗
+    ██╔════╝██╔══██╗██╔══██╗██╔══██╗
+    ██║     ███████║██████╔╝██║  ██║
+    ██║     ██╔══██║██╔══██╗██║  ██║
+    ╚██████╗██║  ██║██║  ██║██████╔╝
+     ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
+
+    SECTION B: CARD – สถานะการพิจารณาหน่วยบริการ + การ์ด "ยังไม่ได้ทำแบบประเมิน" (แสดงทั้งหมดพร้อม scrollbar)
+    (ใช้ตัวแปรจาก SECTION X ด้านบน)
+    -------------------------------------------------------------------------------------------------------------------------------- --}}
+    <div class="row g-3 mb-3">
+        @foreach ($displayOrder as $key)
+            @php
+                $label = $labels[$key];
+                $bg = $bgMap[$key];
+                $fg = $fgMap[$key];
+                $count = data_get($status, "$key.count", 0);
+                $unitsInStatus = data_get($status, "$key.units", collect());
+            @endphp
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100 position-relative">
+                    {{-- แถบสีซ้าย (สไตล์เดียวกับ GAP) --}}
+                    <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $bg }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
+
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <span class="fw-semibold text-{{ $fg }}">
+                            <i class="ti ti-building-community me-1 text-{{ $fg }}"></i>{{ $label }}
+                        </span>
+                        <span class="badge bg-{{ $bg }} text-{{ $fg }}">{{ number_format($count) }}</span>
+                    </div>
+
+                    {{-- ใช้ scroll ภายในการ์ด + sticky header --}}
+                    <div class="card-body p-0" style="max-height: 360px; overflow: auto;">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                                <tr>
+                                    <th style="width:6%">#</th>
+                                    <th>ชื่อหน่วยบริการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($unitsInStatus as $i => $u)
+                                    <tr>
+                                        <td>{{ $i + 1 }}</td>
+                                        <td class="text-wrap" title="{{ $u->org_name }}">{{ $u->org_name }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted">ไม่มีข้อมูล</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
 
 @endsection

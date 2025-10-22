@@ -5,91 +5,91 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | การตั้งค่าเกี่ยวกับการประเมินหน่วยบริการ (Assessment)
+    | แผนที่ข้อความ/สี : ระดับหน่วยบริการ
     |--------------------------------------------------------------------------
-    | ย้ายจาก config/assessment.php มาไว้รวมที่นี่
-    | การเรียกใช้งาน:
-    |   config('tmc.assessment.level_text.basic')
-    |   config('tmc.assessment.approval_badge_class.approved')
+    | ใช้คู่กับ <x-level-badge> หรือ $model->level_text / $model->level_badge_class
      */
+    'level_text'                => [
+        'basic'      => 'ระดับพื้นฐาน',
+        'medium'     => 'ระดับกลาง',
+        'advanced'   => 'ระดับสูง',
+        'unassessed' => 'ยังไม่ได้ประเมิน', // เพิ่ม
+    ],
 
-    'assessment'   => [
+    // คลาสสีพื้นของ badge (Light Able utility classes)
+    'level_badge_class'         => [
+        'basic'      => 'pink-100',   // ชมพูอ่อน
+        'medium'     => 'yellow-100', // เหลืองอ่อน
+        'advanced'   => 'green-100',  // เขียวอ่อน
+        'unassessed' => 'gray-100',   // เทาอ่อน
+    ],
 
-        // แผนที่ข้อความ: ระดับหน่วยบริการ
-        'level_text'                => [
-            'basic'      => 'ระดับพื้นฐาน',
-            'medium'     => 'ระดับกลาง',
-            'advanced'   => 'ระดับสูง',
-            'unassessed' => 'ยังไม่ได้ประเมิน', // เพิ่ม
-        ],
+    // สีตัวอักษรบน badge (ควรเข้มกว่าโทนพื้น)
+    'level_badge_text_color'    => [
+        'basic'      => 'pink-900',
+        'medium'     => 'yellow-900',
+        'advanced'   => 'teal-900',
+        'unassessed' => 'gray-900',
+        'default'    => '#212529',
+    ],
 
-        // คลาสสีพื้นของ badge (Light Able utility classes)
-        'level_badge_class'         => [
-            'basic'      => 'pink-100',   // ชมพูอ่อน
-            'medium'     => 'yellow-100', // เหลืองอ่อน
-            'advanced'   => 'green-100',  // เขียวอ่อน
-            'unassessed' => 'gray-100',   // เทาอ่อน
-        ],
+    // เสริม: คลาส border (เฉพาะกรณีที่อยากให้ “ยังไม่ได้ประเมิน” เด่นขึ้น)
+    'level_badge_border_class'  => [
+        'basic'      => '',
+        'medium'     => '',
+        'advanced'   => '',
+        'unassessed' => 'border border-gray-400',
+    ],
 
-        // สีตัวอักษรบน badge
-        'level_badge_text_color'    => [
-            'basic'      => 'pink-900',
-            'medium'     => 'yellow-900',
-            'advanced'   => 'teal-900',
-            'unassessed' => 'gray-900',
-            'default'    => '#212529',
-        ],
+    /*
+    |--------------------------------------------------------------------------
+    | แผนที่ข้อความ/สี : สถานะแบบประเมิน (การกรอกฟอร์ม)
+    |--------------------------------------------------------------------------
+     */
+    'status_text'               => [
+        'draft'     => 'แบบร่าง',
+        'completed' => 'ส่งตรวจสอบแล้ว',
+    ],
 
-        // คลาสเสริมของ border สำหรับ badge
-        'level_badge_border_class'  => [
-            'basic'      => '',
-            'medium'     => '',
-            'advanced'   => '',
-            'unassessed' => 'border border-gray-400',
-        ],
+    'status_badge_class'        => [
+        'draft'     => 'secondary',
+        'completed' => 'secondary',
+    ],
 
-        // แผนที่ข้อความ: สถานะแบบประเมิน (การกรอกฟอร์ม)
-        'status_text'               => [
-            'draft'     => 'แบบร่าง',
-            'completed' => 'ส่งตรวจสอบแล้ว',
-        ],
+    'status_badge_text_color'   => [
+        'draft'     => 'text-white',
+        'completed' => 'text-white',
+        'default'   => '#212529',
+    ],
 
-        'status_badge_class'        => [
-            'draft'     => 'secondary',
-            'completed' => 'secondary',
-        ],
+    /*
+    |--------------------------------------------------------------------------
+    | แผนที่ข้อความ/สี : สถานะการอนุมัติ
+    |--------------------------------------------------------------------------
+     */
+    'approval_text'             => [
+        'pending'   => 'รอดำเนินการ',
+        'reviewing' => 'อยู่ระหว่างการพิจารณา',
+        'returned'  => 'ส่งกลับแก้ไข',
+        'approved'  => 'อนุมัติ',
+        'rejected'  => 'ไม่อนุมัติ',
+    ],
 
-        'status_badge_text_color'   => [
-            'draft'     => 'text-white',
-            'completed' => 'text-white',
-            'default'   => '#212529',
-        ],
+    'approval_badge_class'      => [
+        'pending'   => 'gray-100',
+        'reviewing' => 'blue-100',
+        'returned'  => 'yellow-100',
+        'approved'  => 'green-100',
+        'rejected'  => 'red-100',
+    ],
 
-        // แผนที่ข้อความ: สถานะการอนุมัติ
-        'approval_text'             => [
-            'pending'   => 'รอดำเนินการ',
-            'reviewing' => 'อยู่ระหว่างการพิจารณา',
-            'returned'  => 'ส่งกลับแก้ไข',
-            'approved'  => 'อนุมัติ',
-            'rejected'  => 'ไม่อนุมัติ',
-        ],
-
-        'approval_badge_class'      => [
-            'pending'   => 'gray-100',
-            'reviewing' => 'blue-100',
-            'returned'  => 'yellow-100',
-            'approved'  => 'green-100',
-            'rejected'  => 'red-100',
-        ],
-
-        'approval_badge_text_color' => [
-            'pending'   => 'gray-900',
-            'reviewing' => 'blue-900',
-            'returned'  => 'yellow-900',
-            'approved'  => 'green-900',
-            'rejected'  => 'red-900',
-            'default'   => '#212529',
-        ],
+    'approval_badge_text_color' => [
+        'pending'   => 'gray-900',
+        'reviewing' => 'blue-900',
+        'returned'  => 'yellow-900',
+        'approved'  => 'green-900',
+        'rejected'  => 'red-900',
+        'default'   => '#212529',
     ],
 
     /*
@@ -101,7 +101,7 @@ return [
     |   config('tmc.affiliations')  // ได้เป็น array ทั้งชุด
      */
 
-    'affiliations' => [
+    'affiliations'              => [
         'สำนักงานปลัดกระทรวงสาธารณสุข',
         'กรมควบคุมโรค',
         'กรมการแพทย์',
