@@ -6,7 +6,8 @@
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
 <!-- [Tabler Icons] https://tablericons.com -->
-<link rel="stylesheet" href="{{ URL::asset('build/fonts/tabler-icons.min.css') }}">
+{{-- <link rel="stylesheet" href="{{ URL::asset('build/fonts/tabler-icons.min.css') }}"> --}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <!-- [Feather Icons] https://feathericons.com -->
 <link rel="stylesheet" href="{{ URL::asset('build/fonts/feather.css') }}">
 <!-- [Font Awesome Icons] https://fontawesome.com/icons -->

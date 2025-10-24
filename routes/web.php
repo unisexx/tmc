@@ -74,6 +74,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'overview'])->name('dashboard');
         Route::get('/dashboard/unit', [DashboardController::class, 'unit'])->name('dashboard.unit');
         Route::get('/dashboard/gap-units', [DashboardController::class, 'gapUnits'])->name('dashboard.gap-units');
+        Route::get('/dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
 
         // สถิติการเข้าเว็บ
         Route::get('/stat', [StatController::class, 'index'])->name('stat');

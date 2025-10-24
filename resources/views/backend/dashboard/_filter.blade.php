@@ -136,11 +136,12 @@
             --}}
 
             {{-- ปุ่มค้นหา --}}
-            <div class="col-12 col-sm-auto">
-                <button class="btn btn-outline-primary w-100">
+            <div class="col-12 col-sm-auto d-flex align-items-center justify-content-center">
+                <button class="btn btn-outline-primary">
                     <i class="ph-duotone ph-magnifying-glass"></i> ค้นหา
                 </button>
             </div>
+
         </div>
     </div>
 </form>

@@ -6,7 +6,40 @@
 @section('breadcrumb-item-active', 'แดชบอร์ด')
 
 @section('content')
+    @push('styles')
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
+        <link rel="stylesheet" href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css">
+    @endpush
+    @push('scripts')
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+        <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
+        <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    @endpush
+
     @include('backend.dashboard._filter')
+
+    {{-- ปุ่มส่งออกข้อมูล --}}
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <div class="d-flex align-items-center text-muted">
+                <i class="ti ti-download me-2 fs-5 text-primary"></i>
+                <span class="fw-semibold">ส่งออกข้อมูล</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ route('backend.dashboard.export', array_merge(request()->all(), ['format' => 'excel'])) }}" class="btn btn-outline-success btn-sm px-3 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-title="ดาวน์โหลดรายงานเป็น Excel">
+                    <i class="ti ti-file-spreadsheet me-1"></i> Excel
+                </a>
+
+                <a href="{{ route('backend.dashboard.export', array_merge(request()->all(), ['format' => 'pdf'])) }}" class="btn btn-outline-danger btn-sm px-3 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-title="ดาวน์โหลดรายงานเป็น PDF">
+                    <i class="ti ti-file-text me-1"></i> PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+
 
     @php
         $mapLevel = fn($v) => match (strtolower((string) $v)) {
@@ -402,9 +435,83 @@
     </div>
 
     @push('styles')
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
-        <link rel="stylesheet" href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css">
+        <style>
+            /* กล่องเมนู Export */
+            .tmc-export {
+                background: #fff;
+                border-radius: .5rem;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, .12);
+                overflow: hidden;
+                font-size: .9rem;
+                line-height: 1.1;
+                text-align: left;
+                /* ✅ จัดข้อความชิดซ้าย */
+                min-width: 180px;
+                /* ปรับความกว้างพอดี */
+            }
 
+            /* ปุ่มแต่ละรายการ */
+            .tmc-export .btn {
+                display: flex;
+                /* ✅ ใช้ flex เพื่อจัด icon กับข้อความสวย ๆ */
+                align-items: center;
+                gap: .5rem;
+                padding: .45rem .75rem;
+                color: #333;
+                text-decoration: none;
+                white-space: nowrap;
+                text-align: left;
+                /* ✅ เนื้อหาในปุ่มชิดซ้าย */
+                background: transparent;
+            }
+
+            .tmc-export .btn:hover {
+                background: #f8f9fa;
+            }
+
+            .tmc-export .btn i {
+                width: 1.1rem;
+                text-align: center;
+                flex-shrink: 0;
+            }
+
+
+            /* ปุ่ม trigger แบบ “สามขีด” – สีดำ และอยู่กึ่งกลางพอดี */
+            .leaflet-control.tmc-export-toggle a {
+                position: relative;
+                display: block;
+                width: 32px;
+                height: 32px;
+                background: #fff;
+                border-radius: 4px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+            }
+
+            /* เส้นสามขีด สีดำ */
+            .leaflet-control.tmc-export-toggle a::before {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 16px;
+                height: 2px;
+                background: #000;
+                /* ✅ สีดำกลาง */
+                border-radius: 2px;
+                box-shadow: 0 -5px 0 #000, 0 5px 0 #000;
+                /* ✅ เส้นบน/ล่างสีดำ */
+            }
+
+            /* เว้นระยะให้พอดีกับปุ่มอื่นทางซ้าย */
+            .leaflet-top.leaflet-left .tmc-export-toggle {
+                margin-top: .25rem;
+            }
+        </style>
+    @endpush
+
+
+    @push('styles')
         {{-- ----------------------------------------------------------------------------------------------------------------------------
           MAP: STYLES (CSS เฉพาะของแผนที่/ป้าย/แผงรายชื่อ/ขนาด popup)
         ---------------------------------------------------------------------------------------------------------------------------- --}}
@@ -594,13 +701,9 @@
         </style>
     @endpush
 
-
     @push('scripts')
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
-        <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
-
         {{-- ----------------------------------------------------------------------------------------------------------------------------
-          MAP: SCRIPTS (สร้างแผนที่, หมุด, ป้าย, popup, แผงรายชื่อ, การเลื่อนกล้อง)
+        MAP: SCRIPTS (สร้างแผนที่, หมุด, ป้าย, popup, แผงรายชื่อ, การเลื่อนกล้อง, และ Export เมนู)
         ---------------------------------------------------------------------------------------------------------------------------- --}}
         <script>
             (function() {
@@ -612,6 +715,7 @@
                     unassessed: '#9aa0a6'
                 };
 
+                // ====== สร้างแผนที่ ======
                 const map = L.map('tmc-map', {
                     zoomControl: true,
                     fullscreenControl: true,
@@ -642,6 +746,7 @@
                     if (f.lat == null || f.lon == null) return;
                     const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
                     const key = String(f.id ?? `${f.lat},${f.lon}`);
+
                     const mk = L.marker([f.lat, f.lon], {
                         icon: coloredPin(c)
                     }).addTo(map);
@@ -652,32 +757,25 @@
                     const districtLabel = isBkk ? 'เขต' : 'อำเภอ';
                     const subdistrictLabel = isBkk ? 'แขวง' : 'ตำบล';
 
-                    // ✅ แสดง “การให้บริการของหน่วยงาน” เฉพาะหน่วยที่ approved และมีรายการ services
                     const svcHtml = (f.approved && Array.isArray(f.services) && f.services.length) ?
-                        `<div class="mt-2">
-                               <div class="fw-semibold mb-1">บริการ</div>
-                               <ul class="mb-2 ps-3">
-                                   ${f.services.map(s => `<li class="small">${esc(s)}</li>`).join('')}
-                               </ul>
-                           </div>` :
-                        '';
+                        `<div class="mt-2"><div class="fw-semibold mb-1">บริการ</div><ul class="mb-2 ps-3">${f.services.map(s=>`<li class="small">${esc(s)}</li>`).join('')}</ul></div>` : '';
 
                     mk.bindPopup(`
-                        <div class="tmc-pop" style="min-width:260px;">
-                            <h6 class="mb-2 text-primary">${esc(f.name)}</h6>
-                            ${f.address ? `<p class="mb-1"><span class="text-muted">ที่อยู่:</span> ${esc(f.address)}</p>` : ''}
-                            <p class="mb-2">
-                              <span class="text-muted">จังหวัด:</span> ${esc(f.province || '-')}
-                              <span class="ms-2 text-muted">${districtLabel}:</span> ${esc(f.district || '-')}
-                              <span class="ms-2 text-muted">${subdistrictLabel}:</span> ${esc(f.subdistrict || '-')}
-                            </p>
-                            ${svcHtml}
-                            ${contactLine ? `<p class="text-muted small mt-2 mb-2"><strong>ติดต่อ:</strong> ${esc(contactLine)}</p>` : ''}
-                            <button type="button" class="btn btn-primary btn-sm w-100" disabled>
-                                <i class="ph-duotone ph-paper-plane-tilt me-1"></i> ส่งข้อความ
-                            </button>
-                        </div>
-                    `, {
+            <div class="tmc-pop" style="min-width:260px;">
+              <h6 class="mb-2 text-primary">${esc(f.name)}</h6>
+              ${f.address ? `<p class="mb-1"><span class="text-muted">ที่อยู่:</span> ${esc(f.address)}</p>` : ''}
+              <p class="mb-2">
+                <span class="text-muted">จังหวัด:</span> ${esc(f.province || '-')}
+                <span class="ms-2 text-muted">${districtLabel}:</span> ${esc(f.district || '-')}
+                <span class="ms-2 text-muted">${subdistrictLabel}:</span> ${esc(f.subdistrict || '-')}
+              </p>
+              ${svcHtml}
+              ${contactLine ? `<p class="text-muted small mt-2 mb-2"><strong>ติดต่อ:</strong> ${esc(contactLine)}</p>` : ''}
+              <button type="button" class="btn btn-primary btn-sm w-100" disabled>
+                <i class="ph-duotone ph-paper-plane-tilt me-1"></i> ส่งข้อความ
+              </button>
+            </div>
+        `, {
                         maxWidth: 480,
                         autoPan: true
                     });
@@ -685,20 +783,16 @@
                     mk.on('popupopen', () => {
                         setActiveByKey(key, true);
                         ensureVisibleWithPanel(mk);
-                        panToOffset(mk.getLatLng(), L.point(-100, 200)); // ขยับลง 200px
+                        panToOffset(mk.getLatLng(), L.point(-100, 200));
                     });
                     markers.push(mk);
                     markerById.set(key, mk);
 
-                    // label ไม่มี badge ระดับ
                     const lbl = L.marker([f.lat, f.lon], {
                         interactive: true,
                         icon: L.divIcon({
                             className: 'facility-label',
-                            html: `<div class="flabel" style="--c:${c}">
-                                     <span class="dot"></span>
-                                     <span class="name">${esc(f.name)}</span>
-                                   </div>`,
+                            html: `<div class="flabel" style="--c:${c}"><span class="dot"></span><span class="name">${esc(f.name)}</span></div>`,
                             iconSize: null,
                             iconAnchor: [-6, 18]
                         }),
@@ -721,28 +815,21 @@
 
                 function flyPanZoom(mk) {
                     if (!mk) return;
-
-                    const latlng = mk.getLatLng();
-                    const cur = map.getCenter();
-                    const distM = map.distance(cur, latlng);
-
+                    const latlng = mk.getLatLng(),
+                        cur = map.getCenter(),
+                        distM = map.distance(cur, latlng);
                     let z;
                     if (distM > 600000) z = 8;
                     else if (distM > 200000) z = 10;
                     else if (distM > 50000) z = 12;
                     else z = Math.max(map.getZoom(), 14);
-
                     const needZoom = Math.abs(map.getZoom() - z) > 0.6;
                     const done = () => mk.openPopup();
-
-                    // ✅ คำนวณตำแหน่ง offset ล่วงหน้า (ให้หมุดอยู่ต่ำกว่ากึ่งกลาง)
                     const offsetPx = L.point(-100, 200);
                     const target = (() => {
-                        const zoom = z;
-                        const pt = map.project(latlng, zoom).subtract(offsetPx);
-                        return map.unproject(pt, zoom);
+                        const pt = map.project(latlng, z).subtract(offsetPx);
+                        return map.unproject(pt, z);
                     })();
-
                     if (distM > 1500 || needZoom) {
                         map.flyTo(target, z, {
                             animate: true,
@@ -781,7 +868,6 @@
                 }
 
                 function panToOffset(latlng, offsetPx) {
-                    // offsetPx: L.point(x, y). y ติดลบ = ขยับหมุดลง
                     const z = map.getZoom();
                     const pt = map.project(latlng, z).subtract(offsetPx);
                     const ll = map.unproject(pt, z);
@@ -791,47 +877,40 @@
                         easeLinearity: 0.2
                     });
                 }
-
                 const listCtrl = L.control({
                     position: 'topright'
                 });
                 listCtrl.onAdd = function() {
                     const wrap = L.DomUtil.create('div', 'tmc-list');
                     wrap.innerHTML = `<div class="hdr"><span>หน่วยบริการทั้งหมด</span><button class="toggle" type="button" title="ย่อ/ขยาย">▣</button></div>
-                                      <div class="srch"><input type="search" placeholder="ค้นหาชื่อ/จังหวัด"></div>
-                                      <div class="body"></div>`;
+                          <div class="srch"><input type="search" placeholder="ค้นหาชื่อ/จังหวัด"></div>
+                          <div class="body"></div>`;
                     L.DomEvent.disableClickPropagation(wrap);
                     L.DomEvent.disableScrollPropagation(wrap);
-
                     const body = wrap.querySelector('.body'),
                         input = wrap.querySelector('input[type="search"]'),
                         toggleBtn = wrap.querySelector('.toggle');
-
-                    // กันโฟกัสหลุด / ป้องกัน Leaflet แย่งโฟกัสและคีย์บอร์ด
                     L.DomEvent.disableClickPropagation(input);
                     L.DomEvent.disableScrollPropagation(input);
-                    ['keydown', 'keypress', 'keyup', 'input', 'click', 'mousedown', 'dblclick', 'touchstart', 'pointerdown', 'wheel', 'contextmenu']
-                    .forEach(evt => L.DomEvent.on(input, evt, e => e.stopPropagation()));
+                    ['keydown', 'keypress', 'keyup', 'input', 'click', 'mousedown', 'dblclick', 'touchstart', 'pointerdown', 'wheel', 'contextmenu'].forEach(evt => L.DomEvent.on(input, evt, e => e.stopPropagation()));
                     input.addEventListener('focus', () => map.keyboard && map.keyboard.disable());
                     input.addEventListener('blur', () => map.keyboard && map.keyboard.enable());
                     input.setAttribute('autocomplete', 'off');
                     input.setAttribute('spellcheck', 'false');
                     input.setAttribute('autocapitalize', 'off');
 
-                    const rowsData = facilities
-                        .filter(f => f.lat != null && f.lon != null)
-                        .map(f => {
-                            const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
-                            const key = String(f.id ?? `${f.lat},${f.lon}`);
-                            const lvlText = f.levelKey === 'unassessed' ? 'ยังไม่ได้ประเมิน' : `ระดับ${String(f.levelText||'-')}`;
-                            return {
-                                key,
-                                name: f.name,
-                                province: f.province || '-',
-                                levelText: lvlText,
-                                color: c
-                            };
-                        });
+                    const rowsData = facilities.filter(f => f.lat != null && f.lon != null).map(f => {
+                        const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
+                        const key = String(f.id ?? `${f.lat},${f.lon}`);
+                        const lvlText = f.levelKey === 'unassessed' ? 'ยังไม่ได้ประเมิน' : `ระดับ${String(f.levelText||'-')}`;
+                        return {
+                            key,
+                            name: f.name,
+                            province: f.province || '-',
+                            levelText: lvlText,
+                            color: c
+                        };
+                    });
 
                     function buildRow(row) {
                         const el = document.createElement('div');
@@ -839,10 +918,8 @@
                         el.dataset.key = row.key;
                         el.style.setProperty('--c', row.color);
                         el.innerHTML = `<span class="dot" style="background:${row.color}"></span>
-                                        <div>
-                                           <div class="tit">${esc(row.name)}</div>
-                                           <div class="sub">${esc(row.province)} • ${esc(row.levelText)}</div>
-                                        </div>`;
+                            <div><div class="tit">${esc(row.name)}</div>
+                            <div class="sub">${esc(row.province)} • ${esc(row.levelText)}</div></div>`;
                         el.addEventListener('click', () => {
                             setActive(el, true);
                             const mk = markerById.get(row.key);
@@ -855,9 +932,7 @@
                         const s = q.trim().toLowerCase();
                         body.innerHTML = '';
                         elByKey.clear();
-                        const list = s ?
-                            rowsData.filter(r => (r.name + ' ' + r.province + ' ' + r.levelText).toLowerCase().includes(s)) :
-                            rowsData;
+                        const list = s ? rowsData.filter(r => (r.name + ' ' + r.province + ' ' + r.levelText).toLowerCase().includes(s)) : rowsData;
                         if (!list.length) {
                             const emp = document.createElement('div');
                             emp.className = 'tmc-empty';
@@ -918,11 +993,7 @@
 
                 function coloredPin(c) {
                     return L.icon({
-                        iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(
-                            `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38" fill="none">
-                               <path d="M14 1C9 1 4 5.6 4 11.6 4 21.8 14 37 14 37s10-15.2 10-25.4C24 5.6 19 1 14 1z" fill="${c}"/>
-                               <circle cx="14" cy="11.6" r="3.6" fill="#fff"/>
-                             </svg>`),
+                        iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38" fill="none"><path d="M14 1C9 1 4 5.6 4 11.6 4 21.8 14 37 14 37s10-15.2 10-25.4C24 5.6 19 1 14 1z" fill="${c}"/><circle cx="14" cy="11.6" r="3.6" fill="#fff"/></svg>`),
                         iconSize: [28, 38],
                         iconAnchor: [14, 37],
                         popupAnchor: [0, -38]
@@ -938,9 +1009,219 @@
                         "'": '&#39;'
                     } [m]));
                 }
-            })();
+
+                // ====== EXPORT MENU (PNG / GeoJSON / CSV) =====================================================
+                // ป้องกัน error หากปลั๊กอินยังไม่โหลด
+                const screenshoter = (typeof L.simpleMapScreenshoter === 'function') ?
+                    L.simpleMapScreenshoter({
+                        hidden: true
+                    }).addTo(map) :
+                    null;
+
+                function downloadBlob(blob, filename) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                        a.remove();
+                    }, 0);
+                }
+
+                function downloadText(text, filename, mime = 'text/plain;charset=utf-8') {
+                    const blob = new Blob([text], {
+                        type: mime
+                    });
+                    downloadBlob(blob, filename);
+                }
+
+                function facilitiesToGeoJSON() {
+                    const feats = (Array.isArray(facilities) ? facilities : []).filter(f => f.lat != null && f.lon != null).map(f => ({
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [Number(f.lon), Number(f.lat)]
+                        },
+                        properties: {
+                            id: f.id ?? null,
+                            name: f.name ?? '',
+                            levelKey: f.levelKey ?? '',
+                            levelText: f.levelText ?? '',
+                            approved: !!f.approved,
+                            province: f.province ?? '',
+                            district: f.district ?? '',
+                            subdistrict: f.subdistrict ?? '',
+                            provinceCode: f.provinceCode ?? '',
+                            districtCode: f.districtCode ?? '',
+                            subdistrictCode: f.subdistrictCode ?? '',
+                            phone: f.phone ?? '',
+                            email: f.email ?? '',
+                            services: Array.isArray(f.services) ? f.services.join(', ') : ''
+                        }
+                    }));
+                    return {
+                        type: 'FeatureCollection',
+                        features: feats
+                    };
+                }
+
+                // ===== helper: download blob =====
+                function downloadBlob(blob, filename) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                        a.remove();
+                    }, 0);
+                }
+
+                // ===== helper: download as CSV with BOM (ภาษาไทยไม่เพี้ยนใน Excel) =====
+                function downloadCSV(text, filename) {
+                    const BOM = '\uFEFF';
+                    const blob = new Blob([BOM, text], {
+                        type: 'text/csv;charset=utf-8'
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        URL.revokeObjectURL(url);
+                        a.remove();
+                    }, 0);
+                }
+
+                // ===== CSV generator: หัวคอลัมน์ไทย + ลบฟิลด์ที่ไม่ต้องการ =====
+                function facilitiesToCSV() {
+                    const rows = Array.isArray(facilities) ? facilities : [];
+
+                    // ✅ หัวตารางภาษาไทย (เรียงตามที่กำหนด)
+                    const headers = [
+                        'id',
+                        'ชื่อหน่วยบริการ',
+                        'ระดับ',
+                        'สถานะประเมิน',
+                        'จังหวัด',
+                        'อำเภอ',
+                        'ตำบล',
+                        'ละติจูด',
+                        'ลองจิจูด',
+                        'โทรศัพท์',
+                        'อีเมล์',
+                        'การให้บริการ'
+                    ];
+
+                    // escape ข้อความให้ปลอดภัย
+                    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+                    const lines = [];
+                    lines.push(headers.join(','));
+
+                    rows.forEach(f => {
+                        lines.push([
+                            f.id,
+                            f.name,
+                            f.levelText, // ✅ ระดับ
+                            f.approved ? 'อนุมัติ' : 'รอดำเนินการ', // ✅ สถานะ
+                            f.province,
+                            f.district,
+                            f.subdistrict,
+                            f.lat,
+                            f.lon,
+                            f.phone,
+                            f.email,
+                            Array.isArray(f.services) ? f.services.join(' | ') : ''
+                        ].map(q).join(','));
+                    });
+
+                    return lines.join('\r\n'); // CRLF เพื่อให้ Excel เปิดได้ดี
+                }
+
+
+                const ExportToggle = L.Control.extend({
+                    options: {
+                        position: 'topleft'
+                    }, // อยู่ฝั่งซ้าย
+                    onAdd: function() {
+                        const container = L.DomUtil.create('div', 'leaflet-control tmc-export-toggle leaflet-bar');
+                        const btn = L.DomUtil.create('a', '', container);
+                        btn.href = '#';
+                        btn.title = 'Export';
+
+                        // ✅ ป้องกัน event กระทบแผนที่ (สำคัญ!)
+                        L.DomEvent.disableClickPropagation(container);
+                        L.DomEvent.disableScrollPropagation(container);
+
+                        L.DomEvent.on(btn, 'click', (e) => {
+                            L.DomEvent.stop(e); // กัน event ส่งต่อไป map
+                            menu.getContainer().classList.toggle('d-none');
+                        });
+
+                        return container;
+                    }
+                });
+
+                const ExportMenu = L.Control.extend({
+                    options: {
+                        position: 'topleft'
+                    },
+                    onAdd: function() {
+                        const div = L.DomUtil.create('div', 'tmc-export d-none');
+                        div.id = 'tmc-export-menu';
+                        div.innerHTML = `
+                <a href="#" class="btn" data-act="png"><i class="ti ti-photo"></i> Download PNG</a>
+                <a href="#" class="btn" data-act="geojson"><i class="ti ti-file-code"></i> Download GeoJSON</a>
+                <a href="#" class="btn" data-act="csv"><i class="ti ti-file-spreadsheet"></i> Download CSV</a>
+            `;
+                        L.DomEvent.disableClickPropagation(div);
+                        L.DomEvent.disableScrollPropagation(div);
+                        div.addEventListener('click', async (ev) => {
+                            const a = ev.target.closest('a.btn');
+                            if (!a) return;
+                            ev.preventDefault();
+                            const act = a.dataset.act;
+                            const today = new Date();
+                            const stamp = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+
+                            if (act === 'png') {
+                                const blob = await screenshoter.takeScreen('blob');
+                                downloadBlob(blob, `tmc-map_${stamp}.png`);
+                            } else if (act === 'geojson') {
+                                const gj = facilitiesToGeoJSON();
+                                downloadBlob(new Blob([JSON.stringify(gj)], {
+                                    type: 'application/geo+json;charset=utf-8'
+                                }), `tmc-facilities_${stamp}.geojson`);
+                            } else if (act === 'csv') {
+                                const csv = facilitiesToCSV();
+                                downloadCSV(csv, `tmc-facilities_${stamp}.csv`); // ✅ ใช้ตัวนี้
+                            }
+
+                            div.classList.add('d-none');
+                        });
+                        return div;
+                    }
+                });
+
+                const toggle = new ExportToggle().addTo(map);
+                const menu = new ExportMenu().addTo(map);
+                map.on('click', () => menu.getContainer().classList.add('d-none'));
+
+            })(); // IIFE end
         </script>
     @endpush
+
 
 
 
@@ -1370,7 +1651,6 @@
     </div>
 
     @push('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
         <script>
             (function() {
                 const seriesCounts = @json($seriesCounts);
@@ -1379,27 +1659,59 @@
 
                 // เรียงข้อมูลจากมากไปน้อย พร้อมคงสี
                 const zipped = seriesLabels.map((label, i) => ({
-                    label,
-                    count: seriesCounts[i],
-                    color: seriesColors[i]
-                })).sort((a, b) => b.count - a.count);
+                        label,
+                        count: seriesCounts[i],
+                        color: seriesColors[i]
+                    }))
+                    .sort((a, b) => b.count - a.count);
 
                 const el = document.querySelector("#chart-status-bar");
                 if (!el) return;
+
+                // ตั้งชื่อไฟล์ export
+                const now = new Date();
+                const y = String(now.getFullYear());
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                const baseName = `status-by-approval_${y}${m}${d}`;
 
                 const options = {
                     chart: {
                         type: 'bar',
                         height: 420,
                         toolbar: {
-                            show: false
+                            show: true,
+                            tools: {
+                                // โชว์เฉพาะปุ่มเมนู (ดาวน์โหลด) ที่มุมขวาบน
+                                download: true,
+                                selection: false,
+                                zoom: false,
+                                zoomin: false,
+                                zoomout: false,
+                                pan: false,
+                                reset: false
+                            },
+                            export: {
+                                csv: {
+                                    filename: baseName,
+                                    // header ภาษาไทยอ่านง่าย
+                                    headerCategory: 'สถานะ',
+                                    headerValue: 'จำนวนหน่วยบริการ'
+                                },
+                                svg: {
+                                    filename: baseName
+                                },
+                                png: {
+                                    filename: baseName
+                                }
+                            }
                         },
                         animations: {
                             enabled: true
                         },
                         events: {
-                            dataPointSelection: function(event, chartContext, config) {
-                                // ❌ ไม่ให้คลิกทำอะไรเลย
+                            dataPointSelection: function(event) {
+                                // ปิดการคลิกแท่งกราฟ
                                 event.stopPropagation();
                                 return false;
                             }
@@ -1415,7 +1727,7 @@
                             rotate: -10,
                             trim: true
                         },
-                        title: { // ✅ เพิ่มคำอธิบายแนวนอน
+                        title: {
                             text: 'จำนวนหน่วยบริการ',
                             style: {
                                 fontSize: '14px',
@@ -1430,7 +1742,6 @@
                             horizontal: true,
                             barHeight: '60%',
                             distributed: true,
-                            // ✅ ปิดการ hover และการคลิก
                             dataPointSelection: false
                         }
                     },
@@ -1472,6 +1783,7 @@
             })();
         </script>
     @endpush
+
 
 
 
@@ -1543,5 +1855,792 @@
             </div>
         @endforeach
     </div>
+
+
+
+
+
+
+    {{--
+    --------------------------------------------------------------------------------------------------------------------------------
+
+         ██████╗██╗  ██╗ ██████╗ ██████╗  ██████╗ ██████╗ ██╗     ███████╗████████╗██╗  ██╗
+        ██╔════╝██║  ██║██╔═══██╗██╔══██╗██╔═══██╗██╔══██╗██║     ██╔════╝╚══██╔══╝██║  ██║
+        ██║     ███████║██║   ██║██████╔╝██║   ██║██████╔╝██║     █████╗     ██║   ███████║
+        ██║     ██╔══██║██║   ██║██╔══██╗██║   ██║██╔═══╝ ██║     ██╔══╝     ██║   ██╔══██║
+        ╚██████╗██║  ██║╚██████╔╝██║  ██║╚██████╔╝██║     ███████╗███████╗   ██║   ██║  ██║
+         ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝
+
+        CHOROPLETH: สัดส่วน “อนุมัติ (%)” ต่อจังหวัด (service_units.org_province_code ↔ geo: pro_code)
+    --------------------------------------------------------------------------------------------------------------------------------
+
+    @php
+        $approvedRows = \App\Models\AssessmentServiceUnitLevel::query()
+            ->join('service_units as su', 'su.id', '=', 'assessment_service_unit_levels.service_unit_id')
+            ->where('assessment_service_unit_levels.assess_year', $filterYear)
+            ->where('assessment_service_unit_levels.assess_round', $filterRound)
+            ->where('assessment_service_unit_levels.approval_status', 'approved')
+            ->whereNull('assessment_service_unit_levels.deleted_at')
+            ->selectRaw('LPAD(su.org_province_code, 2, "0") as code, COUNT(*) as approved_count')
+            ->groupBy('code')
+            ->get();
+
+        $totalRows = $serviceUnits->groupBy(fn($su) => str_pad((string) $su->org_province_code, 2, '0', STR_PAD_LEFT))->map->count();
+
+        $provStat = [];
+        foreach ($totalRows as $code => $ttl) {
+            $appr = (int) ($approvedRows->firstWhere('code', $code)->approved_count ?? 0);
+            $pct = $ttl > 0 ? round(($appr / $ttl) * 100, 1) : 0.0;
+            $provStat[$code] = ['approved' => $appr, 'total' => (int) $ttl, 'pct' => $pct];
+        }
+
+        $provinceNameByCode = \App\Models\Province::query()
+            ->get(['code', 'title'])
+            ->mapWithKeys(fn($p) => [str_pad((string) $p->code, 2, '0', STR_PAD_LEFT) => $p->title])
+            ->toArray();
+
+        $TH_GEOJSON_URL = asset('geo/provinces.geojson');
+    @endphp
+
+    <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <div><i class="ph-duotone ph-map-trifold"></i>
+                <span class="ms-1">สัดส่วน “อนุมัติ (%)” ต่อจังหวัด ({{ (int) $filterYear }} / รอบ {{ (int) $filterRound }})</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div id="tmc-choropleth" style="height:600px;"></div>
+        </div>
+    </div>
+
+    @push('styles')
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
+        <style>
+            .choropleth-legend {
+                background: #fff;
+                padding: .5rem .75rem;
+                border-radius: .5rem;
+                box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+                line-height: 1.2;
+                font-size: .9rem;
+                z-index: 500;
+            }
+
+            .choropleth-legend .row {
+                display: flex;
+                align-items: center;
+                gap: .5rem;
+                margin: .25rem 0;
+            }
+
+            .choropleth-legend .swatch {
+                width: 18px;
+                height: 12px;
+                border-radius: 3px;
+                box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+            }
+
+            .leaflet-tooltip.prov-tip {
+                background: rgba(255, 255, 255, .95);
+                border-radius: .5rem;
+                box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+                border: 1px solid #e9ecef;
+                padding: .4rem .6rem;
+            }
+        </style>
+    @endpush
+
+    @push('scripts')
+    <script>
+        (function() {
+            // ===== ข้อมูลจาก Blade =====
+            const PROV_STAT = @json($provStat);
+            const PROV_NAME = @json($provinceNameByCode);
+            const GEO_URL = @json($TH_GEOJSON_URL);
+
+            function getColor(p) {
+                if (p == null) return '#e5e7eb';
+                if (p <= 0) return '#e5e7eb';
+                if (p <= 20) return '#fde68a';
+                if (p <= 40) return '#fbbf24';
+                if (p <= 60) return '#f59e0b';
+                if (p <= 80) return '#f97316';
+                return '#ef4444';
+            }
+
+            function getProvCode(f) {
+                const v = f.properties.pro_code ?? f.properties.PRO_CODE ?? '';
+                return String(v).padStart(2, '0');
+            }
+
+            function getProvNameFromGeo(f) {
+                return f.properties.pro_th ?? f.properties.PRO_TH ?? '';
+            }
+
+            function style(feature) {
+                const code = getProvCode(feature);
+                const pct = (PROV_STAT[code] && typeof PROV_STAT[code].pct === 'number') ? PROV_STAT[code].pct : 0;
+                return {
+                    fillColor: getColor(pct),
+                    weight: 1,
+                    opacity: 1,
+                    color: '#ffffff',
+                    fillOpacity: 0.8
+                };
+            }
+
+            const map = L.map('tmc-choropleth', { zoomControl: true }).setView([15.3, 101], 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+
+            fetch(GEO_URL).then(r => r.json()).then(geo => {
+                const layer = L.geoJSON(geo, {
+                    style,
+                    onEachFeature: (feature, lyr) => {
+                        const code = getProvCode(feature);
+                        const stat = PROV_STAT[code] ? PROV_STAT[code] : { approved: 0, total: 0, pct: 0 };
+                        const name = PROV_NAME[code] ? PROV_NAME[code] : (getProvNameFromGeo(feature) || 'ไม่ทราบจังหวัด');
+
+                        const tip = `<div><strong>${escapeHtml(name)}</strong></div>
+                            <div class="text-muted">อนุมัติ: ${Number(stat.pct).toFixed(1)}% (${Number(stat.approved).toLocaleString()} / ${Number(stat.total).toLocaleString()} หน่วย)</div>`;
+                        lyr.bindTooltip(tip, { sticky: true, className: 'prov-tip' });
+
+                        lyr.on({
+                            mouseover: e => {
+                                e.target.setStyle({ weight: 2, color: '#111', fillOpacity: 0.9 });
+                                e.target.bringToFront();
+                            },
+                            mouseout: e => layer.resetStyle(e.target)
+                        });
+                    }
+                }).addTo(map);
+                map.fitBounds(layer.getBounds().pad(0.08));
+
+                const legend = L.control({ position: 'bottomright' });
+                legend.onAdd = function() {
+                    const div = L.DomUtil.create('div', 'choropleth-legend');
+                    const title = L.DomUtil.create('div', 'fw-semibold mb-1', div);
+                    title.textContent = 'สัดส่วนอนุมัติ (%)';
+                    const ranges = [
+                        { lab: '0', val: 0 },
+                        { lab: '1–20', val: 20 },
+                        { lab: '21–40', val: 40 },
+                        { lab: '41–60', val: 60 },
+                        { lab: '61–80', val: 80 },
+                        { lab: '81–100', val: 100 },
+                    ];
+                    ranges.forEach(r => {
+                        const row = L.DomUtil.create('div', 'row', div);
+                        const sw = L.DomUtil.create('span', 'swatch', row);
+                        sw.style.background = getColor(r.val);
+                        const txt = L.DomUtil.create('span', '', row);
+                        txt.textContent = r.lab;
+                    });
+                    L.DomEvent.disableClickPropagation(div);
+                    L.DomEvent.disableScrollPropagation(div);
+                    return div;
+                };
+                legend.addTo(map);
+            });
+
+            function escapeHtml(s) {
+                return String(s ?? '').replace(/[&<>\"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+            }
+        })();
+    </script>
+    @endpush
+
+--}}
+
+
+
+    {{-- แสดงส่วนนี้เฉพาะเมื่อยังไม่ได้กรองด้วยพารามิเตอร์ `region` --}}
+    @if (!request()->filled('region'))
+
+        {{-- --------------------------------------------------------------------------------------------------------------------------------
+
+    ███████╗████████╗ █████╗  ██████╗██╗  ██╗███████╗██████╗     ██╗   ██╗      ██████╗  █████╗ ██████╗
+    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗    ██║   ██║      ██╔══██╗██╔══██╗██╔══██╗
+    ███████╗   ██║   ███████║██║     █████╔╝ █████╗  ██║  ██║    ██║   ██║█████╗██████╔╝███████║██████╔╝
+    ╚════██║   ██║   ██╔══██║██║     ██╔═██╗ ██╔══╝  ██║  ██║    ╚██╗ ██╔╝╚════╝██╔══██╗██╔══██║██╔══██╗
+    ███████║   ██║   ██║  ██║╚██████╗██║  ██╗███████╗██████╔╝     ╚████╔╝       ██████╔╝██║  ██║██║  ██║
+    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═════╝       ╚═══╝        ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+
+    STACKED V-BAR + ตารางข้อมูล: ระดับบริการ × สคร.
+    - ชื่อ สคร. มาจาก \App\Models\HealthRegion
+    - ข้อความระดับมาจาก config('tmc.level_text')
+    - คำนวณทั้งหมดใน Blade
+    -------------------------------------------------------------------------------------------------------------------------------- --}}
+
+        @php
+            // 1) ดึงชื่อ สคร. จาก DB (เลือก short_title ถ้ามี, รองลงมา title)
+            $REGION_NAMES = \App\Models\HealthRegion::query()
+                ->orderBy('id')
+                ->get(['id', 'title', 'short_title'])
+                ->mapWithKeys(function ($r) {
+                    $name = $r->short_title ?: $r->title ?: 'สคร.' . $r->id;
+                    return [(int) $r->id => $name];
+                });
+
+            // 2) config ระดับ (ข้อความจาก tmc.php)
+            $LEVEL_TEXTS = array_merge(['basic' => 'ระดับพื้นฐาน', 'medium' => 'ระดับกลาง', 'advanced' => 'ระดับสูง', 'unassessed' => 'ยังไม่ได้ประเมิน'], (array) config('tmc.level_text', []));
+
+            // สีของกราฟ (กำหนดเป็น HEX ให้คงที่ สอดคล้องกับโทน badge)
+            $LEVEL_HEX = [
+                'basic' => '#ef83c2', // โทนชมพู (คู่กับ pink-100)
+                'medium' => '#f0c419', // โทนเหลือง (คู่กับ yellow-100)
+                'advanced' => '#0dcc93', // โทนเขียว (คู่กับ green-100/teal)
+                'unassessed' => '#9aa0a6', // โทนเทา (คู่กับ gray-100)
+            ];
+
+            // 3) map ระดับที่อ่านได้จากข้อมูล + ลำดับเลือก "ระดับสูงสุด" ต่อหน่วย
+            $mapLevel = function ($v) {
+                $s = strtolower((string) $v);
+                return match ($s) {
+                    'พื้นฐาน', 'ระดับพื้นฐาน', 'basic' => 'basic',
+                    'กลาง', 'ระดับกลาง', 'medium' => 'medium',
+                    'สูง', 'ระดับสูง', 'advanced' => 'advanced',
+                    default => null,
+                };
+            };
+            $prefer = ['advanced', 'medium', 'basic']; // เลือกระดับสูงสุดตามลำดับนี้
+            $order = ['unassessed', 'basic', 'medium', 'advanced']; // ลำดับการแสดงผล (ล่าง → บน)
+
+            // 4) รวมจำนวนหน่วย ต่อ สคร. × ระดับ
+            $byRegion = [];
+            foreach ($serviceUnits as $su) {
+                $rid = (int) data_get($su, 'province.health_region_id', 0);
+                if ($rid === 0) {
+                    continue;
+                }
+
+                if (!isset($byRegion[$rid])) {
+                    $byRegion[$rid] = [
+                        'region_id' => $rid,
+                        'region_name' => $REGION_NAMES->get($rid, "สคร.$rid"),
+                        'basic' => 0,
+                        'medium' => 0,
+                        'advanced' => 0,
+                        'unassessed' => 0,
+                    ];
+                }
+
+                // กรองเฉพาะระดับที่ approved (ตามที่คุณ load ความสัมพันธ์มาแล้ว)
+                $approvedLevels = collect(data_get($su, 'assessmentLevels', []))->map(fn($a) => $mapLevel(data_get($a, 'level')))->filter()->unique()->values();
+
+                // ถ้าไม่มี approved เลย = unassessed
+                $picked = 'unassessed';
+                foreach ($prefer as $k) {
+                    if ($approvedLevels->contains($k)) {
+                        $picked = $k;
+                        break;
+                    }
+                }
+                $byRegion[$rid][$picked] = (int) $byRegion[$rid][$picked] + 1;
+            }
+
+            // 5) ให้ครบทุก สคร. แม้ไม่มีหน่วย (เติม 0)
+            foreach ($REGION_NAMES as $rid => $rname) {
+                if (!isset($byRegion[$rid])) {
+                    $byRegion[$rid] = [
+                        'region_id' => (int) $rid,
+                        'region_name' => $rname,
+                        'basic' => 0,
+                        'medium' => 0,
+                        'advanced' => 0,
+                        'unassessed' => 0,
+                    ];
+                }
+            }
+
+            // 6) เตรียมข้อมูลสำหรับกราฟ
+            $rows = collect($byRegion)
+                ->values()
+                ->map(function ($r) use ($order) {
+                    $sum = 0;
+                    foreach ($order as $lv) {
+                        $sum += (int) ($r[$lv] ?? 0);
+                    }
+                    $r['_total'] = $sum;
+                    return $r;
+                })
+                ->sortBy('region_id') // เปลี่ยนเป็น ->sortByDesc('_total') ได้
+                ->values();
+
+            $cats = $rows->pluck('region_name')->values();
+            $series = collect($order)
+                ->map(function ($lv) use ($rows, $LEVEL_TEXTS, $LEVEL_HEX) {
+                    return [
+                        'name' => $LEVEL_TEXTS[$lv] ?? ucfirst($lv),
+                        'data' => $rows->map(fn($r) => (int) ($r[$lv] ?? 0))->values(),
+                        'color' => $LEVEL_HEX[$lv] ?? '#999999',
+                    ];
+                })
+                ->values();
+
+            $grandTotal = (int) $rows->sum('_total');
+        @endphp
+
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <h6 class="mb-0"><i class="ti ti-chart-bar"></i> ระดับของหน่วยบริการตาม สคร.</h6>
+                <span class="badge bg-light text-dark">รวม {{ number_format($grandTotal) }} หน่วย</span>
+            </div>
+            <div class="card-body">
+                <div id="chart-level-by-dco"></div>
+
+                {{-- =========================
+            ตารางสรุประดับบริการ × สคร.
+            (ใช้ตัวแปร $rows, $order, $LEVEL_TEXTS ที่คำนวณไว้ด้านบน)
+            ========================= --}}
+                @php
+                    // รวมคอลัมน์ (sum ตามระดับ)
+                    $colTotals = [];
+                    foreach ($order as $lv) {
+                        $colTotals[$lv] = (int) collect($rows)->sum($lv);
+                    }
+                    $grandTotal = (int) collect($rows)->sum('_total');
+                @endphp
+
+                <div class="mt-3 table-responsive">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:18%">สคร.</th>
+                                @foreach ($order as $lv)
+                                    <th class="text-end">{{ $LEVEL_TEXTS[$lv] ?? ucfirst($lv) }}</th>
+                                @endforeach
+                                <th class="text-end" style="width:10%">รวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($rows as $r)
+                                @php $rowTotal = (int) ($r['_total'] ?? 0); @endphp
+                                <tr>
+                                    <td>{{ $r['region_name'] }}</td>
+                                    @foreach ($order as $lv)
+                                        <td class="text-end">{{ number_format((int) ($r[$lv] ?? 0)) }}</td>
+                                    @endforeach
+                                    <td class="text-end fw-semibold">{{ number_format($rowTotal) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="{{ count($order) + 2 }}" class="text-center text-muted">ไม่มีข้อมูล</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <th>รวมทั้งหมด</th>
+                                @foreach ($order as $lv)
+                                    <th class="text-end">{{ number_format($colTotals[$lv] ?? 0) }}</th>
+                                @endforeach
+                                <th class="text-end">{{ number_format($grandTotal) }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        @push('scripts')
+            <script>
+                (function() {
+                    const cats = @json($cats);
+                    const series = @json($series);
+
+                    const el = document.querySelector('#chart-level-by-dco');
+                    if (!el) return;
+
+                    // ตั้งชื่อไฟล์ export
+                    const now = new Date();
+                    const y = String(now.getFullYear());
+                    const m = String(now.getMonth() + 1).padStart(2, '0');
+                    const d = String(now.getDate()).padStart(2, '0');
+                    const baseName = `level-by-dco_${y}${m}${d}`;
+
+                    new ApexCharts(el, {
+                        chart: {
+                            type: 'bar',
+                            height: 420,
+                            stacked: true,
+                            toolbar: {
+                                show: true,
+                                tools: {
+                                    download: true, // ✅ แสดงปุ่มเมนูดาวน์โหลด (SVG/PNG/CSV)
+                                    selection: false,
+                                    zoom: false,
+                                    zoomin: false,
+                                    zoomout: false,
+                                    pan: false,
+                                    reset: false
+                                },
+                                export: {
+                                    csv: {
+                                        filename: baseName,
+                                        headerCategory: 'สคร.' // หัวคอลัมน์ของแกน X
+                                    },
+                                    svg: {
+                                        filename: baseName
+                                    },
+                                    png: {
+                                        filename: baseName
+                                    }
+                                }
+                            },
+                            animations: {
+                                enabled: true
+                            }
+                        },
+                        plotOptions: {
+                            bar: {
+                                horizontal: false,
+                                columnWidth: '55%'
+                            }
+                        },
+                        series: series,
+                        xaxis: {
+                            categories: cats,
+                            labels: {
+                                rotate: -10,
+                                trim: true
+                            }
+                        },
+                        yaxis: {
+                            labels: {
+                                formatter: v => new Intl.NumberFormat().format(v)
+                            },
+                            title: {
+                                text: 'จำนวนหน่วยบริการ'
+                            }
+                        },
+                        dataLabels: {
+                            enabled: false
+                        },
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            shared: true,
+                            intersect: false,
+                            y: {
+                                formatter: v => new Intl.NumberFormat().format(v)
+                            }
+                        },
+                        grid: {
+                            strokeDashArray: 4
+                        },
+                        states: {
+                            hover: {
+                                filter: {
+                                    type: 'none'
+                                }
+                            },
+                            active: {
+                                filter: {
+                                    type: 'none'
+                                }
+                            }
+                        },
+                        noData: {
+                            text: 'ไม่มีข้อมูล'
+                        }
+                    }).render();
+                })();
+            </script>
+        @endpush
+
+
+    @endif
+
+
+
+
+
+    {{-- --------------------------------------------------------------------------------------------------------------------------------
+
+    ███████╗████████╗ █████╗  ██████╗██╗  ██╗███████╗██████╗     ██╗   ██╗      ██████╗  █████╗ ██████╗
+    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗    ██║   ██║      ██╔══██╗██╔══██╗██╔══██╗
+    ███████╗   ██║   ███████║██║     █████╔╝ █████╗  ██║  ██║    ██║   ██║█████╗██████╔╝███████║██████╔╝
+    ╚════██║   ██║   ██╔══██║██║     ██╔═██╗ ██╔══╝  ██║  ██║    ╚██╗ ██╔╝╚════╝██╔══██╗██╔══██║██╔══██╗
+    ███████║   ██║   ██║  ██║╚██████╗██║  ██╗███████╗██████╔╝     ╚████╔╝       ██████╔╝██║  ██║██║  ██║
+    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═════╝       ╚═══╝        ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+
+    STACKED H-BAR: ระดับบริการ × จังหวัด
+    - รายชื่อจังหวัดจาก \App\Models\Province
+    - ข้อความระดับจาก config('tmc.level_text')
+    - ทำทั้งหมดใน Blade
+    -------------------------------------------------------------------------------------------------------------------------------- --}}
+
+    @php
+        // 1) รายชื่อจังหวัด (ถ้ามี $filterRegion ใช้กรองให้เหลือเฉพาะจังหวัดใน สคร. นั้น)
+        $PROVINCE_NAMES = \App\Models\Province::query()
+            ->when(isset($filterRegion) && $filterRegion, fn($q) => $q->where('health_region_id', (int) $filterRegion))
+            ->orderBy('code')
+            ->get(['code', 'title'])
+            ->mapWithKeys(fn($p) => [(int) $p->code => $p->title]);
+
+        // 2) ข้อความระดับจาก config
+        $LEVEL_TEXTS = array_merge(['basic' => 'ระดับพื้นฐาน', 'medium' => 'ระดับกลาง', 'advanced' => 'ระดับสูง', 'unassessed' => 'ยังไม่ได้ประเมิน'], (array) config('tmc.level_text', []));
+
+        // สี (โทนเดียวกับก่อนหน้า)
+        $LEVEL_HEX = [
+            'basic' => '#ef83c2',
+            'medium' => '#f0c419',
+            'advanced' => '#0dcc93',
+            'unassessed' => '#9aa0a6',
+        ];
+
+        // 3) map ระดับ + ลำดับเลือกระดับสูงสุด
+        $mapLevel = function ($v) {
+            return match (strtolower((string) $v)) {
+                'พื้นฐาน', 'ระดับพื้นฐาน', 'basic' => 'basic',
+                'กลาง', 'ระดับกลาง', 'medium' => 'medium',
+                'สูง', 'ระดับสูง', 'advanced' => 'advanced',
+                default => null,
+            };
+        };
+        $prefer = ['advanced', 'medium', 'basic'];
+        // ลำดับการซ้อน (ล่าง→บน) ให้ "ยังไม่ได้ประเมิน" อยู่ล่างสุด
+        $order = ['unassessed', 'basic', 'medium', 'advanced'];
+
+        // 4) รวมจำนวนหน่วย ต่อจังหวัด × ระดับ
+        $byProvince = [];
+        foreach ($serviceUnits as $su) {
+            $pcode = (int) data_get($su, 'org_province_code', 0);
+            // ถ้าหน้านี้กรอง สคร. มาแล้ว และจังหวัดนั้นไม่ได้อยู่ใน PROVINCE_NAMES ให้ข้าม
+            if ($pcode === 0 || !$PROVINCE_NAMES->has($pcode)) {
+                continue;
+            }
+
+            if (!isset($byProvince[$pcode])) {
+                $byProvince[$pcode] = [
+                    'province_code' => $pcode,
+                    'province_name' => $PROVINCE_NAMES->get($pcode),
+                    'basic' => 0,
+                    'medium' => 0,
+                    'advanced' => 0,
+                    'unassessed' => 0,
+                ];
+            }
+
+            $approvedLevels = collect(data_get($su, 'assessmentLevels', []))->map(fn($a) => $mapLevel(data_get($a, 'level')))->filter()->unique()->values();
+
+            $picked = 'unassessed';
+            foreach ($prefer as $k) {
+                if ($approvedLevels->contains($k)) {
+                    $picked = $k;
+                    break;
+                }
+            }
+            $byProvince[$pcode][$picked] = (int) $byProvince[$pcode][$picked] + 1;
+        }
+
+        // 5) เติมจังหวัดที่ไม่มีหน่วย (ให้เป็น 0) เพื่อให้ครบชุด
+        foreach ($PROVINCE_NAMES as $code => $title) {
+            if (!isset($byProvince[$code])) {
+                $byProvince[$code] = [
+                    'province_code' => (int) $code,
+                    'province_name' => $title,
+                    'basic' => 0,
+                    'medium' => 0,
+                    'advanced' => 0,
+                    'unassessed' => 0,
+                ];
+            }
+        }
+
+        // 6) เตรียมข้อมูลสำหรับกราฟ/ตาราง
+        $rows = collect($byProvince)
+            ->values()
+            ->map(function ($r) use ($order) {
+                $sum = 0;
+                foreach ($order as $lv) {
+                    $sum += (int) ($r[$lv] ?? 0);
+                }
+                $r['_total'] = $sum;
+                return $r;
+            })
+            ->sortBy('province_code') // เปลี่ยนเป็น ->sortByDesc('_total') ได้
+            ->values();
+
+        $cats = $rows->pluck('province_name')->values();
+        $series = collect($order)
+            ->map(function ($lv) use ($rows, $LEVEL_TEXTS, $LEVEL_HEX) {
+                return [
+                    'name' => $LEVEL_TEXTS[$lv] ?? ucfirst($lv),
+                    'data' => $rows->map(fn($r) => (int) ($r[$lv] ?? 0))->values(),
+                    'color' => $LEVEL_HEX[$lv] ?? '#999999',
+                ];
+            })
+            ->values();
+
+        $grandTotal = (int) $rows->sum('_total');
+    @endphp
+
+    <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <h6 class="mb-0"><i class="ti ti-chart-bar"></i> ระดับของหน่วยบริการตาม “จังหวัด”</h6>
+            <span class="badge bg-light text-dark">รวม {{ number_format($grandTotal) }} หน่วย</span>
+        </div>
+        <div class="card-body">
+            <div id="chart-level-by-province"></div>
+
+            {{-- ===== ตารางสรุป: จังหวัด × ระดับ ===== --}}
+            @php
+                $colTotals = [];
+                foreach ($order as $lv) {
+                    $colTotals[$lv] = (int) collect($rows)->sum($lv);
+                }
+                $grandTotal = (int) collect($rows)->sum('_total');
+            @endphp
+            <div class="mt-3 table-responsive">
+                <table class="table table-sm table-striped align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width:160px">จังหวัด</th>
+                            @foreach ($order as $lv)
+                                <th class="text-end">{{ $LEVEL_TEXTS[$lv] ?? ucfirst($lv) }}</th>
+                            @endforeach
+                            <th class="text-end" style="width:10%">รวม</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($rows as $r)
+                            @php $rowTotal = (int) ($r['_total'] ?? 0); @endphp
+                            <tr>
+                                <td>{{ $r['province_name'] }}</td>
+                                @foreach ($order as $lv)
+                                    <td class="text-end">{{ number_format((int) ($r[$lv] ?? 0)) }}</td>
+                                @endforeach
+                                <td class="text-end fw-semibold">{{ number_format($rowTotal) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="{{ count($order) + 2 }}" class="text-center text-muted">ไม่มีข้อมูล</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light">
+                            <th>รวมทั้งหมด</th>
+                            @foreach ($order as $lv)
+                                <th class="text-end">{{ number_format($colTotals[$lv] ?? 0) }}</th>
+                            @endforeach
+                            <th class="text-end">{{ number_format($grandTotal) }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+        <script>
+            (function() {
+                const cats = @json($cats);
+                const series = @json($series);
+
+                const el = document.querySelector('#chart-level-by-province');
+                if (!el) return;
+
+                // ชื่อไฟล์ export
+                const now = new Date();
+                const y = String(now.getFullYear());
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                const baseName = `level-by-province_${y}${m}${d}`;
+
+                // ความสูงอัตโนมัติอ่านง่ายตามจำนวนจังหวัด
+                const height = Math.max(420, 28 * cats.length + 140);
+
+                new ApexCharts(el, {
+                    chart: {
+                        type: 'bar',
+                        height,
+                        stacked: true,
+                        toolbar: {
+                            show: true,
+                            tools: {
+                                download: true, // ✅ แสดงเมนู Download SVG/PNG/CSV
+                                selection: false,
+                                zoom: false,
+                                zoomin: false,
+                                zoomout: false,
+                                pan: false,
+                                reset: false
+                            },
+                            export: {
+                                csv: {
+                                    filename: baseName,
+                                    headerCategory: 'จังหวัด' // หัวคอลัมน์แกน X
+                                },
+                                svg: {
+                                    filename: baseName
+                                },
+                                png: {
+                                    filename: baseName
+                                }
+                            }
+                        },
+                        animations: {
+                            enabled: true
+                        }
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: true,
+                            barHeight: '60%'
+                        }
+                    }, // แนวนอนเพื่ออ่านชื่อจังหวัดง่าย
+                    series,
+                    xaxis: {
+                        categories: cats,
+                        labels: {
+                            formatter: v => Math.round(v) // ให้เป็นจำนวนเต็ม
+                        },
+                        min: 0,
+                        tickAmount: 10,
+                        decimalsInFloat: 0,
+                        title: {
+                            text: 'จำนวนหน่วยบริการ'
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        shared: true,
+                        intersect: false,
+                        y: {
+                            formatter: v => new Intl.NumberFormat().format(v)
+                        }
+                    },
+                    grid: {
+                        strokeDashArray: 4
+                    },
+                    states: {
+                        hover: {
+                            filter: {
+                                type: 'none'
+                            }
+                        },
+                        active: {
+                            filter: {
+                                type: 'none'
+                            }
+                        }
+                    },
+                    noData: {
+                        text: 'ไม่มีข้อมูล'
+                    }
+                }).render();
+            })();
+        </script>
+    @endpush
+
 
 @endsection
