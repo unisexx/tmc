@@ -1,8 +1,4 @@
 @php
-    $levelTextMap = config('assessment.level_text');
-    $levelBadgeMap = config('assessment.level_badge_class'); // 'pink-400' | 'yellow-400' | 'green-400'
-    $levelBadgeTextColors = config('assessment.level_badge_text_color'); // 'pink-700' | 'yellow-700' | 'green-700'
-
     $isEdit = isset($mode) && $mode === 'edit' && isset($row);
 
     // ปี/รอบ
@@ -249,6 +245,8 @@
     </div>
 </div>
 
+
+
 @push('css')
     <style>
         /* ขยาย hit-area ของ radio ให้คลิกง่าย */
@@ -271,76 +269,116 @@
 @push('js')
     <script>
         // Single Source of Truth จาก PHP -> JS
-        const LEVEL_TEXT = @json($levelTextMap);
-        const LEVEL_BADGE = @json($levelBadgeMap);
-        const LEVEL_COLOR = @json($levelBadgeTextColors);
+        const LEVEL_TEXT = @json(config('tmc.level_text', []));
+        const LEVEL_COLORS = @json(config('tmc.level_colors', []));
+        const FALLBACK_LEVEL_KEY = 'unassessed';
+        const FALLBACK_COLOR = LEVEL_COLORS[FALLBACK_LEVEL_KEY] || '#A8A8A8';
     </script>
 
     <script>
+        function renderLevelBadgeHtml(levelKey) {
+            var k = (levelKey && String(levelKey).trim() !== '') ?
+                String(levelKey).trim() :
+                FALLBACK_LEVEL_KEY;
+
+            var color = LEVEL_COLORS[k] || FALLBACK_COLOR;
+            var text = LEVEL_TEXT[k] || '—';
+
+            return '' +
+                '<span class="level-badge-map d-inline-flex align-items-center" style="--c: ' + color + ';">' +
+                '<span class="dot"></span>' +
+                '<span class="name">' + text + '</span>' +
+                '</span>';
+        }
+
+        function renderEmptyBadgeHtml() {
+            return '' +
+                '<span class="level-badge-map d-inline-flex align-items-center" style="--c: ' + FALLBACK_COLOR + ';">' +
+                '<span class="dot"></span>' +
+                '<span class="name">—</span>' +
+                '</span>';
+        }
+
         (function() {
-            const secQ2 = document.getElementById('secQ2');
-            const secQ31 = document.getElementById('secQ31');
-            const secQ32 = document.getElementById('secQ32');
-            const secQ4 = document.getElementById('secQ4');
+            var secQ2 = document.getElementById('secQ2');
+            var secQ31 = document.getElementById('secQ31');
+            var secQ32 = document.getElementById('secQ32');
+            var secQ4 = document.getElementById('secQ4');
 
-            const levelLabel = document.getElementById('levelLabel');
-            const levelInput = document.getElementById('levelInput');
-            const btnNext = document.getElementById('btnNext');
-
-            // ป้ายระดับบนหัวสรุป (อาจไม่มีในบางหน้า)
-            const summaryLevelBadge = document.getElementById('summaryLevelBadge');
+            var levelLabel = document.getElementById('levelLabel');
+            var levelInput = document.getElementById('levelInput');
+            var btnNext = document.getElementById('btnNext');
+            var summaryLevelBadge = document.getElementById('summaryLevelBadge');
 
             function collapseShow(el) {
-                el?.classList.add('show');
+                if (!el) return;
+                el.classList.add('show');
             }
 
             function collapseHide(el) {
-                el?.classList.remove('show');
+                if (!el) return;
+                el.classList.remove('show');
             }
 
             function clearRadios(name) {
-                document.querySelectorAll(`input[name="${name}"]`).forEach(i => i.checked = false);
+                document.querySelectorAll('input[name="' + name + '"]').forEach(function(i) {
+                    i.checked = false;
+                });
             }
 
-            function renderBadgeHtml(levelKey) {
-                const txt = LEVEL_TEXT[levelKey] ?? '—';
-                const theme = LEVEL_BADGE[levelKey] ?? 'secondary';
-                const color = LEVEL_COLOR[levelKey] ?? 'white';
-                return `<span class="badge bg-${theme} text-${color} ms-1">${txt}</span>`;
-            }
-
+            // setResult(): ใส่ค่า level ลง hidden + update badge + enable ปุ่ม
             function setResult(levelKey) {
-                const txt = LEVEL_TEXT[levelKey] ?? '—';
-                const theme = LEVEL_BADGE[levelKey] ?? 'secondary';
-                const color = LEVEL_COLOR[levelKey] ?? 'white';
-                levelInput.value = levelKey || '';
-                levelLabel.innerHTML = `<span class="badge bg-${theme} text-${color}">${txt}</span>`;
-                if (summaryLevelBadge) summaryLevelBadge.innerHTML = renderBadgeHtml(levelKey);
-                btnNext.disabled = !levelKey;
+                var key = levelKey || '';
+                levelInput.value = key;
+                levelLabel.innerHTML = renderLevelBadgeHtml(key);
+
+                if (summaryLevelBadge) {
+                    summaryLevelBadge.innerHTML = renderLevelBadgeHtml(key);
+                }
+
+                btnNext.disabled = !key;
             }
 
+            // resetResult(): ล้าง level และ badge เป็น "—"
             function resetResult() {
                 levelInput.value = '';
-                levelLabel.innerHTML = `<span class="badge bg-secondary">—</span>`;
-                if (summaryLevelBadge) summaryLevelBadge.innerHTML = `<span class="badge bg-secondary ms-1">—</span>`;
+                levelLabel.innerHTML = renderEmptyBadgeHtml();
+
+                if (summaryLevelBadge) {
+                    summaryLevelBadge.innerHTML = renderEmptyBadgeHtml();
+                }
+
                 btnNext.disabled = true;
             }
 
+            /**
+             * hideBelow(fromStep)
+             * fromStep:
+             *   1  = เปลี่ยน q1 -> ล้าง q2,q31,q32,q4
+             *   2  = เปลี่ยน q2 -> ล้าง q31,q32,q4
+             *   31 = เปลี่ยน q31 -> ล้าง q4
+             *   32 = เปลี่ยน q32 -> ล้าง q4
+             */
             function hideBelow(from) {
                 if (from <= 1) {
                     collapseHide(secQ2);
                     clearRadios('q2');
+
                     collapseHide(secQ31);
                     clearRadios('q31');
+
                     collapseHide(secQ32);
                     clearRadios('q32');
+
                     collapseHide(secQ4);
                     clearRadios('q4');
                 } else if (from === 2) {
                     collapseHide(secQ31);
                     clearRadios('q31');
+
                     collapseHide(secQ32);
                     clearRadios('q32');
+
                     collapseHide(secQ4);
                     clearRadios('q4');
                 } else if (from === 31 || from === 32) {
@@ -349,84 +387,129 @@
                 }
             }
 
+            // -----------------------------
+            // Event listeners
+            // -----------------------------
+
             // Q1
-            document.querySelectorAll('input[name="q1"]').forEach(el => {
-                el.addEventListener('change', () => {
-                    const v = el.value;
+            document.querySelectorAll('input[name="q1"]').forEach(function(el) {
+                el.addEventListener('change', function() {
+                    var v = el.value;
                     resetResult();
+
                     if (v === 'have') {
                         collapseShow(secQ2);
                         hideBelow(2);
                     }
                     if (v === 'none') {
                         hideBelow(1);
-                        setResult('basic');
+                        setResult('basic'); // ไม่มีแพทย์ = พื้นฐาน
                     }
                 });
             });
 
             // Q2
-            document.querySelectorAll('input[name="q2"]').forEach(el => {
-                el.addEventListener('change', () => {
-                    const v = el.value;
+            document.querySelectorAll('input[name="q2"]').forEach(function(el) {
+                el.addEventListener('change', function() {
+                    var v = el.value;
                     resetResult();
                     hideBelow(2);
-                    if (v === 'tm') collapseShow(secQ31);
-                    if (v === 'other') collapseShow(secQ32);
+
+                    if (v === 'tm') {
+                        collapseShow(secQ31);
+                    }
+                    if (v === 'other') {
+                        collapseShow(secQ32);
+                    }
                 });
             });
 
-            // Q31
-            document.querySelectorAll('input[name="q31"]').forEach(el => {
-                el.addEventListener('change', () => {
-                    const v = el.value;
+            // Q31 (สาย TM)
+            document.querySelectorAll('input[name="q31"]').forEach(function(el) {
+                el.addEventListener('change', function() {
+                    var v = el.value;
                     resetResult();
                     hideBelow(31);
-                    if (v === 'yes') collapseShow(secQ4);
-                    if (v === 'no') setResult('basic');
+
+                    if (v === 'yes') {
+                        collapseShow(secQ4);
+                    }
+                    if (v === 'no') {
+                        setResult('basic');
+                    }
                 });
             });
 
-            // Q32
-            document.querySelectorAll('input[name="q32"]').forEach(el => {
-                el.addEventListener('change', () => {
-                    const v = el.value;
+            // Q32 (สายอื่น)
+            document.querySelectorAll('input[name="q32"]').forEach(function(el) {
+                el.addEventListener('change', function() {
+                    var v = el.value;
                     resetResult();
                     hideBelow(32);
-                    if (v === 'yes') setResult('medium');
-                    if (v === 'no') setResult('basic');
+
+                    if (v === 'yes') {
+                        setResult('medium');
+                    }
+                    if (v === 'no') {
+                        setResult('basic');
+                    }
                 });
             });
 
-            // Q4
-            document.querySelectorAll('input[name="q4"]').forEach(el => {
-                el.addEventListener('change', () => {
-                    const v = el.value;
-                    if (v === 'can') setResult('advanced');
-                    if (v === 'cannot') setResult('medium');
+            // Q4 (ศักยภาพกลุ่มซับซ้อน)
+            document.querySelectorAll('input[name="q4"]').forEach(function(el) {
+                el.addEventListener('change', function() {
+                    var v = el.value;
+                    if (v === 'can') {
+                        setResult('advanced');
+                    }
+                    if (v === 'cannot') {
+                        setResult('medium');
+                    }
                 });
             });
 
-            // Restore
+            // -----------------------------
+            // Restore state ตอนโหลดหน้า
+            // -----------------------------
             (function restore() {
-                const q1 = document.querySelector('input[name="q1"]:checked')?.value;
-                const q2 = document.querySelector('input[name="q2"]:checked')?.value;
-                const q31 = document.querySelector('input[name="q31"]:checked')?.value;
-                const q32 = document.querySelector('input[name="q32"]:checked')?.value;
-                const lv = levelInput?.value;
+                var q1 = document.querySelector('input[name="q1"]:checked');
+                var q2 = document.querySelector('input[name="q2"]:checked');
+                var q31 = document.querySelector('input[name="q31"]:checked');
+                var q32 = document.querySelector('input[name="q32"]:checked');
+                var lv = levelInput ? levelInput.value : '';
 
-                if (q1 === 'have') collapseShow(secQ2);
-                if (q1 === 'have' && q2 === 'tm') collapseShow(secQ31);
-                if (q1 === 'have' && q2 === 'other') collapseShow(secQ32);
-                if (q31 === 'yes') collapseShow(secQ4);
+                if (q1 && q1.value === 'have') {
+                    collapseShow(secQ2);
 
-                if (lv) {
-                    const txt = LEVEL_TEXT[lv] ?? '—';
-                    const theme = LEVEL_BADGE[lv] ?? 'secondary';
-                    const color = LEVEL_COLOR[lv] ?? 'white';
-                    levelLabel.innerHTML = `<span class="badge bg-${theme} text-${color}">${txt}</span>`;
-                    if (summaryLevelBadge) summaryLevelBadge.innerHTML = renderBadgeHtml(lv);
+                    if (q2 && q2.value === 'tm') {
+                        collapseShow(secQ31);
+                    }
+                    if (q2 && q2.value === 'other') {
+                        collapseShow(secQ32);
+                    }
+
+                    if (q31 && q31.value === 'yes') {
+                        collapseShow(secQ4);
+                    }
+                }
+
+                if (lv && lv.trim() !== '') {
+                    levelLabel.innerHTML = renderLevelBadgeHtml(lv);
+
+                    if (summaryLevelBadge) {
+                        summaryLevelBadge.innerHTML = renderLevelBadgeHtml(lv);
+                    }
+
                     btnNext.disabled = false;
+                } else {
+                    levelLabel.innerHTML = renderEmptyBadgeHtml();
+
+                    if (summaryLevelBadge) {
+                        summaryLevelBadge.innerHTML = renderEmptyBadgeHtml();
+                    }
+
+                    btnNext.disabled = true;
                 }
             })();
         })();

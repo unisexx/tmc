@@ -7,7 +7,37 @@
 @section('breadcrumb-item-active', 'รายงานหน่วยบริการ')
 
 @section('content')
+    @push('styles')
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
+        <link rel="stylesheet" href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css">
+    @endpush
+    @push('scripts')
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+        <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
+        <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+    @endpush
+
     @include('backend.dashboard._filter')
+
+    {{-- ปุ่มส่งออกข้อมูล --}}
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-header d-flex justify-content-between align-items-center py-3 bg-light">
+            <div class="d-flex align-items-center text-muted">
+                <i class="ti ti-download me-2 fs-5 text-primary"></i>
+                <span class="fw-semibold">ส่งออกข้อมูลภาพรวม</span>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ route('backend.dashboard.export-unit', ['format' => 'excel']) }}" target="_blank" class="btn text-white fw-semibold px-3 py-2 d-flex align-items-center shadow-sm" style="background:#1e8449; border:none; border-radius:.5rem; box-shadow:0 3px 10px rgba(33,115,70,0.3);
+              transition:all .2s;">
+                    <i class="fas fa-file-excel me-2 fs-5"></i> Excel
+                </a>
+                <a href="{{ route('backend.dashboard.export-unit', ['format' => 'pdf']) }}" target="_blank" class="btn text-white fw-semibold px-3 py-2 d-flex align-items-center shadow-sm" style="background:#c0392b; border:none; border-radius:.5rem; box-shadow:0 3px 10px rgba(208,68,55,0.3);
+              transition:all .2s;">
+                    <i class="fas fa-file-pdf me-2 fs-5"></i> PDF
+                </a>
+            </div>
+        </div>
+    </div>
 
     @php
         $filterYear = (int) request('year');
@@ -31,29 +61,43 @@
         $levelCode = $asul?->level;
         $asulId = $asul?->id;
 
-        // ===== สีระดับ (ต้องตรงกับหน้า overview) =====
-        $LEVEL_COLORS = array_replace(
-            [
-                'basic' => '#FF4560', // พื้นฐาน = ชมพู
-                'medium' => '#FEB019', // กลาง = เหลือง/ส้ม
-                'advanced' => '#00E396', // สูง = เขียว
-                'unassessed' => '#A8A8A8', // ยังไม่ได้ประเมิน = เทา
-            ],
-            (array) config('tmc.level_colors', []),
-        );
+        /*
+    |--------------------------------------------------------------------------
+    | ดึงค่าจาก config/tmc.php
+    |--------------------------------------------------------------------------
+    |
+    | - level_text     = ['basic' => 'ระดับพื้นฐาน', ...]
+    | - level_colors   = ['basic' => '#FF4560', ...]
+    |
+    | หมายเหตุ:
+    |   level_text['unassessed'] = "ยังไม่ได้ประเมิน"
+    |   level_text['basic']      = "ระดับพื้นฐาน"
+    |   ... ฯลฯ
+    */
 
+        $LEVEL_TEXTS = config('tmc.level_text', []);
+        $LEVEL_COLORS = config('tmc.level_colors', []);
+
+        // ถ้า $levelCode ไม่มี (เช่น ยังไม่ประเมิน) ให้ถือเป็น 'unassessed'
         $levelKey = $levelCode ?: 'unassessed';
 
-        $levelTextMap = [
-            'basic' => 'พื้นฐาน',
-            'medium' => 'กลาง',
-            'advanced' => 'สูง',
-            'unassessed' => 'ยังไม่ได้ประเมิน',
-        ];
+        // ข้อความสำหรับแสดงในหน้า เช่น "ระดับพื้นฐาน" หรือ "ยังไม่ได้ประเมิน"
+        // - ถ้าเป็น unassessed ให้ใช้ข้อความตาม config ตรง ๆ เช่น "ยังไม่ได้ประเมิน"
+        // - ถ้าเป็น basic/medium/advanced ให้คงรูปแบบ "ระดับพื้นฐาน", ฯลฯ จาก config เช่นกัน
+        $levelTextRaw = $LEVEL_TEXTS[$levelKey] ?? null;
 
-        $levelText = $levelKey === 'unassessed' ? 'ยังไม่ได้ประเมิน' : 'ระดับ' . ($levelTextMap[$levelKey] ?? '-');
+        if ($levelKey === 'unassessed') {
+            // ยังไม่ได้ประเมิน -> ใช้ข้อความตาม config ตรง ๆ
+            $levelText = $levelTextRaw ?? 'ยังไม่ได้ประเมิน';
+        } else {
+            // ระดับที่ประเมินได้แล้ว -> ตัดคำว่า "ระดับ" ออกมาใช้ต่อ หรือจะใช้ทั้งสตริงก็ได้
+            // เดิมในโค้ดเก่าคุณต้องการรูปแบบ "ระดับพื้นฐาน", "ระดับกลาง", "ระดับสูง"
+            // ดังนั้นเราจะใช้ทั้งสตริงจาก config เลย
+            $levelText = $levelTextRaw ?: 'ระดับ' . $levelKey; // fallback เผื่อ config ไม่มี
+        }
 
-        $pinColor = $LEVEL_COLORS[$levelKey] ?? $LEVEL_COLORS['unassessed'];
+        // สีหมุด/สีสถานะบนแผนที่ของระดับนี้
+        $pinColor = $LEVEL_COLORS[$levelKey] ?? ($LEVEL_COLORS['unassessed'] ?? '#A8A8A8');
 
         // line ติดต่อ
         $contactLine = collect([$unit->org_tel ?: null, $unit->org_email ?: null])
@@ -71,8 +115,10 @@
 
         $services = collect();
         if ($levelCode && $asulId) {
+            // base service ที่เปิดให้ระดับนี้
             $base = StHealthService::active()->forLevel($levelCode)->orderBy('ordering')->orderBy('id')->get();
 
+            // toggle จาก assessment_service_configs
             $pivot = AssessmentServiceConfig::where('assessment_service_unit_level_id', $asulId)->pluck('is_enabled', 'st_health_service_id');
 
             $services = $base->map(function ($svc) use ($pivot) {
@@ -94,12 +140,12 @@
 
         $servicesCsv = implode(' | ', $enabledServiceNames);
 
-        // สำหรับ header card
+        // สำหรับ header card (ด้านขวา)
         $shortLocation = trim('จ.' . ($provinceTitle ?? '-'));
         $yearRoundText = "ปี {$filterYear} รอบ {$filterRound}";
 
         // card title ขวา
-        $levelTextConfig = config('tmc.assessment.level_text', []);
+        $levelTextConfig = config('tmc.assessment.level_text', []); // อาจไม่มี key นี้ ให้คงโค้ดเดิม
         $cardTitle = $levelCode && isset($levelTextConfig[$levelCode]) ? 'หน่วยบริการ' . $levelTextConfig[$levelCode] : 'การตั้งค่าการแสดงผลหน้าบ้าน';
 
         $toggleUrl = $levelCode && $asulId ? route('backend.assessment-service-configs.services.toggle', $asulId) : null;
@@ -110,7 +156,7 @@
         // สถานะอนุมัติล่าสุดของหน่วย (pending / approved / ...)
         $approvalStatusKey = $asul?->approval_status ?? null;
 
-        // ดึง config สี + ข้อความ
+        // ดึง config สี + ข้อความ ของสถานะอนุมัติ
         $approvalTextMap = config('tmc.approval_text', []);
         $approvalBgClassMap = config('tmc.approval_badge_class', []);
         $approvalFgClassMap = config('tmc.approval_badge_text_color', []);
@@ -122,6 +168,7 @@
 
         $approvalFgCls = $approvalStatusKey ? $approvalFgClassMap[$approvalStatusKey] ?? 'text-dark' : 'text-dark';
     @endphp
+
 
     {{-- ========================================================= --}}
     {{-- แถวบน: ซ้าย (สรุป+ข้อมูลหน่วย) + ขวา (การตั้งค่าหน้าบ้าน) --}}
@@ -144,11 +191,7 @@
                                 <div class="fw-semibold d-flex align-items-center flex-wrap">
                                     <span class="me-2">{{ $unit->org_name ?? '-' }}</span>
                                     <span id="summaryLevelBadge">
-                                        @if (!empty($summaryRow->level))
-                                            <x-level-badge :level="$summaryRow->level" class="ms-1" />
-                                        @else
-                                            <span class="badge bg-secondary ms-1">—</span>
-                                        @endif
+                                        <x-level-badge :level="$summaryRow->level" class="ms-1" />
                                     </span>
                                 </div>
                                 <div class="text-muted small">
@@ -285,8 +328,8 @@
         {{-- ====== คอลัมน์ขวา ====== --}}
         <div class="col-12 col-xl-4 d-flex">
             @if ($levelCode && $asulId)
-                <div class="card border-0 shadow-sm flex-fill w-100">
-                    <div class="card-header border-0 bg-transparent pb-0">
+                <div class="card border-primary border-2 shadow-sm flex-fill w-100">
+                    <div class="card-header border-0 bg-primary-subtle d-flex align-items-start gap-2">
                         <div class="d-flex align-items-start gap-2">
                             <div class="avtar avtar-s bg-light flex-shrink-0">
                                 <i class="ph-duotone ph-sliders-horizontal f-20"></i>
@@ -390,12 +433,6 @@
 
 
 @push('styles')
-    {{-- Leaflet CSS --}}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin />
-
-    {{-- Fullscreen plugin CSS --}}
-    <link rel="stylesheet" href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css" />
-
     <style>
         /* map size */
         .tmc-unit-map {
@@ -651,15 +688,6 @@
 
 
 @push('scripts')
-    {{-- Leaflet core --}}
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-    {{-- Fullscreen plugin --}}
-    <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
-
-    {{-- Screenshoter for PNG export --}}
-    <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // -------------------------
@@ -772,7 +800,7 @@
                     `<div class="lv-meta">${esc(levelTextDisplay)}</div>`;
 
                 return `
-                <div class="tmc-pop" style="min-width:260px; max-width:320px;">
+                <div class="tmc-pop">
                     <div class="lv-head">
                         <span class="lv-dot" style="background:${pinColor}"></span>
                         <div>
@@ -820,7 +848,7 @@
 
                 mk.bindPopup(buildPopupHTML(), {
                     maxWidth: 480,
-                    autoPan: false // จะ pan เองเพื่อ offset popup
+                    autoPan: true // จะ pan เองเพื่อ offset popup
                 });
 
                 function focusMarkerWithPopup() {

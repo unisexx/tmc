@@ -6,10 +6,12 @@
 
 @section('content')
     @php
+        // ใช้ logic เดิมของไฟล์นี้
         $yearCE = fiscalYearCE();
         $roundNow = fiscalRound();
         $yearOpts = fiscalYearOptionsBE(5);
-        $filterYear = request('year', $yearCE);
+
+        $filterYear = (int) request('year', $yearCE);
         $filterRound = (int) request('round', $roundNow);
     @endphp
 
@@ -17,32 +19,45 @@
         <div class="col-sm-12">
             <div class="card">
                 <div class="card-body">
-                    <div class="row justify-content-between align-items-center mb-3 g-3">
+
+                    {{-- ========================= --}}
+                    {{-- แถบค้นหา (ปีงบประมาณ / รอบ) --}}
+                    {{-- ========================= --}}
+                    <div class="row justify-content-between align-items-start mb-3 g-3">
                         <div class="col">
-                            <form method="GET" action="{{ route('backend.self-assessment-service-unit-level.index') }}" class="d-flex flex-wrap align-items-center gap-2">
-                                <div class="input-group" style="max-width: 260px;">
+                            <form method="GET" action="{{ route('backend.self-assessment-service-unit-level.index') }}" class="d-flex flex-wrap align-items-stretch gap-2">
+
+                                {{-- ปีงบประมาณ --}}
+                                <div class="input-group" style="max-width:260px;">
                                     <span class="input-group-text">ปีงบประมาณ</span>
-                                    <select name="year" class="form-select">
+                                    <select id="filter-year" name="year" class="form-select">
                                         @foreach ($yearOpts as $y)
-                                            <option value="{{ $y['ce'] }}" @selected($filterYear == $y['ce'])>{{ $y['be'] }}</option>
+                                            <option value="{{ $y['ce'] }}" @selected($filterYear === (int) $y['ce'])>
+                                                {{ $y['be'] }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
 
-                                <div class="input-group" style="max-width: 280px;">
+                                {{-- รอบ (จะถูกควบคุมโดย JS ตามปีที่เลือก) --}}
+                                <div class="input-group" style="max-width:280px;">
                                     <span class="input-group-text">รอบ</span>
-                                    <select name="round" class="form-select">
+                                    <select id="filter-round" name="round" class="form-select">
+                                        {{-- ใส่ option เริ่มต้นตามค่าปัจจุบัน เพื่อให้ไม่ error ตอนโหลดครั้งแรก
+                                             JS จะ rebuild ให้ถูกต้องภายหลัง --}}
                                         <option value="1" @selected($filterRound === 1)>รอบที่ 1 (ต.ค. – มี.ค.)</option>
                                         <option value="2" @selected($filterRound === 2)>รอบที่ 2 (เม.ย. – ก.ย.)</option>
                                     </select>
                                 </div>
 
+                                {{-- ปุ่มค้นหา --}}
                                 <button class="btn btn-outline-primary" type="submit">
                                     <i class="ph-duotone ph-magnifying-glass"></i> ค้นหา
                                 </button>
                             </form>
                         </div>
 
+                        {{-- ปุ่มเริ่มรอบประเมิน --}}
                         <div class="col-auto">
                             <a href="{{ route('backend.self-assessment-service-unit-level.create') }}" class="btn btn-primary">
                                 <i class="ti ti-plus"></i> เริ่มรอบประเมิน
@@ -50,6 +65,9 @@
                         </div>
                     </div>
 
+                    {{-- ========================= --}}
+                    {{-- ตารางรายการประเมินตนเอง --}}
+                    {{-- ========================= --}}
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead>
@@ -94,22 +112,33 @@
                                         </td>
 
                                         <td class="text-center">
-                                            {{-- ใช้ component ระดับ --}}
+                                            {{-- ระดับหน่วยบริการ --}}
                                             <x-level-badge :level="$row->level" />
-                                            {{-- หรือถ้าอยากอิง accessor ล้วน ๆ:
-                                            <span class="badge bg-{{ $row->level_badge_class }}">{{ $row->level_text ?? '-' }}</span> --}}
+                                            {{-- fallback:
+                                            <span class="badge bg-{{ $row->level_badge_class }}">
+                                                {{ $row->level_text ?? '-' }}
+                                            </span>
+                                            --}}
                                         </td>
 
                                         <td class="text-center">
+                                            {{-- สถานะแบบประเมิน --}}
                                             <x-status-badge :status="$row->status" />
-                                            {{-- หรือ:
-                                            <span class="badge bg-{{ $row->status_badge_class }}">{{ $row->status_text }}</span> --}}
+                                            {{-- fallback:
+                                            <span class="badge bg-{{ $row->status_badge_class }}">
+                                                {{ $row->status_text }}
+                                            </span>
+                                            --}}
                                         </td>
 
                                         <td class="text-center">
+                                            {{-- สถานะการอนุมัติ --}}
                                             <x-approval-badge :status="$row->approval_status" />
-                                            {{-- หรือ:
-                                            <span class="badge bg-{{ $row->approval_badge_class }}">{{ $row->approval_text ?? '—' }}</span> --}}
+                                            {{-- fallback:
+                                            <span class="badge bg-{{ $row->approval_badge_class }}">
+                                                {{ $row->approval_text ?? '—' }}
+                                            </span>
+                                            --}}
                                         </td>
 
                                         <td class="text-center">
@@ -120,7 +149,7 @@
                                                     <i class="ti ti-eye me-1"></i> ดูสรุป
                                                 </a>
 
-                                                {{-- แก้ไขแบบประเมินระดับหน่วยบริการ --}}
+                                                {{-- แก้ไข --}}
                                                 @if ($canEdit)
                                                     <button type="button" class="btn btn-sm btn-light border js-edit-step1" data-url="{{ route('backend.self-assessment-service-unit-level.edit', $row->id) }}" data-title="แก้ไขแบบประเมิน" data-text="คุณต้องการเข้าไปแก้ไขแบบประเมินของหน่วยบริการนี้ใช่ไหม?" data-confirm="ไปหน้าแก้ไข" data-bs-toggle="tooltip" data-bs-title="แก้ไขแบบประเมิน">
                                                         <i class="ti ti-edit me-1"></i> แก้ไข
@@ -148,7 +177,6 @@
 
                                             </div>
                                         </td>
-
                                     </tr>
                                 @empty
                                     <tr>
@@ -158,10 +186,13 @@
                             </tbody>
                         </table>
                     </div>
+
                 </div>
 
                 @if ($rows->hasPages())
-                    <div class="card-footer">{!! $rows->appends(request()->query())->links() !!}</div>
+                    <div class="card-footer">
+                        {!! $rows->appends(request()->query())->links() !!}
+                    </div>
                 @endif
             </div>
         </div>
@@ -170,74 +201,165 @@
 
 @push('js')
     <script>
-        document.addEventListener('click', function(e) {
-            const btnLocked = e.target.closest('.js-locked');
-            const btnEdit = e.target.closest('.js-edit-step1');
-            const btnDelete = e.target.closest('.js-delete');
+        (function() {
+            // ====== อ้างอิง element ปีงบและรอบ ======
+            const yearEl = document.getElementById('filter-year');
+            const roundEl = document.getElementById('filter-round');
 
-            // ✅ ถ้ากดปุ่มที่ถูกล็อก (แก้ไข/ลบไม่ได้)
-            if (btnLocked) {
-                e.preventDefault();
+            // ====== ค่าปัจจุบันจากเซิร์ฟเวอร์ (ฝั่ง PHP inject มา) ======
+            const CURRENT_FY_CE = {{ (int) fiscalYearCE() }}; // ปีงบ ค.ศ. ปัจจุบัน
+            const CURRENT_MONTH = {{ (int) now()->month }}; // เดือนปัจจุบัน 1-12
+            const SELECTED_ROUND = {{ (int) $filterRound }}; // รอบที่เลือกอยู่ ณ ตอนโหลดหน้า
 
-                const reason = btnLocked.dataset.reason ||
-                    'รายการนี้ถูกล็อก ไม่สามารถดำเนินการได้';
-
-                Swal.fire({
-                    icon: 'info',
-                    title: 'ไม่สามารถทำรายการได้',
-                    html: reason,
-                    confirmButtonText: 'ตกลง',
+            // ฟังก์ชัน helper: สร้าง option list ใหม่ให้ <select>
+            function setOptions(selectEl, items, placeholder = null) {
+                const frag = document.createDocumentFragment();
+                if (placeholder !== null) {
+                    const first = document.createElement('option');
+                    first.value = '';
+                    first.textContent = placeholder;
+                    frag.appendChild(first);
+                }
+                items.forEach(({
+                    value,
+                    text,
+                    selected
+                }) => {
+                    const o = document.createElement('option');
+                    o.value = value;
+                    o.textContent = text;
+                    if (selected) o.selected = true;
+                    frag.appendChild(o);
                 });
-                return;
+                selectEl.replaceChildren(frag);
             }
 
-            // ✏️ ปุ่มแก้ไข (แบบประเมินระดับ)
-            if (btnEdit) {
-                e.preventDefault();
-
-                const url = btnEdit.dataset.url;
-                const title = btnEdit.dataset.title ?? 'ยืนยันการเข้าสู่ฟอร์มพิจารณาสถานะหน่วยบริการ';
-                const text = btnEdit.dataset.text ?? 'คุณต้องการเข้าสู่หน้าแบบประเมินหรือไม่?';
-                const confirmText = btnEdit.dataset.confirm ?? 'ตกลง';
-
-                Swal.fire({
-                    icon: 'question',
-                    title,
-                    html: text, // ← เดิมเป็น html, (ตัวแปรไม่มี) ให้ใช้ html: text
-                    // หรือจะใช้ text: text ก็ได้ ถ้าไม่ต้องการ HTML tag
-                    showCancelButton: true,
-                    confirmButtonText: confirmText,
-                    cancelButtonText: 'ยกเลิก',
-                }).then(res => {
-                    if (res.isConfirmed && url) {
-                        window.location.href = url;
-                    }
-                });
-                return;
+            // ตรรกะกำหนดจำนวน "รอบ" ที่อนุญาตให้เลือก ตามปีงบประมาณ
+            // - ถ้าเป็นปีก่อนหน้า (< ปีงบปัจจุบัน): มี 2 รอบแน่นอน
+            // - ถ้าเป็นปีงบปัจจุบัน:
+            //      ถ้าเดือนปัจจุบันอยู่ช่วง ต.ค.(10)–มี.ค.(3) => inRound1 = true => มีแค่รอบ 1
+            //      ถ้า เม.ย.(4)–ก.ย.(9) => inRound1 = false => มีครบ 2 รอบ
+            // - ถ้าเป็นปีอนาคต (> ปีงบปัจจุบัน): ตอนนี้ถือว่ายังไม่เปิดรอบ (0)
+            function roundsAvailableFor(yearCE) {
+                if (yearCE < CURRENT_FY_CE) return 2;
+                if (yearCE > CURRENT_FY_CE) return 0;
+                const inRound1 = (CURRENT_MONTH >= 10 || CURRENT_MONTH <= 3);
+                return inRound1 ? 1 : 2;
             }
 
+            // สร้าง option ของ "รอบ" ใหม่ทุกครั้งที่ปีเปลี่ยน
+            function rebuildRoundOptions() {
+                const yearCE = parseInt(yearEl?.value || CURRENT_FY_CE, 10);
+                const count = roundsAvailableFor(yearCE);
 
-            // 🗑️ ปุ่มลบ
-            if (btnDelete) {
-                e.preventDefault();
+                // ปีอนาคต (ยังไม่มีรอบให้เลือก)
+                if (count === 0) {
+                    setOptions(roundEl, [], 'ไม่มีรอบให้เลือก');
+                    roundEl.disabled = true;
+                    return;
+                }
 
-                const formId = btnDelete.dataset.form;
-                const form = document.getElementById(formId);
-                const name = btnDelete.dataset.name ?? 'รายการนี้';
+                roundEl.disabled = false;
 
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'ยืนยันการลบ',
-                    html: `ต้องการลบ <b>${name}</b> ใช่หรือไม่?<br><small>การลบไม่สามารถย้อนกลับได้</small>`,
-                    showCancelButton: true,
-                    confirmButtonText: 'ลบเลย',
-                    cancelButtonText: 'ยกเลิก',
-                    confirmButtonColor: '#d33',
-                }).then(res => {
-                    if (res.isConfirmed && form) form.submit();
-                });
-                return;
+                // พยายามรักษาค่าเดิม ถ้าอยู่ในช่วง valid
+                const keep = parseInt(roundEl.value || SELECTED_ROUND, 10);
+                const chosen = (keep >= 1 && keep <= count) ? keep : count;
+
+                const opts = [];
+                if (count >= 1) {
+                    opts.push({
+                        value: '1',
+                        text: 'รอบที่ 1 (ต.ค. – มี.ค.)',
+                        selected: chosen === 1
+                    });
+                }
+                if (count >= 2) {
+                    opts.push({
+                        value: '2',
+                        text: 'รอบที่ 2 (เม.ย. – ก.ย.)',
+                        selected: chosen === 2
+                    });
+                }
+
+                setOptions(roundEl, opts);
             }
-        }, false);
+
+            // เมื่อผู้ใช้เปลี่ยน "ปีงบประมาณ" -> อัปเดต "รอบ"
+            yearEl?.addEventListener('change', () => {
+                rebuildRoundOptions();
+            });
+
+            // init ครั้งแรกหลังโหลดหน้า
+            rebuildRoundOptions();
+
+            // ====== ด้านล่าง: event สำหรับปุ่มในตาราง (lock/edit/delete) ======
+            document.addEventListener('click', function(e) {
+                const btnLocked = e.target.closest('.js-locked');
+                const btnEdit = e.target.closest('.js-edit-step1');
+                const btnDelete = e.target.closest('.js-delete');
+
+                // รายการที่ล็อก (แก้ไข/ลบไม่ได้)
+                if (btnLocked) {
+                    e.preventDefault();
+
+                    const reason = btnLocked.dataset.reason ||
+                        'รายการนี้ถูกล็อก ไม่สามารถดำเนินการได้';
+
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'ไม่สามารถทำรายการได้',
+                        html: reason,
+                        confirmButtonText: 'ตกลง',
+                    });
+                    return;
+                }
+
+                // ปุ่มแก้ไข
+                if (btnEdit) {
+                    e.preventDefault();
+
+                    const url = btnEdit.dataset.url;
+                    const title = btnEdit.dataset.title ?? 'ยืนยันการเข้าสู่ฟอร์มพิจารณาสถานะหน่วยบริการ';
+                    const text = btnEdit.dataset.text ?? 'คุณต้องการเข้าสู่หน้าแบบประเมินหรือไม่?';
+                    const confirmText = btnEdit.dataset.confirm ?? 'ตกลง';
+
+                    Swal.fire({
+                        icon: 'question',
+                        title,
+                        html: text,
+                        showCancelButton: true,
+                        confirmButtonText: confirmText,
+                        cancelButtonText: 'ยกเลิก',
+                    }).then(res => {
+                        if (res.isConfirmed && url) {
+                            window.location.href = url;
+                        }
+                    });
+                    return;
+                }
+
+                // ปุ่มลบ
+                if (btnDelete) {
+                    e.preventDefault();
+
+                    const formId = btnDelete.dataset.form;
+                    const form = document.getElementById(formId);
+                    const name = btnDelete.dataset.name ?? 'รายการนี้';
+
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'ยืนยันการลบ',
+                        html: `ต้องการลบ <b>${name}</b> ใช่หรือไม่?<br><small>การลบไม่สามารถย้อนกลับได้</small>`,
+                        showCancelButton: true,
+                        confirmButtonText: 'ลบเลย',
+                        cancelButtonText: 'ยกเลิก',
+                        confirmButtonColor: '#d33',
+                    }).then(res => {
+                        if (res.isConfirmed && form) form.submit();
+                    });
+                    return;
+                }
+            }, false);
+        })();
     </script>
 @endpush

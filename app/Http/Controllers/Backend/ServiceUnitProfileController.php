@@ -30,23 +30,30 @@ class ServiceUnitProfileController extends Controller
         $unit = $this->resolveCurrentServiceUnit($request);
         abort_unless($unit, 403, 'ไม่พบหน่วยบริการของคุณ');
 
-        $data                           = $request->validated();
+        // ดึงค่า validated ทั้งหมด
+        $data = $request->validated();
+
+        // แปลงเวลาทำการจาก helper ใน FormRequest
         $data['org_working_hours_json'] = $request->parsedWorkingHours();
 
-        $unit->fill(collect($data)->only([
-            'org_name',
-            'org_affiliation',
-            'org_affiliation_other',
-            'org_address',
-            'org_province_code',
-            'org_district_code',
-            'org_subdistrict_code',
-            'org_postcode',
-            'org_tel',
-            'org_lat',
-            'org_lng',
-            'org_working_hours_json',
-        ])->toArray())->save();
+        // อัปเดต field ที่อนุญาตให้แก้ไข
+        $unit->fill(
+            collect($data)->only([
+                'org_name',
+                'org_affiliation',
+                'org_affiliation_other',
+                'org_address',
+                'org_province_code',
+                'org_district_code',
+                'org_subdistrict_code',
+                'org_postcode',
+                'org_tel',
+                'org_email',
+                'org_lat',
+                'org_lng',
+                'org_working_hours_json',
+            ])->toArray()
+        )->save();
 
         flash_notify('บันทึกการแก้ไขแล้ว', 'success');
         return redirect()->route('backend.service-unit-profile.edit');

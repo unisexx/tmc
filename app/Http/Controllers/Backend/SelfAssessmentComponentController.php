@@ -110,7 +110,7 @@ class SelfAssessmentComponentController extends Controller
         ];
 
         // 7) ส่งไป view
-        return view('backend.self.create', compact(
+        return view('backend.self_assessment_component.create', compact(
             'suLevel', 'form', 'level', 'components',
             'sectionsByComp', 'questionsBySection',
             'answerMap', 'year', 'round', 'summary'

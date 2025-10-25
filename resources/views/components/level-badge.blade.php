@@ -9,43 +9,18 @@
 @php
     use Illuminate\Support\Str;
 
-    // ข้อความของระดับ
-    $LEVEL_TEXT = array_merge(
-        [
-            'basic' => 'ระดับพื้นฐาน',
-            'medium' => 'ระดับกลาง',
-            'advanced' => 'ระดับสูง',
-            'unassessed' => 'ยังไม่ได้ประเมิน',
-        ],
-        (array) config('tmc.level_text', []),
-    );
+    // โหลดค่าจาก config
+    $LEVEL_TEXT = config('tmc.level_text', []);
+    $LEVEL_COLORS = config('tmc.level_colors', []);
 
-    // สีหลักของแต่ละระดับ (ใช้บนแผนที่)
-    // fallback ไว้ให้ ถ้า config('tmc.level_colors') ไม่มี key นั้น
-    $LEVEL_COLORS = array_replace(
-        [
-            'basic' => '#FF4560', // ชมพู
-            'medium' => '#FEB019', // ส้ม
-            'advanced' => '#00E396', // เขียว
-            'unassessed' => '#A8A8A8', // เทา
-        ],
-        (array) config('tmc.level_colors'),
-    );
+    // normalize ค่า level (เผื่อส่งมาเป็น null หรือสตริงว่าง)
+    $normalizedLevel = $level && trim($level) !== '' ? trim($level) : 'unassessed';
 
-    $normalizedLevel = $level ?: 'unassessed';
-
-    // เลือกข้อความ
+    // ข้อความที่จะแสดง เช่น "ระดับพื้นฐาน" หรือ "ยังไม่ได้ประเมิน"
     $text = $textOverride ?? ($LEVEL_TEXT[$normalizedLevel] ?? '—');
 
-    // เลือกสีหลัก (var(--c))
+    // สีหลักจาก config หรือ override จาก props
     $color = $colorOverride ?? ($LEVEL_COLORS[$normalizedLevel] ?? '#A8A8A8');
-
-    // output structure:
-    // <span class="level-badge-map" style="--c: {color}">
-    //    <span class="dot"></span>
-    //    <span class="name">{text}</span>
-    // </span>
-
 @endphp
 
 <span {{ $attributes->merge(['class' => 'level-badge-map d-inline-flex align-items-center']) }} style="--c: {{ $color }};">

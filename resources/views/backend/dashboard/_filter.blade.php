@@ -34,7 +34,7 @@
 
 @endphp
 
-<form method="GET" class="card mb-3 filter-bar">
+<form method="GET" action="{{ route('backend.dashboard') }}" class="card mb-3 filter-bar">
     <div class="card-body">
         <div class="row gx-2 gy-2 align-items-stretch">
 

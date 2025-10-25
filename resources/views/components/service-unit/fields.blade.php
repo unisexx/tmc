@@ -19,12 +19,13 @@
         @enderror
     </div>
 
-    <div class="col-md-6">
+    {{-- แถว สังกัด / โทรศัพท์ / อีเมล --}}
+    <div class="col-md-4">
         <label for="org_affiliation" class="form-label required">สังกัด</label>
         @php
             $affOptions = config('service_unit.affiliations');
         @endphp
-        <select name="org_affiliation" id="org_affiliation" class="form-select">
+        <select name="org_affiliation" id="org_affiliation" class="form-select @error('org_affiliation') is-invalid @enderror" required>
             <option value="">--- เลือก ---</option>
             @foreach ($affOptions as $option)
                 <option value="{{ $option }}" @selected(old('org_affiliation', $unit->org_affiliation ?? '') === $option)>
@@ -37,18 +38,18 @@
         @enderror
     </div>
 
-    <div class="col-md-6" id="org_affiliation_other_box" style="display: none;">
-        <label for="org_affiliation_other" class="form-label required">โปรดระบุ</label>
-        <input type="text" name="org_affiliation_other" id="org_affiliation_other" class="form-control" value="{{ old('org_affiliation_other', $unit->org_affiliation_other ?? '') }}">
-        @error('org_affiliation_other')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-
-    <div class="col-md-6">
+    <div class="col-md-4">
         <label for="org_tel" class="form-label">หมายเลขโทรศัพท์</label>
         <input type="text" name="org_tel" id="org_tel" value="{{ old('org_tel', $unit->org_tel ?? ($unit->org_phone ?? '')) }}" class="form-control @error('org_tel') is-invalid @enderror">
         @error('org_tel')
+            <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+    </div>
+
+    <div class="col-md-4">
+        <label for="org_email" class="form-label">อีเมล์ของหน่วยบริการ</label>
+        <input type="email" name="org_email" id="org_email" value="{{ old('org_email', $unit->org_email ?? '') }}" class="form-control @error('org_email') is-invalid @enderror" placeholder="name@example.com">
+        @error('org_email')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>

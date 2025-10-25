@@ -31,6 +31,7 @@ class ServiceUnitRequest extends FormRequest
                 Rule::requiredIf(fn() => $this->input('org_affiliation') === 'อื่น ๆ'),
             ],
             'org_tel'               => ['nullable', 'string', 'max:60'],
+            'org_email'             => ['nullable', 'string', 'email', 'max:255'],
             'org_address'           => ['nullable', 'string', 'max:1000'],
 
             'org_province_code'     => ['required', 'string'],
@@ -67,6 +68,7 @@ class ServiceUnitRequest extends FormRequest
             'org_affiliation'       => 'สังกัด',
             'org_affiliation_other' => 'โปรดระบุสังกัด',
             'org_tel'               => 'หมายเลขโทรศัพท์',
+            'org_email'             => 'อีเมล์หน่วยบริการ',
             'org_address'           => 'ที่อยู่หน่วยบริการ',
             'org_province_code'     => 'จังหวัด',
             'org_district_code'     => 'อำเภอ',

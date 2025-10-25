@@ -13,24 +13,21 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class DashboardController extends Controller
 {
-    /**
-     * เดิมเรียก /backend/dashboard -> ใช้งานได้ต่อ โดยชี้ไป overview()
-     * เพิ่มเงื่อนไข: ถ้ามี service_unit_id ให้ไปหน้า unit()
-     */
     public function index(Request $request)
     {
-        // ตรวจสอบว่ามีการส่งค่า service_unit_id มาจากฟอร์มหรือไม่
-        $serviceUnitId = $request->input('service_unit_id');
+        // ดึงค่าแบบ trim เพื่อกันเคส " " (ช่องว่าง)
+        $serviceUnitId = trim((string) $request->input('service_unit_id'));
 
-        if (!empty($serviceUnitId)) {
-            // แนบ query string อื่น ๆ ที่อาจส่งมาจากฟอร์ม เช่น year, round
+        // ถ้ามีค่าและเป็นตัวเลขบวกเท่านั้น เราถึงจะ redirect
+        if ($serviceUnitId !== '' && ctype_digit($serviceUnitId) && (int) $serviceUnitId > 0) {
+
+            // แนบ query string เดิมทั้งหมด (year, round, region,...)
             $query = http_build_query($request->query());
 
-            // redirect ไปหน้า unit โดยแนบพารามิเตอร์เดิมทั้งหมด
-            return redirect("/backend/dashboard/unit" . ($query ? "?{$query}" : ""));
+            return redirect('/backend/dashboard/unit' . ($query ? "?{$query}" : ""));
         }
 
-        // ถ้าไม่มี service_unit_id → ไปหน้า overview ตามปกติ
+        // ถ้าไม่มี service_unit_id ที่ใช้ได้ → แสดง overview ปกติ
         return $this->overview($request);
     }
 

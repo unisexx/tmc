@@ -15,28 +15,40 @@ return [
         'unassessed' => 'ยังไม่ได้ประเมิน',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | สีสำหรับใช้ใน Badge ระดับ และ กราฟ ApexCharts (เรียงลำดับตามระดับ)
+    |--------------------------------------------------------------------------
+     */
+    'level_colors'               => [
+        'basic'      => '#FF4560', // ชมพู
+        'medium'     => '#FEB019', // ส้ม
+        'advanced'   => '#00E396', // เขียว
+        'unassessed' => '#A8A8A8', // เทา
+    ],
+
     // โทนสีหลัก: basic=ชมพู, medium=ส้ม, advanced=เขียว, unassessed=เทา
-    'level_badge_class'          => [
-        'basic'      => 'bg-basic',      // ชมพูแดง
-        'medium'     => 'bg-medium',     // ส้มทอง
-        'advanced'   => 'bg-advanced',   // เขียวมรกต
-        'unassessed' => 'bg-unassessed', // เทา
-    ],
+    // 'level_badge_class'          => [
+    //     'basic'      => 'bg-basic',      // ชมพูแดง
+    //     'medium'     => 'bg-medium',     // ส้มทอง
+    //     'advanced'   => 'bg-advanced',   // เขียวมรกต
+    //     'unassessed' => 'bg-unassessed', // เทา
+    // ],
 
-    'level_badge_text_color'     => [
-        'basic'      => 'text-dark',
-        'medium'     => 'text-dark',
-        'advanced'   => 'text-dark',
-        'unassessed' => 'text-dark',
-        'default'    => '#212529',
-    ],
+    // 'level_badge_text_color'     => [
+    //     'basic'      => 'text-dark',
+    //     'medium'     => 'text-dark',
+    //     'advanced'   => 'text-dark',
+    //     'unassessed' => 'text-dark',
+    //     'default'    => '#212529',
+    // ],
 
-    'level_badge_border_class'   => [
-        'basic'      => '',
-        'medium'     => '',
-        'advanced'   => '',
-        'unassessed' => '',
-    ],
+    // 'level_badge_border_class'   => [
+    //     'basic'      => '',
+    //     'medium'     => '',
+    //     'advanced'   => '',
+    //     'unassessed' => '',
+    // ],
 
     /*
     |--------------------------------------------------------------------------
@@ -185,18 +197,6 @@ return [
         'องค์การมหาชน',
         'เอกชน',
         'อื่น ๆ',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | สีสำหรับใช้ในกราฟ ApexCharts (เรียงลำดับตามระดับ)
-    |--------------------------------------------------------------------------
-     */
-    'level_colors'               => [
-        'basic'      => '#FF4560', // ชมพู
-        'medium'     => '#FEB019', // ส้ม
-        'advanced'   => '#00E396', // เขียว
-        'unassessed' => '#A8A8A8', // เทา
     ],
 
 ];
