@@ -43,9 +43,10 @@
 
         /* กรอบหน้า A4 แบบ margin สวย ๆ */
         .page {
-            padding: 18mm 15mm;
-            /* บน-ล่าง 18mm, ซ้าย-ขวา 15mm */
+            padding: 8mm 15mm 16mm 15mm;
+            /* top right bottom left */
         }
+
 
         h1,
         h2,

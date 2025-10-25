@@ -6,55 +6,54 @@ use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class DashboardExport implements FromView, WithTitle, WithStyles
 {
-    protected $data;
+    protected array $data;
 
     public function __construct(array $data)
     {
         $this->data = $data;
     }
 
-    /**
-     * สร้างเนื้อหา Excel จาก Blade view
-     */
+    // ใช้ blade excel.blade.php ที่เราแก้ล่าสุด (หัวข้อแต่ละส่วนอยู่ใน <table><td colspan="6">)
     public function view(): View
     {
-        return view('backend.dashboard.export_excel', $this->data);
+        return view('backend.dashboard.export_overview.excel', $this->data);
     }
 
-    /**
-     * ตั้งชื่อแท็บของชีต
-     */
     public function title(): string
     {
-        return 'รายงานสรุปหน่วยบริการ';
+        $yearTh = ($this->data['filterYear'] ?? now()->year) + 543;
+        $round  = $this->data['filterRound'] ?? '-';
+
+        return "สรุปภาพรวม {$yearTh} รอบ {$round}";
     }
 
-    /**
-     * ปรับสไตล์ของชีตหลัง render
-     */
     public function styles(Worksheet $sheet)
     {
-        // ทำให้หัวตารางตัวหนา
-        $sheet->getStyle('A1:E1')->getFont()->setBold(true);
-
-        // ปรับขนาดคอลัมน์อัตโนมัติ
-        foreach (range('A', 'E') as $col) {
+        // autosize บลาๆ
+        foreach (range('A', 'K') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // ใส่กรอบเส้นรอบเซลล์ทั้งหมด
-        $sheet->getStyle('A1:E' . $sheet->getHighestRow())
+        // ใส่เส้นขอบรอบข้อมูลทั้งหมดแบบบาง ๆ
+        $highestRow = $sheet->getHighestRow();
+        $highestCol = $sheet->getHighestColumn();
+
+        $sheet->getStyle("A1:{$highestCol}{$highestRow}")
             ->applyFromArray([
                 'borders' => [
                     'allBorders' => [
-                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                        'color'       => ['argb' => 'FF999999'],
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color'       => ['argb' => 'FFCCCCCC'],
                     ],
                 ],
             ]);
+
+        // ไม่ต้อง mergeCells() ที่นี่อีก
+        return [];
     }
 }

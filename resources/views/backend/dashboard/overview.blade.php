@@ -20,23 +20,34 @@
     @include('backend.dashboard._filter')
 
     {{-- ปุ่มส่งออกข้อมูล --}}
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-header d-flex justify-content-between align-items-center py-3 bg-light">
             <div class="d-flex align-items-center text-muted">
                 <i class="ti ti-download me-2 fs-5 text-primary"></i>
-                <span class="fw-semibold">ส่งออกข้อมูล</span>
+                <span class="fw-semibold">ส่งออกข้อมูลภาพรวม</span>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="{{ route('backend.dashboard.export', array_merge(request()->all(), ['format' => 'excel'])) }}" class="btn btn-outline-success btn-sm px-3 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-title="ดาวน์โหลดรายงานเป็น Excel">
-                    <i class="ti ti-file-spreadsheet me-1"></i> Excel
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ route('backend.dashboard.export-overview', ['format' => 'excel']) }}" target="_blank" class="btn text-white fw-semibold px-3 py-2 d-flex align-items-center shadow-sm" style="background:#1e8449; border:none; border-radius:.5rem; box-shadow:0 3px 10px rgba(33,115,70,0.3);
+              transition:all .2s;">
+                    <i class="fas fa-file-excel me-2 fs-5"></i> Excel
                 </a>
-
-                <a href="{{ route('backend.dashboard.export', array_merge(request()->all(), ['format' => 'pdf'])) }}" class="btn btn-outline-danger btn-sm px-3 d-flex align-items-center" data-bs-toggle="tooltip" data-bs-title="ดาวน์โหลดรายงานเป็น PDF">
-                    <i class="ti ti-file-text me-1"></i> PDF
+                <a href="{{ route('backend.dashboard.export-overview', ['format' => 'pdf']) }}" target="_blank" class="btn text-white fw-semibold px-3 py-2 d-flex align-items-center shadow-sm" style="background:#c0392b; border:none; border-radius:.5rem; box-shadow:0 3px 10px rgba(208,68,55,0.3);
+              transition:all .2s;">
+                    <i class="fas fa-file-pdf me-2 fs-5"></i> PDF
                 </a>
             </div>
         </div>
     </div>
+
+    {{-- เพิ่ม hover effect --}}
+    <style>
+        .card-header a.btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            opacity: 0.95;
+        }
+    </style>
+
 
 
 

@@ -71,10 +71,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('backend')->name('backend.')->group(function () {
         // Dashboard
-        Route::get('/dashboard', [DashboardController::class, 'overview'])->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard/unit', [DashboardController::class, 'unit'])->name('dashboard.unit');
         Route::get('/dashboard/gap-units', [DashboardController::class, 'gapUnits'])->name('dashboard.gap-units');
-        Route::get('/dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
+        Route::get('/dashboard/export-overview', [DashboardController::class, 'exportOverview'])->name('dashboard.export-overview');
+        Route::get('/dashboard/export-unit', [DashboardController::class, 'exportUnit'])->name('dashboard.export-unit');
 
         // สถิติการเข้าเว็บ
         Route::get('/stat', [StatController::class, 'index'])->name('stat');
