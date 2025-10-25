@@ -20,8 +20,8 @@
     @include('backend.dashboard._filter')
 
     {{-- ปุ่มส่งออกข้อมูล --}}
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
             <div class="d-flex align-items-center text-muted">
                 <i class="ti ti-download me-2 fs-5 text-primary"></i>
                 <span class="fw-semibold">ส่งออกข้อมูล</span>
@@ -100,8 +100,8 @@
         $total = array_sum($summary) + $notAssessed;
         $pct = fn($v) => $total > 0 ? number_format(($v / $total) * 100, 1) . '%' : '0%';
 
-        $levelBg = config('assessment.level_badge_class');
-        $levelText = config('assessment.level_badge_text_color');
+        $levelBg = config('tmc.level_badge_class');
+        $levelText = config('tmc.level_badge_text_color');
     @endphp
 
     {{-- --------------------------------------------------------------------------------------------------------------------------------
@@ -126,15 +126,15 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0">
-                                <div class="avtar bg-{{ $levelBg['basic'] }}">
-                                    <i class="ph-duotone ph-hospital f-24 text-{{ $levelText['basic'] }}"></i>
+                                <div class="avtar {{ $levelBg['basic'] }}">
+                                    <i class="ph-duotone ph-hospital f-24 {{ $levelText['basic'] }}"></i>
                                 </div>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <p class="mb-1">ระดับพื้นฐาน</p>
+                                <p class="fw-semibold mb-1">ระดับพื้นฐาน</p>
                                 <div class="d-flex align-items-center justify-content-between">
                                     <h4 class="mb-0">{{ number_format($summary['basic']) }}</h4>
-                                    <span class="fw-medium text-{{ $levelText['basic'] }}">{{ $pct($summary['basic']) }}</span>
+                                    <span class="fw-medium {{ $levelText['basic'] }}">{{ $pct($summary['basic']) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -150,15 +150,15 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0">
-                                <div class="avtar bg-{{ $levelBg['medium'] }}">
-                                    <i class="ph-duotone ph-hospital f-24 text-{{ $levelText['medium'] }}"></i>
+                                <div class="avtar {{ $levelBg['medium'] }}">
+                                    <i class="ph-duotone ph-hospital f-24 {{ $levelText['medium'] }}"></i>
                                 </div>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <p class="mb-1">ระดับกลาง</p>
+                                <p class="fw-semibold mb-1">ระดับกลาง</p>
                                 <div class="d-flex align-items-center justify-content-between">
                                     <h4 class="mb-0">{{ number_format($summary['medium']) }}</h4>
-                                    <span class="fw-medium text-{{ $levelText['medium'] }}">{{ $pct($summary['medium']) }}</span>
+                                    <span class="fw-medium {{ $levelText['medium'] }}">{{ $pct($summary['medium']) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -174,15 +174,15 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0">
-                                <div class="avtar bg-{{ $levelBg['advanced'] }}">
-                                    <i class="ph-duotone ph-hospital f-24 text-{{ $levelText['advanced'] }}"></i>
+                                <div class="avtar {{ $levelBg['advanced'] }}">
+                                    <i class="ph-duotone ph-hospital f-24 {{ $levelText['advanced'] }}"></i>
                                 </div>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <p class="mb-1">ระดับสูง</p>
+                                <p class="fw-semibold mb-1">ระดับสูง</p>
                                 <div class="d-flex align-items-center justify-content-between">
                                     <h4 class="mb-0">{{ number_format($summary['advanced']) }}</h4>
-                                    <span class="fw-medium text-{{ $levelText['advanced'] }}">{{ $pct($summary['advanced']) }}</span>
+                                    <span class="fw-medium {{ $levelText['advanced'] }}">{{ $pct($summary['advanced']) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -198,15 +198,15 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0">
-                                <div class="avtar bg-gray-100">
-                                    <i class="ph-duotone ph-hospital f-24 text-gray-900"></i>
+                                <div class="avtar {{ $levelBg['unassessed'] }}">
+                                    <i class="ph-duotone ph-hospital f-24 {{ $levelText['unassessed'] }}"></i>
                                 </div>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <p class="mb-1">ยังไม่ได้ประเมิน</p>
+                                <p class="fw-semibold mb-1">ยังไม่ได้ประเมิน</p>
                                 <div class="d-flex align-items-center justify-content-between">
                                     <h4 class="mb-0">{{ number_format($notAssessed) }}</h4>
-                                    <span class="fw-medium text-gray-900">{{ $pct($notAssessed) }}</span>
+                                    <span class="fw-medium {{ $levelText['unassessed'] }}">{{ $pct($notAssessed) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -427,7 +427,7 @@
 
     <div class="card">
         <div class="card-header d-flex align-items-center justify-content-between">
-            <div><i class="ph-duotone ph-map-pin"></i> <span class="ms-1">แผนที่หน่วยบริการสุขภาพผู้เดินทาง</span></div>
+            <div class="fw-semibold text-dark"><i class="ph-duotone ph-map-pin"></i> <span class="ms-1">แผนที่หน่วยบริการสุขภาพผู้เดินทาง</span></div>
         </div>
         <div class="card-body p-0">
             <div id="tmc-map" style="height:560px;"></div>
@@ -480,8 +480,8 @@
             .leaflet-control.tmc-export-toggle a {
                 position: relative;
                 display: block;
-                width: 32px;
-                height: 32px;
+                width: 30px;
+                height: 30px;
                 background: #fff;
                 border-radius: 4px;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
@@ -513,8 +513,8 @@
 
     @push('styles')
         {{-- ----------------------------------------------------------------------------------------------------------------------------
-          MAP: STYLES (CSS เฉพาะของแผนที่/ป้าย/แผงรายชื่อ/ขนาด popup)
-        ---------------------------------------------------------------------------------------------------------------------------- --}}
+    MAP: STYLES (CSS เฉพาะของแผนที่/ป้าย/แผงรายชื่อ/ขนาด popup)
+    ---------------------------------------------------------------------------------------------------------------------------- --}}
         <style>
             #tmc-map {
                 height: 560px;
@@ -698,22 +698,65 @@
             .tmc-pop small {
                 font-size: .9rem;
             }
+
+            /* ✅ ส่วนหัวชื่อหน่วยบริการใน popup */
+            .tmc-pop .lv-head {
+                display: flex;
+                align-items: center;
+                /* <<< ปรับเป็น center เพื่อให้จุดสีอยู่กลางบรรทัดเดียวกับชื่อ */
+                gap: .5rem;
+                line-height: 1.2;
+                margin-bottom: .5rem;
+            }
+
+            /* ✅ จุดสีสถานะระดับ */
+            .tmc-pop .lv-dot {
+                width: .8rem;
+                height: .8rem;
+                border-radius: 50%;
+                box-shadow: 0 0 0 2px #fff, 0 0 4px rgba(0, 0, 0, .2);
+                flex-shrink: 0;
+            }
+
+            /* ชื่อหน่วยบริการ */
+            .tmc-pop .lv-name {
+                font-weight: 600;
+                color: #0d6efd;
+                font-size: 1.05rem;
+            }
+
+            .tmc-pop .lv-meta {
+                font-weight: 400;
+                color: #6c757d;
+                font-size: .9rem;
+            }
         </style>
     @endpush
 
+
     @push('scripts')
         {{-- ----------------------------------------------------------------------------------------------------------------------------
-        MAP: SCRIPTS (สร้างแผนที่, หมุด, ป้าย, popup, แผงรายชื่อ, การเลื่อนกล้อง, และ Export เมนู)
-        ---------------------------------------------------------------------------------------------------------------------------- --}}
+    MAP: SCRIPTS (สร้างแผนที่, หมุด, ป้าย, popup, แผงรายชื่อ, การเลื่อนกล้อง, และ Export เมนู)
+    ---------------------------------------------------------------------------------------------------------------------------- --}}
+        @php
+            // ดึงสีจาก config พร้อม fallback ถ้าคีย์ไหนหายไป
+            $LEVEL_COLORS = array_replace(
+                [
+                    'basic' => '#FF4560', // ชมพู
+                    'medium' => '#FEB019', // ส้ม
+                    'advanced' => '#00E396', // เขียว
+                    'unassessed' => '#A8A8A8', // เทา
+                ],
+                (array) config('tmc.level_colors'),
+            );
+        @endphp
         <script>
             (function() {
                 const facilities = @json($facilities);
-                const LEVEL_COLORS = {
-                    basic: '#ef83c2',
-                    medium: '#f0c419',
-                    advanced: '#0dcc93',
-                    unassessed: '#9aa0a6'
-                };
+
+                // ✅ ใช้สีจาก config/tmc.php
+                const LEVEL_COLORS = @json($LEVEL_COLORS);
+                const DEFAULT_COLOR = LEVEL_COLORS.unassessed || '#A8A8A8';
 
                 // ====== สร้างแผนที่ ======
                 const map = L.map('tmc-map', {
@@ -744,11 +787,12 @@
 
                 facilities.forEach(f => {
                     if (f.lat == null || f.lon == null) return;
-                    const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
+
+                    const c = LEVEL_COLORS[f.levelKey] || DEFAULT_COLOR;
                     const key = String(f.id ?? `${f.lat},${f.lon}`);
 
                     const mk = L.marker([f.lat, f.lon], {
-                        icon: coloredPin(c)
+                        icon: coloredPinClassic(c) // ใช้หมุดสีตามระดับ
                     }).addTo(map);
                     mk._tmcKey = key;
 
@@ -757,34 +801,57 @@
                     const districtLabel = isBkk ? 'เขต' : 'อำเภอ';
                     const subdistrictLabel = isBkk ? 'แขวง' : 'ตำบล';
 
+                    const levelDisplay = (f.levelKey === 'unassessed') ?
+                        'ยังไม่ได้ประเมิน' :
+                        ('ระดับ' + String(f.levelText || '-'));
+
                     const svcHtml = (f.approved && Array.isArray(f.services) && f.services.length) ?
-                        `<div class="mt-2"><div class="fw-semibold mb-1">บริการ</div><ul class="mb-2 ps-3">${f.services.map(s=>`<li class="small">${esc(s)}</li>`).join('')}</ul></div>` : '';
+                        `<div class="mt-2">
+                            <div class="fw-semibold mb-1">บริการ</div>
+                            <ul class="mb-2 ps-3">${f.services.map(s=>`<li class="small">${esc(s)}</li>`).join('')}</ul>
+                       </div>` :
+                        '';
 
                     mk.bindPopup(`
-            <div class="tmc-pop" style="min-width:260px;">
-              <h6 class="mb-2 text-primary">${esc(f.name)}</h6>
-              ${f.address ? `<p class="mb-1"><span class="text-muted">ที่อยู่:</span> ${esc(f.address)}</p>` : ''}
-              <p class="mb-2">
-                <span class="text-muted">จังหวัด:</span> ${esc(f.province || '-')}
-                <span class="ms-2 text-muted">${districtLabel}:</span> ${esc(f.district || '-')}
-                <span class="ms-2 text-muted">${subdistrictLabel}:</span> ${esc(f.subdistrict || '-')}
-              </p>
-              ${svcHtml}
-              ${contactLine ? `<p class="text-muted small mt-2 mb-2"><strong>ติดต่อ:</strong> ${esc(contactLine)}</p>` : ''}
-              <button type="button" class="btn btn-primary btn-sm w-100" disabled>
-                <i class="ph-duotone ph-paper-plane-tilt me-1"></i> ส่งข้อความ
-              </button>
-            </div>
-        `, {
+                        <div class="tmc-pop" style="min-width:260px;">
+
+                        <div class="lv-head">
+                            <span class="lv-dot" style="background:${c}"></span>
+                            <span class="lv-name">${esc(f.name)}</span>
+                        </div>
+
+                        ${f.address
+                            ? `<p class="mb-1"><span class="text-muted">ที่อยู่:</span> ${esc(f.address)}</p>`
+                            : ''}
+
+                        <p class="mb-2">
+                            <span class="text-muted">จังหวัด:</span> ${esc(f.province || '-')}
+                            <span class="ms-2 text-muted">${districtLabel}:</span> ${esc(f.district || '-')}
+                            <span class="ms-2 text-muted">${subdistrictLabel}:</span> ${esc(f.subdistrict || '-')}
+                        </p>
+
+                        ${svcHtml}
+
+                        ${contactLine
+                            ? `<p class="text-muted small mt-2 mb-2"><strong>ติดต่อ:</strong> ${esc(contactLine)}</p>`
+                            : ''}
+
+                        <button type="button" class="btn btn-primary btn-sm w-100" disabled>
+                            <i class="ph-duotone ph-paper-plane-tilt me-1"></i> ส่งข้อความ
+                        </button>
+                        </div>
+                    `, {
                         maxWidth: 480,
                         autoPan: true
                     });
+
 
                     mk.on('popupopen', () => {
                         setActiveByKey(key, true);
                         ensureVisibleWithPanel(mk);
                         panToOffset(mk.getLatLng(), L.point(-100, 200));
                     });
+
                     markers.push(mk);
                     markerById.set(key, mk);
 
@@ -792,12 +859,16 @@
                         interactive: true,
                         icon: L.divIcon({
                             className: 'facility-label',
-                            html: `<div class="flabel" style="--c:${c}"><span class="dot"></span><span class="name">${esc(f.name)}</span></div>`,
+                            html: `<div class="flabel" style="--c:${c}">
+                                <span class="dot"></span>
+                                <span class="name">${esc(f.name)}</span>
+                               </div>`,
                             iconSize: null,
                             iconAnchor: [-6, 18]
                         }),
                         zIndexOffset: 1000
                     }).addTo(map);
+
                     lbl.on('click', () => mk.openPopup());
                     labels.push(lbl);
                 });
@@ -818,11 +889,13 @@
                     const latlng = mk.getLatLng(),
                         cur = map.getCenter(),
                         distM = map.distance(cur, latlng);
+
                     let z;
                     if (distM > 600000) z = 8;
                     else if (distM > 200000) z = 10;
                     else if (distM > 50000) z = 12;
                     else z = Math.max(map.getZoom(), 14);
+
                     const needZoom = Math.abs(map.getZoom() - z) > 0.6;
                     const done = () => mk.openPopup();
                     const offsetPx = L.point(-100, 200);
@@ -830,6 +903,7 @@
                         const pt = map.project(latlng, z).subtract(offsetPx);
                         return map.unproject(pt, z);
                     })();
+
                     if (distM > 1500 || needZoom) {
                         map.flyTo(target, z, {
                             animate: true,
@@ -853,10 +927,13 @@
                     const panelHidden = getComputedStyle(panel).display === 'none' || panel.classList.contains('min');
                     const panelWidth = panelHidden ? 0 : panel.offsetWidth;
                     if (panelWidth <= 0) return;
+
                     const margin = 24,
                         halfNeed = panelWidth / 2 + margin;
+
                     const size = map.getSize(),
                         pt = map.latLngToContainerPoint(mk.getLatLng());
+
                     const rightSpace = size.x - pt.x;
                     if (rightSpace < halfNeed) {
                         const dx = (halfNeed - rightSpace);
@@ -877,49 +954,72 @@
                         easeLinearity: 0.2
                     });
                 }
+
                 const listCtrl = L.control({
                     position: 'topright'
                 });
                 listCtrl.onAdd = function() {
                     const wrap = L.DomUtil.create('div', 'tmc-list');
-                    wrap.innerHTML = `<div class="hdr"><span>หน่วยบริการทั้งหมด</span><button class="toggle" type="button" title="ย่อ/ขยาย">▣</button></div>
-                          <div class="srch"><input type="search" placeholder="ค้นหาชื่อ/จังหวัด"></div>
-                          <div class="body"></div>`;
+                    wrap.innerHTML = `<div class="hdr">
+                        <span>หน่วยบริการทั้งหมด</span>
+                        <button class="toggle" type="button" title="ย่อ/ขยาย">▣</button>
+                    </div>
+                    <div class="srch"><input type="search" placeholder="ค้นหาชื่อ/จังหวัด"></div>
+                    <div class="body"></div>`;
+
                     L.DomEvent.disableClickPropagation(wrap);
                     L.DomEvent.disableScrollPropagation(wrap);
+
                     const body = wrap.querySelector('.body'),
                         input = wrap.querySelector('input[type="search"]'),
                         toggleBtn = wrap.querySelector('.toggle');
+
                     L.DomEvent.disableClickPropagation(input);
                     L.DomEvent.disableScrollPropagation(input);
-                    ['keydown', 'keypress', 'keyup', 'input', 'click', 'mousedown', 'dblclick', 'touchstart', 'pointerdown', 'wheel', 'contextmenu'].forEach(evt => L.DomEvent.on(input, evt, e => e.stopPropagation()));
+
+                    [
+                        'keydown', 'keypress', 'keyup', 'input', 'click',
+                        'mousedown', 'dblclick', 'touchstart', 'pointerdown',
+                        'wheel', 'contextmenu'
+                    ].forEach(evt =>
+                        L.DomEvent.on(input, evt, e => e.stopPropagation())
+                    );
+
                     input.addEventListener('focus', () => map.keyboard && map.keyboard.disable());
                     input.addEventListener('blur', () => map.keyboard && map.keyboard.enable());
                     input.setAttribute('autocomplete', 'off');
                     input.setAttribute('spellcheck', 'false');
                     input.setAttribute('autocapitalize', 'off');
 
-                    const rowsData = facilities.filter(f => f.lat != null && f.lon != null).map(f => {
-                        const c = LEVEL_COLORS[f.levelKey] || '#9aa0a6';
-                        const key = String(f.id ?? `${f.lat},${f.lon}`);
-                        const lvlText = f.levelKey === 'unassessed' ? 'ยังไม่ได้ประเมิน' : `ระดับ${String(f.levelText||'-')}`;
-                        return {
-                            key,
-                            name: f.name,
-                            province: f.province || '-',
-                            levelText: lvlText,
-                            color: c
-                        };
-                    });
+                    const rowsData = facilities
+                        .filter(f => f.lat != null && f.lon != null)
+                        .map(f => {
+                            const c = LEVEL_COLORS[f.levelKey] || DEFAULT_COLOR;
+                            const key = String(f.id ?? `${f.lat},${f.lon}`);
+                            const lvlText = f.levelKey === 'unassessed' ?
+                                'ยังไม่ได้ประเมิน' :
+                                `ระดับ${String(f.levelText||'-')}`;
+
+                            return {
+                                key,
+                                name: f.name,
+                                province: f.province || '-',
+                                levelText: lvlText,
+                                color: c
+                            };
+                        });
 
                     function buildRow(row) {
                         const el = document.createElement('div');
                         el.className = 'tmc-item';
                         el.dataset.key = row.key;
                         el.style.setProperty('--c', row.color);
-                        el.innerHTML = `<span class="dot" style="background:${row.color}"></span>
-                            <div><div class="tit">${esc(row.name)}</div>
-                            <div class="sub">${esc(row.province)} • ${esc(row.levelText)}</div></div>`;
+                        el.innerHTML = `
+                        <span class="dot" style="background:${row.color}"></span>
+                        <div>
+                            <div class="tit">${esc(row.name)}</div>
+                            <div class="sub">${esc(row.province)} • ${esc(row.levelText)}</div>
+                        </div>`;
                         el.addEventListener('click', () => {
                             setActive(el, true);
                             const mk = markerById.get(row.key);
@@ -932,7 +1032,15 @@
                         const s = q.trim().toLowerCase();
                         body.innerHTML = '';
                         elByKey.clear();
-                        const list = s ? rowsData.filter(r => (r.name + ' ' + r.province + ' ' + r.levelText).toLowerCase().includes(s)) : rowsData;
+
+                        const list = s ?
+                            rowsData.filter(r =>
+                                (r.name + ' ' + r.province + ' ' + r.levelText)
+                                .toLowerCase()
+                                .includes(s)
+                            ) :
+                            rowsData;
+
                         if (!list.length) {
                             const emp = document.createElement('div');
                             emp.className = 'tmc-empty';
@@ -945,9 +1053,12 @@
                                 body.appendChild(el);
                             });
                         }
+
                         if (activeKey) setActiveByKey(activeKey, false);
                     }
+
                     input.addEventListener('input', e => render(e.target.value));
+
                     toggleBtn.addEventListener('click', () => {
                         wrap.classList.toggle('min');
                         if (activeKey) {
@@ -955,6 +1066,7 @@
                             if (mk) ensureVisibleWithPanel(mk);
                         }
                     });
+
                     render();
                     return wrap;
                 };
@@ -966,11 +1078,13 @@
                     if (activeEl) {
                         activeKey = activeEl.dataset.key;
                         activeEl.classList.add('active');
-                        if (scrollIntoView) activeEl.scrollIntoView({
-                            block: 'nearest',
-                            inline: 'nearest',
-                            behavior: 'smooth'
-                        });
+                        if (scrollIntoView) {
+                            activeEl.scrollIntoView({
+                                block: 'nearest',
+                                inline: 'nearest',
+                                behavior: 'smooth'
+                            });
+                        }
                     }
                 }
 
@@ -981,22 +1095,45 @@
                         setActive(el, scrollIntoView);
                         return;
                     }
+
                     const panel = document.querySelector('.tmc-list'),
                         input = panel?.querySelector('input[type="search"]');
+
                     if (input && input.value) {
                         input.value = '';
                         input.dispatchEvent(new Event('input'));
                     }
+
                     const el2 = elByKey.get(key);
                     if (el2) setActive(el2, scrollIntoView);
                 }
 
                 function coloredPin(c) {
                     return L.icon({
-                        iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38" fill="none"><path d="M14 1C9 1 4 5.6 4 11.6 4 21.8 14 37 14 37s10-15.2 10-25.4C24 5.6 19 1 14 1z" fill="${c}"/><circle cx="14" cy="11.6" r="3.6" fill="#fff"/></svg>`),
+                        iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38" fill="none">
+    <path d="M14 1C9 1 4 5.6 4 11.6 4 21.8 14 37 14 37s10-15.2 10-25.4C24 5.6 19 1 14 1z" fill="${c}"/>
+    <circle cx="14" cy="11.6" r="3.6" fill="#fff"/>
+</svg>`),
                         iconSize: [28, 38],
                         iconAnchor: [14, 37],
                         popupAnchor: [0, -38]
+                    });
+                }
+
+                function coloredPinClassic(c) {
+                    return L.icon({
+                        iconUrl: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38" fill="none">
+    <path d="M14 1C9 1 4 5.6 4 11.6C4 21.8 14 37 14 37C14 37 24 21.8 24 11.6C24 5.6 19 1 14 1Z"
+          fill="${c}" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+    <circle cx="14" cy="11.6" r="4.2" fill="#fff" />
+    <circle cx="14" cy="11.6" r="2.2" fill="rgba(0,0,0,0.08)"/>
+</svg>`),
+                        iconSize: [28, 38],
+                        iconAnchor: [14, 37],
+                        popupAnchor: [0, -30],
+                        className: 'pin-classic'
                     });
                 }
 
@@ -1011,7 +1148,6 @@
                 }
 
                 // ====== EXPORT MENU (PNG / GeoJSON / CSV) =====================================================
-                // ป้องกัน error หากปลั๊กอินยังไม่โหลด
                 const screenshoter = (typeof L.simpleMapScreenshoter === 'function') ?
                     L.simpleMapScreenshoter({
                         hidden: true
@@ -1040,51 +1176,38 @@
                 }
 
                 function facilitiesToGeoJSON() {
-                    const feats = (Array.isArray(facilities) ? facilities : []).filter(f => f.lat != null && f.lon != null).map(f => ({
-                        type: 'Feature',
-                        geometry: {
-                            type: 'Point',
-                            coordinates: [Number(f.lon), Number(f.lat)]
-                        },
-                        properties: {
-                            id: f.id ?? null,
-                            name: f.name ?? '',
-                            levelKey: f.levelKey ?? '',
-                            levelText: f.levelText ?? '',
-                            approved: !!f.approved,
-                            province: f.province ?? '',
-                            district: f.district ?? '',
-                            subdistrict: f.subdistrict ?? '',
-                            provinceCode: f.provinceCode ?? '',
-                            districtCode: f.districtCode ?? '',
-                            subdistrictCode: f.subdistrictCode ?? '',
-                            phone: f.phone ?? '',
-                            email: f.email ?? '',
-                            services: Array.isArray(f.services) ? f.services.join(', ') : ''
-                        }
-                    }));
+                    const feats = (Array.isArray(facilities) ? facilities : [])
+                        .filter(f => f.lat != null && f.lon != null)
+                        .map(f => ({
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [Number(f.lon), Number(f.lat)]
+                            },
+                            properties: {
+                                id: f.id ?? null,
+                                name: f.name ?? '',
+                                levelKey: f.levelKey ?? '',
+                                levelText: f.levelText ?? '',
+                                approved: !!f.approved,
+                                province: f.province ?? '',
+                                district: f.district ?? '',
+                                subdistrict: f.subdistrict ?? '',
+                                provinceCode: f.provinceCode ?? '',
+                                districtCode: f.districtCode ?? '',
+                                subdistrictCode: f.subdistrictCode ?? '',
+                                phone: f.phone ?? '',
+                                email: f.email ?? '',
+                                services: Array.isArray(f.services) ? f.services.join(', ') : ''
+                            }
+                        }));
                     return {
                         type: 'FeatureCollection',
                         features: feats
                     };
                 }
 
-                // ===== helper: download blob =====
-                function downloadBlob(blob, filename) {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    a.style.display = 'none';
-                    document.body.appendChild(a);
-                    a.click();
-                    setTimeout(() => {
-                        URL.revokeObjectURL(url);
-                        a.remove();
-                    }, 0);
-                }
-
-                // ===== helper: download as CSV with BOM (ภาษาไทยไม่เพี้ยนใน Excel) =====
+                // helper: download as CSV with BOM
                 function downloadCSV(text, filename) {
                     const BOM = '\uFEFF';
                     const blob = new Blob([BOM, text], {
@@ -1103,11 +1226,9 @@
                     }, 0);
                 }
 
-                // ===== CSV generator: หัวคอลัมน์ไทย + ลบฟิลด์ที่ไม่ต้องการ =====
                 function facilitiesToCSV() {
                     const rows = Array.isArray(facilities) ? facilities : [];
 
-                    // ✅ หัวตารางภาษาไทย (เรียงตามที่กำหนด)
                     const headers = [
                         'id',
                         'ชื่อหน่วยบริการ',
@@ -1123,18 +1244,15 @@
                         'การให้บริการ'
                     ];
 
-                    // escape ข้อความให้ปลอดภัย
                     const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
-                    const lines = [];
-                    lines.push(headers.join(','));
-
+                    const lines = [headers.join(',')];
                     rows.forEach(f => {
                         lines.push([
                             f.id,
                             f.name,
-                            f.levelText, // ✅ ระดับ
-                            f.approved ? 'อนุมัติ' : 'รอดำเนินการ', // ✅ สถานะ
+                            f.levelText,
+                            f.approved ? 'อนุมัติ' : 'รอดำเนินการ',
                             f.province,
                             f.district,
                             f.subdistrict,
@@ -1146,26 +1264,24 @@
                         ].map(q).join(','));
                     });
 
-                    return lines.join('\r\n'); // CRLF เพื่อให้ Excel เปิดได้ดี
+                    return lines.join('\r\n');
                 }
-
 
                 const ExportToggle = L.Control.extend({
                     options: {
                         position: 'topleft'
-                    }, // อยู่ฝั่งซ้าย
+                    },
                     onAdd: function() {
                         const container = L.DomUtil.create('div', 'leaflet-control tmc-export-toggle leaflet-bar');
                         const btn = L.DomUtil.create('a', '', container);
                         btn.href = '#';
                         btn.title = 'Export';
 
-                        // ✅ ป้องกัน event กระทบแผนที่ (สำคัญ!)
                         L.DomEvent.disableClickPropagation(container);
                         L.DomEvent.disableScrollPropagation(container);
 
                         L.DomEvent.on(btn, 'click', (e) => {
-                            L.DomEvent.stop(e); // กัน event ส่งต่อไป map
+                            L.DomEvent.stop(e);
                             menu.getContainer().classList.toggle('d-none');
                         });
 
@@ -1181,16 +1297,25 @@
                         const div = L.DomUtil.create('div', 'tmc-export d-none');
                         div.id = 'tmc-export-menu';
                         div.innerHTML = `
-                <a href="#" class="btn" data-act="png"><i class="ti ti-photo"></i> Download PNG</a>
-                <a href="#" class="btn" data-act="geojson"><i class="ti ti-file-code"></i> Download GeoJSON</a>
-                <a href="#" class="btn" data-act="csv"><i class="ti ti-file-spreadsheet"></i> Download CSV</a>
-            `;
+                        <a href="#" class="btn" data-act="png">
+                            <i class="ti ti-photo"></i> Download PNG
+                        </a>
+                        <a href="#" class="btn" data-act="geojson">
+                            <i class="ti ti-file-code"></i> Download GeoJSON
+                        </a>
+                        <a href="#" class="btn" data-act="csv">
+                            <i class="ti ti-file-spreadsheet"></i> Download CSV
+                        </a>
+                    `;
+
                         L.DomEvent.disableClickPropagation(div);
                         L.DomEvent.disableScrollPropagation(div);
+
                         div.addEventListener('click', async (ev) => {
                             const a = ev.target.closest('a.btn');
                             if (!a) return;
                             ev.preventDefault();
+
                             const act = a.dataset.act;
                             const today = new Date();
                             const stamp = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
@@ -1200,27 +1325,33 @@
                                 downloadBlob(blob, `tmc-map_${stamp}.png`);
                             } else if (act === 'geojson') {
                                 const gj = facilitiesToGeoJSON();
-                                downloadBlob(new Blob([JSON.stringify(gj)], {
-                                    type: 'application/geo+json;charset=utf-8'
-                                }), `tmc-facilities_${stamp}.geojson`);
+                                downloadBlob(
+                                    new Blob([JSON.stringify(gj)], {
+                                        type: 'application/geo+json;charset=utf-8'
+                                    }),
+                                    `tmc-facilities_${stamp}.geojson`
+                                );
                             } else if (act === 'csv') {
                                 const csv = facilitiesToCSV();
-                                downloadCSV(csv, `tmc-facilities_${stamp}.csv`); // ✅ ใช้ตัวนี้
+                                downloadCSV(csv, `tmc-facilities_${stamp}.csv`);
                             }
 
                             div.classList.add('d-none');
                         });
+
                         return div;
                     }
                 });
 
                 const toggle = new ExportToggle().addTo(map);
                 const menu = new ExportMenu().addTo(map);
-                map.on('click', () => menu.getContainer().classList.add('d-none'));
 
+                map.on('click', () => menu.getContainer().classList.add('d-none'));
             })(); // IIFE end
         </script>
     @endpush
+
+
 
 
 
@@ -1246,11 +1377,11 @@
         {{-- ===== GAP: ระดับพื้นฐาน ===== --}}
         <div class="col-lg-4">
             <div class="card h-100 position-relative">
-                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['basic'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
+                <span class="position-absolute top-0 bottom-0 start-0 {{ $levelBg['basic'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
 
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <span class="text-{{ $levelText['basic'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับพื้นฐาน</span>
-                    <span class="badge bg-{{ $levelBg['basic'] }} text-{{ $levelText['basic'] }}">
+                    <span class="fw-semibold {{ $levelText['basic'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับพื้นฐาน</span>
+                    <span class="badge bg-{{ $levelBg['basic'] }} {{ $levelText['basic'] }}">
                         {{ number_format($gapBasic->count()) }}
                     </span>
                 </div>
@@ -1284,11 +1415,11 @@
         {{-- ===== GAP: ระดับกลาง ===== --}}
         <div class="col-lg-4">
             <div class="card h-100 position-relative">
-                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['medium'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
+                <span class="position-absolute top-0 bottom-0 start-0 {{ $levelBg['medium'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
 
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <span class="text-{{ $levelText['medium'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับกลาง</span>
-                    <span class="badge bg-{{ $levelBg['medium'] }} text-{{ $levelText['medium'] }}">
+                    <span class="fw-semibold {{ $levelText['medium'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับกลาง</span>
+                    <span class="badge {{ $levelBg['medium'] }} {{ $levelText['medium'] }}">
                         {{ number_format($gapIntermediate->count()) }}
                     </span>
                 </div>
@@ -1321,11 +1452,11 @@
         {{-- ===== GAP: ระดับสูง ===== --}}
         <div class="col-lg-4">
             <div class="card h-100 position-relative">
-                <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $levelBg['advanced'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
+                <span class="position-absolute top-0 bottom-0 start-0 {{ $levelBg['advanced'] }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
 
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <span class="text-{{ $levelText['advanced'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับสูง</span>
-                    <span class="badge bg-{{ $levelBg['advanced'] }} text-{{ $levelText['advanced'] }}">
+                    <span class="fw-semibold {{ $levelText['advanced'] }}"><i class="ph-duotone ph-chart-bar"></i> GAP ระดับสูง</span>
+                    <span class="badge {{ $levelBg['advanced'] }} {{ $levelText['advanced'] }}">
                         {{ number_format($gapAdvanced->count()) }}
                     </span>
                 </div>
@@ -1527,79 +1658,57 @@
     @php
         use App\Models\AssessmentServiceUnitLevel;
 
-        // ลำดับ/ป้าย/สี ของสถานะ (ใช้ร่วมกันทั้ง Chart และ Card)
-        $displayOrder = ['pending', 'reviewing', 'returned', 'approved', 'rejected', 'no_form'];
+        // ====== ดึงค่าจาก config แทนฮาร์ดโค้ด ======
+        $displayOrder = config('tmc.approval_display_order', ['pending', 'reviewing', 'returned', 'approved', 'rejected', 'no_form']);
 
-        $labels = [
-            'pending' => 'รอดำเนินการ',
-            'reviewing' => 'อยู่ระหว่างการพิจารณา',
-            'returned' => 'ส่งกลับแก้ไข',
-            'approved' => 'อนุมัติ',
-            'rejected' => 'ไม่อนุมัติ',
-            'no_form' => 'ยังไม่ได้ทำแบบประเมิน',
-        ];
+        $labels = config('tmc.approval_text', []);
+        $bgMapHex = config('tmc.approval_card_bg', []); // ตอนนี้เป็นรหัสสี HEX แล้ว
+        $fgMapClass = config('tmc.approval_card_fg', []); // text-white / text-dark
+        $chartColorsHex = config('tmc.approval_chart_colors', []); // ยังกันไว้ ถ้าอยากใช้ต่อที่อื่น
 
-        // สีสำหรับการ์ด (Light Able utility classes)
-        $bgMap = [
-            'pending' => 'gray-100',
-            'reviewing' => 'blue-100',
-            'returned' => 'yellow-100',
-            'approved' => 'green-100',
-            'rejected' => 'red-100',
-            'no_form' => 'indigo-100',
-        ];
-        $fgMap = [
-            'pending' => 'gray-900',
-            'reviewing' => 'blue-900',
-            'returned' => 'yellow-900',
-            'approved' => 'green-900',
-            'rejected' => 'red-900',
-            'no_form' => 'indigo-900',
-        ];
-
-        // สีสำหรับกราฟ (HEX)
-        $chartColors = [
-            'pending' => '#9aa0a6', // gray-500
-            'reviewing' => '#60a5fa', // blue-400
-            'returned' => '#fbbf24', // amber-400
-            'approved' => '#34d399', // emerald-400
-            'rejected' => '#f87171', // red-400
-            'no_form' => '#a78bfa', // indigo-400
-        ];
-
-        // สถานะที่ถูกต้องตามฐานข้อมูล
+        // สถานะที่ระบบฐานข้อมูลจริง ๆ จะส่งมา (ไม่รวม no_form)
         $dbStatuses = ['pending', 'reviewing', 'returned', 'approved', 'rejected'];
 
-        // หาเรคคอร์ดล่าสุดของแต่ละหน่วย ในปี/รอบที่เลือก
+        // เตรียม record ล่าสุดของแต่ละหน่วย ปี/รอบ ที่เลือก
         $unitIds = $serviceUnits->pluck('id')->all();
         $latestAll = collect();
+
         if (!empty($unitIds)) {
             $latestAll = AssessmentServiceUnitLevel::select('id', 'service_unit_id', 'assess_year', 'assess_round', 'approval_status')->whereIn('service_unit_id', $unitIds)->where('assess_year', $filterYear)->where('assess_round', $filterRound)->whereNull('deleted_at')->orderByDesc('id')->get()->groupBy('service_unit_id')->map->first();
         }
 
-        // สร้าง buckets ของสถานะ
+        // เตรียม bucket แต่ละสถานะ
         $status = [];
         foreach ($displayOrder as $key) {
-            $status[$key] = ['count' => 0, 'units' => collect()];
+            $status[$key] = [
+                'count' => 0,
+                'units' => collect(),
+            ];
         }
 
+        // ใส่หน่วยบริการแต่ละอันลง bucket
         foreach ($serviceUnits as $su) {
             $record = $latestAll->get($su->id);
 
             if (!$record) {
+                // ไม่มีเรคคอร์ดเลยในปี/รอบ -> ยังไม่ทำแบบประเมิน
                 $bucket = 'no_form';
             } else {
                 $st = $record->approval_status;
+
                 if ($st === 'pending' || $st === null || $st === '') {
-                    $bucket = 'pending'; // รวมค่าว่างเข้าที่ pending
+                    // รวมค่าว่างเข้า pending
+                    $bucket = 'pending';
                 } elseif (in_array($st, $dbStatuses, true)) {
                     $bucket = $st;
                 } else {
-                    continue; // ข้ามสถานะอื่นที่ไม่รองรับ
+                    // สถานะไม่รู้จัก -> ข้าม
+                    continue;
                 }
             }
 
             $status[$bucket]['count']++;
+
             $status[$bucket]['units']->push(
                 (object) [
                     'org_name' => $su->org_name ?? ($su->name ?? '—'),
@@ -1607,16 +1716,25 @@
             );
         }
 
-        // เรียงชื่อหน่วยในแต่ละสถานะ
+        // เรียงชื่อหน่วยบริการในแต่ละ bucket ตามตัวอักษร
         foreach ($status as $k => $it) {
             $status[$k]['units'] = $it['units']->sortBy('org_name')->values();
         }
 
-        // ----- เตรียมชุดข้อมูลสำหรับกราฟ -----
+        // ----- เตรียมข้อมูลส่งเข้า chart -----
+        // จำนวนหน่วย ตามลำดับที่กำหนด
         $seriesCounts = collect($displayOrder)->map(fn($k) => (int) data_get($status, "$k.count", 0))->all();
-        $seriesLabels = collect($displayOrder)->map(fn($k) => $labels[$k])->all();
-        $seriesColors = collect($displayOrder)->map(fn($k) => $chartColors[$k])->all();
+
+        // label ไทย ตาม config
+        $seriesLabels = collect($displayOrder)->map(fn($k) => $labels[$k] ?? $k)->all();
+
+        // ✅ สีของแต่ละสถานะ
+        //    ดึงจาก approval_card_bg (ซึ่งตอนนี้เป็น HEX 100%)
+        //    ถ้า config ไม่มี ก็ fallback #999999
+        $seriesColors = collect($displayOrder)->map(fn($k) => $bgMapHex[$k] ?? '#999999')->all();
     @endphp
+
+
 
 
     {{-- --------------------------------------------------------------------------------------------------------------------------------
@@ -1656,24 +1774,31 @@
                 const seriesCounts = @json($seriesCounts);
                 const seriesLabels = @json($seriesLabels);
                 const seriesColors = @json($seriesColors);
+                const statusKeys = @json($displayOrder);
 
-                // เรียงข้อมูลจากมากไปน้อย พร้อมคงสี
-                const zipped = seriesLabels.map((label, i) => ({
-                        label,
-                        count: seriesCounts[i],
-                        color: seriesColors[i]
-                    }))
-                    .sort((a, b) => b.count - a.count);
+                // ✅ ดึงสีตัวเลขจาก config
+                const chartTextColors = @json(config('tmc.approval_chart_text_colors', []));
+
+                // zip ข้อมูลทั้งหมด
+                const zippedAll = statusKeys.map((key, i) => ({
+                    key: key,
+                    label: seriesLabels[i] ?? key,
+                    count: seriesCounts[i] ?? 0,
+                    color: seriesColors[i] ?? '#999999',
+                    textColor: chartTextColors[key] ?? '#000000'
+                }));
+
+                // แยก no_form ออกมาไว้ล่างสุด
+                const normalItems = zippedAll.filter(item => item.key !== 'no_form');
+                const noFormItem = zippedAll.find(item => item.key === 'no_form');
+                normalItems.sort((a, b) => b.count - a.count);
+                const zipped = noFormItem ? [...normalItems, noFormItem] : normalItems;
 
                 const el = document.querySelector("#chart-status-bar");
                 if (!el) return;
 
-                // ตั้งชื่อไฟล์ export
                 const now = new Date();
-                const y = String(now.getFullYear());
-                const m = String(now.getMonth() + 1).padStart(2, '0');
-                const d = String(now.getDate()).padStart(2, '0');
-                const baseName = `status-by-approval_${y}${m}${d}`;
+                const baseName = `status-by-approval_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 
                 const options = {
                     chart: {
@@ -1682,7 +1807,6 @@
                         toolbar: {
                             show: true,
                             tools: {
-                                // โชว์เฉพาะปุ่มเมนู (ดาวน์โหลด) ที่มุมขวาบน
                                 download: true,
                                 selection: false,
                                 zoom: false,
@@ -1694,7 +1818,6 @@
                             export: {
                                 csv: {
                                     filename: baseName,
-                                    // header ภาษาไทยอ่านง่าย
                                     headerCategory: 'สถานะ',
                                     headerValue: 'จำนวนหน่วยบริการ'
                                 },
@@ -1710,17 +1833,18 @@
                             enabled: true
                         },
                         events: {
-                            dataPointSelection: function(event) {
-                                // ปิดการคลิกแท่งกราฟ
+                            dataPointSelection: (event) => {
                                 event.stopPropagation();
                                 return false;
                             }
                         }
                     },
+
                     series: [{
                         name: 'จำนวนหน่วยบริการ',
                         data: zipped.map(z => z.count)
                     }],
+
                     xaxis: {
                         categories: zipped.map(z => z.label),
                         labels: {
@@ -1736,7 +1860,10 @@
                             }
                         }
                     },
+
+                    // ✅ สีพื้นแท่ง
                     colors: zipped.map(z => z.color),
+
                     plotOptions: {
                         bar: {
                             horizontal: true,
@@ -1745,19 +1872,24 @@
                             dataPointSelection: false
                         }
                     },
+
                     dataLabels: {
                         enabled: true,
                         formatter: (val) => new Intl.NumberFormat().format(val),
+                        // ✅ กำหนดสีแต่ละแท่ง จาก config
                         style: {
-                            fontSize: '12px'
+                            fontSize: '13px',
+                            colors: zipped.map(z => z.textColor)
                         }
                     },
+
                     tooltip: {
                         enabled: true,
                         y: {
                             formatter: (val) => new Intl.NumberFormat().format(val)
                         }
                     },
+
                     grid: {
                         strokeDashArray: 4
                     },
@@ -1787,6 +1919,9 @@
 
 
 
+
+
+
     {{-- --------------------------------------------------------------------------------------------------------------------------------
 
     ██████╗      █████╗ ██████╗ ██████╗ ██████╗  ██████╗ ██╗   ██╗ █████╗ ██╗         ███████╗████████╗ █████╗ ████████╗██╗   ██╗███████╗
@@ -1806,29 +1941,41 @@
     SECTION B: CARD – สถานะการพิจารณาหน่วยบริการ + การ์ด "ยังไม่ได้ทำแบบประเมิน" (แสดงทั้งหมดพร้อม scrollbar)
     (ใช้ตัวแปรจาก SECTION X ด้านบน)
     -------------------------------------------------------------------------------------------------------------------------------- --}}
+    @php
+        $displayOrder = config('tmc.approval_display_order', []);
+        $labels = config('tmc.approval_text', []);
+        $bgMap = config('tmc.approval_card_bg', []);
+        $fgMap = config('tmc.approval_card_fg', []);
+    @endphp
+
     <div class="row g-3 mb-3">
         @foreach ($displayOrder as $key)
             @php
-                $label = $labels[$key];
-                $bg = $bgMap[$key];
-                $fg = $fgMap[$key];
+                $label = $labels[$key] ?? $key;
+                $bgHex = $bgMap[$key] ?? '#e9ecef'; // fallback เทาอ่อน
+                $fgCls = $fgMap[$key] ?? 'text-dark';
                 $count = data_get($status, "$key.count", 0);
                 $unitsInStatus = data_get($status, "$key.units", collect());
             @endphp
 
             <div class="col-12 col-md-6 col-xl-4">
                 <div class="card h-100 position-relative">
-                    {{-- แถบสีซ้าย (สไตล์เดียวกับ GAP) --}}
-                    <span class="position-absolute top-0 bottom-0 start-0 bg-{{ $bg }}" style="width:6px;border-top-left-radius:.5rem;border-bottom-left-radius:.5rem;"></span>
 
-                    <div class="card-header d-flex justify-content-between align-items-center py-2">
-                        <span class="fw-semibold text-{{ $fg }}">
-                            <i class="ti ti-building-community me-1 text-{{ $fg }}"></i>{{ $label }}
+                    {{-- แถบสีซ้าย ใช้ background-color จาก HEX --}}
+                    <span class="position-absolute top-0 bottom-0 start-0" style="background-color: {{ $bgHex }}; width:6px; border-top-left-radius:.5rem; border-bottom-left-radius:.5rem;"></span>
+
+                    <div class="card-header d-flex justify-content-between align-items-center py-2" style="border-bottom: none;">
+                        <span class="fw-semibold {{ $fgCls }}">
+                            <i class="ti ti-building-community me-1 {{ $fgCls }}"></i>{{ $label }}
                         </span>
-                        <span class="badge bg-{{ $bg }} text-{{ $fg }}">{{ number_format($count) }}</span>
+
+                        {{-- ใช้สีพื้น HEX เช่นกัน --}}
+                        <span class="badge {{ $fgCls }}" style="background-color: {{ $bgHex }};">
+                            {{ number_format($count) }}
+                        </span>
                     </div>
 
-                    {{-- ใช้ scroll ภายในการ์ด + sticky header --}}
+                    {{-- Scroll ภายในการ์ด + sticky header --}}
                     <div class="card-body p-0" style="max-height: 360px; overflow: auto;">
                         <table class="table table-sm table-striped mb-0">
                             <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
@@ -1855,6 +2002,8 @@
             </div>
         @endforeach
     </div>
+
+
 
 
 
@@ -2082,14 +2231,33 @@
                 });
 
             // 2) config ระดับ (ข้อความจาก tmc.php)
-            $LEVEL_TEXTS = array_merge(['basic' => 'ระดับพื้นฐาน', 'medium' => 'ระดับกลาง', 'advanced' => 'ระดับสูง', 'unassessed' => 'ยังไม่ได้ประเมิน'], (array) config('tmc.level_text', []));
+            // รวม default เผื่อ config ขาด key
+            $LEVEL_TEXTS = array_merge(
+                [
+                    'basic' => 'ระดับพื้นฐาน',
+                    'medium' => 'ระดับกลาง',
+                    'advanced' => 'ระดับสูง',
+                    'unassessed' => 'ยังไม่ได้ประเมิน',
+                ],
+                (array) config('tmc.level_text', []),
+            );
 
-            // สีของกราฟ (กำหนดเป็น HEX ให้คงที่ สอดคล้องกับโทน badge)
+            // 2.1 สีของกราฟ (HEX) ดึงจาก config('tmc.level_colors')
+            // ใน config ปัจจุบันเรามี:
+            // 'level_colors' => [
+            //     'basic'      => '#FF4560', // ชมพู
+            //     'medium'     => '#FEB019', // ส้ม
+            //     'advanced'   => '#00E396', // เขียว
+            //     'unassessed' => '#A8A8A8', // เทา
+            // ],
+            $LEVEL_COLORS_CONF = (array) config('tmc.level_colors', []);
+
+            // สร้าง map สีพร้อม fallback กรณี config ไม่มี key ใด key หนึ่ง
             $LEVEL_HEX = [
-                'basic' => '#ef83c2', // โทนชมพู (คู่กับ pink-100)
-                'medium' => '#f0c419', // โทนเหลือง (คู่กับ yellow-100)
-                'advanced' => '#0dcc93', // โทนเขียว (คู่กับ green-100/teal)
-                'unassessed' => '#9aa0a6', // โทนเทา (คู่กับ gray-100)
+                'basic' => $LEVEL_COLORS_CONF['basic'] ?? '#FF4560', // ชมพู
+                'medium' => $LEVEL_COLORS_CONF['medium'] ?? '#FEB019', // ส้ม
+                'advanced' => $LEVEL_COLORS_CONF['advanced'] ?? '#00E396', // เขียว
+                'unassessed' => $LEVEL_COLORS_CONF['unassessed'] ?? '#A8A8A8', // เทา
             ];
 
             // 3) map ระดับที่อ่านได้จากข้อมูล + ลำดับเลือก "ระดับสูงสุด" ต่อหน่วย
@@ -2102,8 +2270,12 @@
                     default => null,
                 };
             };
-            $prefer = ['advanced', 'medium', 'basic']; // เลือกระดับสูงสุดตามลำดับนี้
-            $order = ['unassessed', 'basic', 'medium', 'advanced']; // ลำดับการแสดงผล (ล่าง → บน)
+
+            // เลือกระดับสูงสุด (priority) ของแต่ละหน่วย: ถ้ามี advanced ใช้ advanced ก่อน medium ก่อน basic
+            $prefer = ['advanced', 'medium', 'basic'];
+
+            // ลำดับ series ตอน plot (ล่าง → บน ของ stacked bar หรือซ้าย→ขวาตาม series legend)
+            $order = ['unassessed', 'basic', 'medium', 'advanced'];
 
             // 4) รวมจำนวนหน่วย ต่อ สคร. × ระดับ
             $byRegion = [];
@@ -2124,10 +2296,10 @@
                     ];
                 }
 
-                // กรองเฉพาะระดับที่ approved (ตามที่คุณ load ความสัมพันธ์มาแล้ว)
+                // ดึงระดับที่ approved ของหน่วยนี้
                 $approvedLevels = collect(data_get($su, 'assessmentLevels', []))->map(fn($a) => $mapLevel(data_get($a, 'level')))->filter()->unique()->values();
 
-                // ถ้าไม่มี approved เลย = unassessed
+                // ถ้าไม่มีระดับที่อนุมัติเลย → unassessed
                 $picked = 'unassessed';
                 foreach ($prefer as $k) {
                     if ($approvedLevels->contains($k)) {
@@ -2135,6 +2307,7 @@
                         break;
                     }
                 }
+
                 $byRegion[$rid][$picked] = (int) $byRegion[$rid][$picked] + 1;
             }
 
@@ -2163,10 +2336,16 @@
                     $r['_total'] = $sum;
                     return $r;
                 })
-                ->sortBy('region_id') // เปลี่ยนเป็น ->sortByDesc('_total') ได้
+                // สามารถเปลี่ยนลำดับแกน Y ได้ เช่นเรียงตามจำนวนรวมมาก→น้อย:
+                // ->sortByDesc('_total')
+                ->sortBy('region_id')
                 ->values();
 
+            // หมวดแกน X/Y (ชื่อ สคร.)
             $cats = $rows->pluck('region_name')->values();
+
+            // series ของกราฟ (อันนี้แหละที่จะถูกโยนเข้า ApexCharts)
+            // ใช้ชื่อจาก config('tmc.level_text') และสีจาก config('tmc.level_colors')
             $series = collect($order)
                 ->map(function ($lv) use ($rows, $LEVEL_TEXTS, $LEVEL_HEX) {
                     return [
@@ -2179,6 +2358,7 @@
 
             $grandTotal = (int) $rows->sum('_total');
         @endphp
+
 
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between">
@@ -2295,6 +2475,7 @@
                         plotOptions: {
                             bar: {
                                 horizontal: false,
+                                borderRadius: 4,
                                 columnWidth: '55%'
                             }
                         },
@@ -2380,18 +2561,36 @@
             ->get(['code', 'title'])
             ->mapWithKeys(fn($p) => [(int) $p->code => $p->title]);
 
-        // 2) ข้อความระดับจาก config
-        $LEVEL_TEXTS = array_merge(['basic' => 'ระดับพื้นฐาน', 'medium' => 'ระดับกลาง', 'advanced' => 'ระดับสูง', 'unassessed' => 'ยังไม่ได้ประเมิน'], (array) config('tmc.level_text', []));
+        // 2) ข้อความระดับจาก config (เติม default กัน key หลุด)
+        $LEVEL_TEXTS = array_merge(
+            [
+                'basic' => 'ระดับพื้นฐาน',
+                'medium' => 'ระดับกลาง',
+                'advanced' => 'ระดับสูง',
+                'unassessed' => 'ยังไม่ได้ประเมิน',
+            ],
+            (array) config('tmc.level_text', []),
+        );
 
-        // สี (โทนเดียวกับก่อนหน้า)
+        // 2.1 สีระดับจาก config('tmc.level_colors')
+        // config('tmc.level_colors') ควรหน้าตาประมาณนี้:
+        // [
+        //   'basic'      => '#FF4560', // ชมพู
+        //   'medium'     => '#FEB019', // ส้ม
+        //   'advanced'   => '#00E396', // เขียว
+        //   'unassessed' => '#A8A8A8', // เทา
+        // ]
+        $LEVEL_COLORS_CONF = (array) config('tmc.level_colors', []);
+
+        // map สีพร้อม fallback
         $LEVEL_HEX = [
-            'basic' => '#ef83c2',
-            'medium' => '#f0c419',
-            'advanced' => '#0dcc93',
-            'unassessed' => '#9aa0a6',
+            'basic' => $LEVEL_COLORS_CONF['basic'] ?? '#FF4560',
+            'medium' => $LEVEL_COLORS_CONF['medium'] ?? '#FEB019',
+            'advanced' => $LEVEL_COLORS_CONF['advanced'] ?? '#00E396',
+            'unassessed' => $LEVEL_COLORS_CONF['unassessed'] ?? '#A8A8A8',
         ];
 
-        // 3) map ระดับ + ลำดับเลือกระดับสูงสุด
+        // 3) map ระดับ + ลำดับเลือกระดับสูงสุดของหน่วยบริการ
         $mapLevel = function ($v) {
             return match (strtolower((string) $v)) {
                 'พื้นฐาน', 'ระดับพื้นฐาน', 'basic' => 'basic',
@@ -2400,15 +2599,20 @@
                 default => null,
             };
         };
+
+        // ถ้ามีหลายระดับในหน่วยเดียว ให้เลือก "ดีที่สุด" ตามลำดับนี้
         $prefer = ['advanced', 'medium', 'basic'];
-        // ลำดับการซ้อน (ล่าง→บน) ให้ "ยังไม่ได้ประเมิน" อยู่ล่างสุด
+
+        // ลำดับการซ้อนของ series (ล่าง → บน / ซ้าย → ขวา ใน stack)
+        // โดยให้ 'unassessed' (ยังไม่ได้ประเมิน) อยู่ล่างสุด
         $order = ['unassessed', 'basic', 'medium', 'advanced'];
 
         // 4) รวมจำนวนหน่วย ต่อจังหวัด × ระดับ
         $byProvince = [];
         foreach ($serviceUnits as $su) {
             $pcode = (int) data_get($su, 'org_province_code', 0);
-            // ถ้าหน้านี้กรอง สคร. มาแล้ว และจังหวัดนั้นไม่ได้อยู่ใน PROVINCE_NAMES ให้ข้าม
+
+            // ถ้ามีการกรอง region แล้ว จังหวัดนี้ไม่ได้อยู่ใน PROVINCE_NAMES ก็ข้าม
             if ($pcode === 0 || !$PROVINCE_NAMES->has($pcode)) {
                 continue;
             }
@@ -2424,8 +2628,10 @@
                 ];
             }
 
+            // ระดับที่ได้รับการอนุมัติ (assessmentLevels ควรโหลดมาก่อนแล้ว)
             $approvedLevels = collect(data_get($su, 'assessmentLevels', []))->map(fn($a) => $mapLevel(data_get($a, 'level')))->filter()->unique()->values();
 
+            // ถ้าไม่มีระดับที่อนุมัติเลย ให้ถือเป็น 'unassessed'
             $picked = 'unassessed';
             foreach ($prefer as $k) {
                 if ($approvedLevels->contains($k)) {
@@ -2433,10 +2639,11 @@
                     break;
                 }
             }
+
             $byProvince[$pcode][$picked] = (int) $byProvince[$pcode][$picked] + 1;
         }
 
-        // 5) เติมจังหวัดที่ไม่มีหน่วย (ให้เป็น 0) เพื่อให้ครบชุด
+        // 5) เติมจังหวัดที่ไม่มีหน่วย (set เป็น 0) เพื่อให้กราฟครบจังหวัดตาม $PROVINCE_NAMES
         foreach ($PROVINCE_NAMES as $code => $title) {
             if (!isset($byProvince[$code])) {
                 $byProvince[$code] = [
@@ -2461,10 +2668,16 @@
                 $r['_total'] = $sum;
                 return $r;
             })
-            ->sortBy('province_code') // เปลี่ยนเป็น ->sortByDesc('_total') ได้
+            // ถ้าต้องการเรียงจังหวัดในกราฟเป็นจังหวัดที่มีจำนวนเยอะสุดก่อน:
+            // ->sortByDesc('_total')
+            ->sortBy('province_code')
             ->values();
 
+        // ชื่อจังหวัด (categories แกน)
         $cats = $rows->pluck('province_name')->values();
+
+        // series สำหรับ ApexCharts
+        // ใช้ชื่อจาก config('tmc.level_text') และ สีจาก config('tmc.level_colors')
         $series = collect($order)
             ->map(function ($lv) use ($rows, $LEVEL_TEXTS, $LEVEL_HEX) {
                 return [
@@ -2478,13 +2691,14 @@
         $grandTotal = (int) $rows->sum('_total');
     @endphp
 
+
     <div class="card">
         <div class="card-header d-flex align-items-center justify-content-between">
             <h6 class="mb-0"><i class="ti ti-chart-bar"></i> ระดับของหน่วยบริการตาม “จังหวัด”</h6>
             <span class="badge bg-light text-dark">รวม {{ number_format($grandTotal) }} หน่วย</span>
         </div>
         <div class="card-body">
-            <div id="chart-level-by-province"></div>
+            <div id="chart-province-level"></div>
 
             {{-- ===== ตารางสรุป: จังหวัด × ระดับ ===== --}}
             @php
@@ -2538,31 +2752,31 @@
     @push('scripts')
         <script>
             (function() {
-                const cats = @json($cats);
-                const series = @json($series);
+                // ===== ข้อมูลจาก PHP =====
+                // $cats: รายชื่อจังหวัดตามลำดับแกน
+                // $series: [{ name: 'ยังไม่ได้ประเมิน', data: [...], color: '#A8A8A8' }, ...]
+                const categories = @json($cats);
+                const stackedSeries = @json($series);
 
-                const el = document.querySelector('#chart-level-by-province');
+                const el = document.querySelector('#chart-province-level');
                 if (!el) return;
 
-                // ชื่อไฟล์ export
+                // ตั้งชื่อไฟล์ export
                 const now = new Date();
                 const y = String(now.getFullYear());
                 const m = String(now.getMonth() + 1).padStart(2, '0');
                 const d = String(now.getDate()).padStart(2, '0');
-                const baseName = `level-by-province_${y}${m}${d}`;
+                const baseName = `province-level_${y}${m}${d}`;
 
-                // ความสูงอัตโนมัติอ่านง่ายตามจำนวนจังหวัด
-                const height = Math.max(420, 28 * cats.length + 140);
-
-                new ApexCharts(el, {
+                const options = {
                     chart: {
                         type: 'bar',
-                        height,
-                        stacked: true,
+                        height: 420,
+                        stacked: true, // ✅ stack ตามระดับ
                         toolbar: {
                             show: true,
                             tools: {
-                                download: true, // ✅ แสดงเมนู Download SVG/PNG/CSV
+                                download: true,
                                 selection: false,
                                 zoom: false,
                                 zoomin: false,
@@ -2573,7 +2787,8 @@
                             export: {
                                 csv: {
                                     filename: baseName,
-                                    headerCategory: 'จังหวัด' // หัวคอลัมน์แกน X
+                                    headerCategory: 'จังหวัด',
+                                    headerValue: 'จำนวนหน่วยบริการ'
                                 },
                                 svg: {
                                     filename: baseName
@@ -2585,40 +2800,85 @@
                         },
                         animations: {
                             enabled: true
-                        }
-                    },
-                    plotOptions: {
-                        bar: {
-                            horizontal: true,
-                            barHeight: '60%'
-                        }
-                    }, // แนวนอนเพื่ออ่านชื่อจังหวัดง่าย
-                    series,
-                    xaxis: {
-                        categories: cats,
-                        labels: {
-                            formatter: v => Math.round(v) // ให้เป็นจำนวนเต็ม
                         },
-                        min: 0,
-                        tickAmount: 10,
-                        decimalsInFloat: 0,
-                        title: {
-                            text: 'จำนวนหน่วยบริการ'
+                        // ไม่ต้องการให้คลิกแล้ว freeze segment
+                        events: {
+                            dataPointSelection: function(event) {
+                                event.stopPropagation();
+                                return false;
+                            }
                         }
                     },
-                    dataLabels: {
-                        enabled: false
+                    series: stackedSeries.map(s => ({
+                        name: s.name,
+                        data: s.data,
+                        color: s.color, // ✅ ใช้สีจาก config('tmc.level_colors') ที่เราดึงมาใน PHP แล้ว
+                    })),
+                    xaxis: {
+                        categories: categories,
+                        labels: {
+                            rotate: -45, // ✅ เอียง 45 องศา
+                            rotateAlways: true, // ✅ บังคับให้เอียงเสมอ
+                            hideOverlappingLabels: false, // ✅ แสดงครบทุกจังหวัด
+                            trim: false,
+                            style: {
+                                fontSize: '12px'
+                            }
+                        },
+                        title: {
+                            text: 'จังหวัด',
+                            style: {
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: '#333'
+                            }
+                        }
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'จำนวนหน่วยบริการ',
+                            style: {
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: '#333'
+                            }
+                        },
+                        labels: {
+                            formatter: (val) => new Intl.NumberFormat().format(val),
+                        }
                     },
                     legend: {
-                        position: 'top'
+                        position: 'top',
+                        horizontalAlign: 'left',
+                        markers: {
+                            radius: 4
+                        },
+                        labels: {
+                            colors: '#333',
+                            useSeriesColors: false
+                        }
                     },
+
+                    plotOptions: {
+                        bar: {
+                            horizontal: false,
+                            columnWidth: '60%',
+                            borderRadius: 4,
+                        }
+                    },
+
+                    dataLabels: {
+                        enabled: false // stacked เยอะๆ เปิดแล้วจะรก
+                    },
+
                     tooltip: {
                         shared: true,
                         intersect: false,
                         y: {
-                            formatter: v => new Intl.NumberFormat().format(v)
+                            formatter: (val) => new Intl.NumberFormat().format(val)
                         }
                     },
+
                     grid: {
                         strokeDashArray: 4
                     },
@@ -2634,10 +2894,10 @@
                             }
                         }
                     },
-                    noData: {
-                        text: 'ไม่มีข้อมูล'
-                    }
-                }).render();
+                };
+
+                const chart = new ApexCharts(el, options);
+                chart.render();
             })();
         </script>
     @endpush

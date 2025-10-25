@@ -5,58 +5,53 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | แผนที่ข้อความ/สี : ระดับหน่วยบริการ
+    | ระดับหน่วยบริการ
     |--------------------------------------------------------------------------
-    | ใช้คู่กับ <x-level-badge> หรือ $model->level_text / $model->level_badge_class
      */
-    'level_text'                => [
+    'level_text'                 => [
         'basic'      => 'ระดับพื้นฐาน',
         'medium'     => 'ระดับกลาง',
         'advanced'   => 'ระดับสูง',
-        'unassessed' => 'ยังไม่ได้ประเมิน', // เพิ่ม
+        'unassessed' => 'ยังไม่ได้ประเมิน',
     ],
 
-    // คลาสสีพื้นของ badge (Light Able utility classes)
-    'level_badge_class'         => [
-        'basic'      => 'pink-100',   // ชมพูอ่อน
-        'medium'     => 'yellow-100', // เหลืองอ่อน
-        'advanced'   => 'green-100',  // เขียวอ่อน
-        'unassessed' => 'gray-100',   // เทาอ่อน
+    // โทนสีหลัก: basic=ชมพู, medium=ส้ม, advanced=เขียว, unassessed=เทา
+    'level_badge_class'          => [
+        'basic'      => 'bg-basic',      // ชมพูแดง
+        'medium'     => 'bg-medium',     // ส้มทอง
+        'advanced'   => 'bg-advanced',   // เขียวมรกต
+        'unassessed' => 'bg-unassessed', // เทา
     ],
 
-    // สีตัวอักษรบน badge (ควรเข้มกว่าโทนพื้น)
-    'level_badge_text_color'    => [
-        'basic'      => 'pink-900',
-        'medium'     => 'yellow-900',
-        'advanced'   => 'teal-900',
-        'unassessed' => 'gray-900',
+    'level_badge_text_color'     => [
+        'basic'      => 'text-dark',
+        'medium'     => 'text-dark',
+        'advanced'   => 'text-dark',
+        'unassessed' => 'text-dark',
         'default'    => '#212529',
     ],
 
-    // เสริม: คลาส border (เฉพาะกรณีที่อยากให้ “ยังไม่ได้ประเมิน” เด่นขึ้น)
-    'level_badge_border_class'  => [
+    'level_badge_border_class'   => [
         'basic'      => '',
         'medium'     => '',
         'advanced'   => '',
-        'unassessed' => 'border border-gray-400',
+        'unassessed' => '',
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | แผนที่ข้อความ/สี : สถานะแบบประเมิน (การกรอกฟอร์ม)
+    | สถานะแบบประเมิน (การกรอกฟอร์ม)
     |--------------------------------------------------------------------------
      */
-    'status_text'               => [
+    'status_text'                => [
         'draft'     => 'แบบร่าง',
         'completed' => 'ส่งตรวจสอบแล้ว',
     ],
-
-    'status_badge_class'        => [
+    'status_badge_class'         => [
         'draft'     => 'secondary',
         'completed' => 'secondary',
     ],
-
-    'status_badge_text_color'   => [
+    'status_badge_text_color'    => [
         'draft'     => 'text-white',
         'completed' => 'text-white',
         'default'   => '#212529',
@@ -64,44 +59,120 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | แผนที่ข้อความ/สี : สถานะการอนุมัติ
+    | การอนุมัติ / สถานะหน่วยบริการล่าสุด บน Dashboard
     |--------------------------------------------------------------------------
+    | ใช้ทั้ง Card และ Chart ในแดชบอร์ดสถานะหน่วยบริการ
      */
-    'approval_text'             => [
+
+    // ลำดับการแสดง (ใช้เรียงทั้งการ์ดและกราฟ)
+    'approval_display_order'     => [
+        'pending',
+        'reviewing',
+        'returned',
+        'approved',
+        'rejected',
+        'no_form',
+    ],
+
+    // ป้ายข้อความที่ต้องการให้โชว์ใน UI
+    'approval_text'              => [
         'pending'   => 'รอดำเนินการ',
         'reviewing' => 'อยู่ระหว่างการพิจารณา',
         'returned'  => 'ส่งกลับแก้ไข',
         'approved'  => 'อนุมัติ',
         'rejected'  => 'ไม่อนุมัติ',
+        'no_form'   => 'ยังไม่ได้ทำแบบประเมิน',
     ],
 
-    'approval_badge_class'      => [
-        'pending'   => 'gray-100',
-        'reviewing' => 'blue-100',
-        'returned'  => 'yellow-100',
-        'approved'  => 'green-100',
-        'rejected'  => 'red-100',
+    /*
+    |--------------------------------------------------------------------------
+    | สีพื้นของการ์ด (ใช้กับแถบซ้ายและ badge background)
+    | ใช้รหัส HEX เดียวกับ approval_chart_colors
+    |--------------------------------------------------------------------------
+     */
+    'approval_card_bg'           => [
+        'pending'   => '#00c4ff', // ฟ้าสว่าง - รอดำเนินการ
+        'reviewing' => '#00B8A9', // ฟ้าอมเขียว - อยู่ระหว่างการพิจารณา
+        'returned'  => '#FEB019', // ส้มทอง - ส่งกลับแก้ไข
+        'approved'  => '#00E396', // เขียว - อนุมัติ
+        'rejected'  => '#FF4560', // แดงชมพู - ไม่อนุมัติ
+        'no_form'   => '#C5CAE9', // เทาอมฟ้า - ยังไม่ได้ทำแบบประเมิน
     ],
 
-    'approval_badge_text_color' => [
-        'pending'   => 'gray-900',
-        'reviewing' => 'blue-900',
-        'returned'  => 'yellow-900',
-        'approved'  => 'green-900',
-        'rejected'  => 'red-900',
+    /*
+    |--------------------------------------------------------------------------
+    | สีตัวอักษรบนการ์ด (ใช้แค่ text-white / text-dark)
+    |--------------------------------------------------------------------------
+     */
+    'approval_card_fg'           => [
+        'pending'   => 'text-dark',
+        'reviewing' => 'text-dark',
+        'returned'  => 'text-dark',
+        'approved'  => 'text-dark',
+        'rejected'  => 'text-dark',
+        'no_form'   => 'text-dark',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | สี HEX สำหรับใช้ในกราฟ (ApexCharts / legend)
+    |--------------------------------------------------------------------------
+     */
+    'approval_chart_colors'      => [
+        'pending'   => '#00c4ff', // ฟ้าสว่าง - รอดำเนินการ
+        'reviewing' => '#00B8A9', // ฟ้าอมเขียว - อยู่ระหว่างการพิจารณา
+        'returned'  => '#FEB019', // ส้มทอง - ส่งกลับแก้ไข
+        'approved'  => '#00E396', // เขียว - อนุมัติ
+        'rejected'  => '#FF4560', // แดงชมพู - ไม่อนุมัติ
+        'no_form'   => '#C5CAE9', // เทาอมฟ้า - ยังไม่ได้ทำแบบประเมิน
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | สีของตัวเลข (data label) บนแท่งกราฟแต่ละสถานะ
+    |--------------------------------------------------------------------------
+    | ใช้รหัส HEX หรือชื่อสี CSS ได้ เช่น '#ffffff', 'black'
+     */
+    'approval_chart_text_colors' => [
+        'pending'   => '#000000',
+        'reviewing' => '#000000',
+        'returned'  => '#000000',
+        'approved'  => '#000000',
+        'rejected'  => '#000000',
+        'no_form'   => '#000000',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | (ของเดิม) approval_badge_class / approval_badge_text_color
+    | ถ้ามีใช้อยู่ที่อื่น ให้คงไว้ ไม่ต้องลบ
+    |--------------------------------------------------------------------------
+     */
+    'approval_badge_class'       => [
+        'pending'   => 'bg-secondary',
+        'reviewing' => 'bg-basic',      // ชมพู (เรากำหนดเองใน CSS ว่า .bg-basic { background-color:#FF4560 })
+        'returned'  => 'bg-medium',     // ส้ม
+        'approved'  => 'bg-advanced',   // เขียว
+        'rejected'  => 'bg-unassessed', // เทา
+        'no_form'   => 'bg-unassessed', // เทา
+    ],
+
+    'approval_badge_text_color'  => [
+        'pending'   => 'text-dark',
+        'reviewing' => 'text-dark',
+        'returned'  => 'text-dark',
+        'approved'  => 'text-dark',
+        'rejected'  => 'text-dark',
+        'no_form'   => 'text-dark',
         'default'   => '#212529',
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | สังกัดหน่วยบริการ (Affiliations)
+    | สังกัดหน่วยบริการ
     |--------------------------------------------------------------------------
-    | ย้ายจาก config เดิมมาไว้รวมที่นี่
-    | การเรียกใช้งาน:
-    |   config('tmc.affiliations')  // ได้เป็น array ทั้งชุด
      */
-
-    'affiliations'              => [
+    'affiliations'               => [
         'สำนักงานปลัดกระทรวงสาธารณสุข',
         'กรมควบคุมโรค',
         'กรมการแพทย์',
@@ -114,6 +185,18 @@ return [
         'องค์การมหาชน',
         'เอกชน',
         'อื่น ๆ',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | สีสำหรับใช้ในกราฟ ApexCharts (เรียงลำดับตามระดับ)
+    |--------------------------------------------------------------------------
+     */
+    'level_colors'               => [
+        'basic'      => '#FF4560', // ชมพู
+        'medium'     => '#FEB019', // ส้ม
+        'advanced'   => '#00E396', // เขียว
+        'unassessed' => '#A8A8A8', // เทา
     ],
 
 ];

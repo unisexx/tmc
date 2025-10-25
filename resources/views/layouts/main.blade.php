@@ -17,6 +17,64 @@
         @stack('css')
         @stack('styles')
         @include('layouts.head-css')
+        <style>
+            .bg-basic {
+                background-color: #FF4560 !important;
+            }
+
+            /* ชมพูแดง */
+            .bg-medium {
+                background-color: #FEB019 !important;
+            }
+
+            /* ส้มทอง */
+            .bg-advanced {
+                background-color: #00E396 !important;
+            }
+
+            /* เขียวมรกต */
+            .bg-unassessed {
+                background-color: #A8A8A8 !important;
+            }
+        </style>
+        <style>
+            /* สไตล์ badge ระดับหน่วยบริการ แบบเดียวกับ label บนแผนที่ */
+            .level-badge-map {
+                /* var(--c) จะถูก inject ผ่าน inline style="--c: #xxxxxx" */
+                background: color-mix(in srgb, var(--c) 18%, white);
+                border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+                color: #0b2e13;
+                font-size: .9rem;
+                line-height: 1.1;
+                font-weight: 500;
+
+                border-radius: 999px;
+                padding: .35rem .75rem;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+
+                gap: .5rem;
+                white-space: nowrap;
+            }
+
+            .level-badge-map .dot {
+                width: .66rem;
+                height: .66rem;
+                border-radius: 4px;
+                background: var(--c);
+                box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08);
+                flex-shrink: 0;
+            }
+
+            .level-badge-map .name {
+                font-weight: 600;
+                color: #000;
+                /* ใน map เราไม่ได้ทำข้อความเป็นสีของระดับ แต่ใช้ดำ/น้ำเงินเข้มอ่านง่าย */
+                line-height: 1.1;
+            }
+
+            /* ถ้าอยากให้ข้อความเป็นโทนน้ำเงินแบบ popup title ก็เปลี่ยนเป็น #0d6efd ตรงนี้ได้ */
+            /* .level-badge-map .name { color:#0d6efd; } */
+        </style>
     </head>
 
     <body data-pc-preset="preset-1" data-pc-sidebar-theme="light" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme="light">

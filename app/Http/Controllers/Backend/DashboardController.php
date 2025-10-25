@@ -123,7 +123,7 @@ class DashboardController extends Controller
         $gapIntermediate = $this->aggregateGapsByLevel('medium', $filterYear, $filterRound, $filterRegion, $filterProvinceCode);
         $gapAdvanced     = $this->aggregateGapsByLevel('advanced', $filterYear, $filterRound, $filterRegion, $filterProvinceCode);
 
-        return view('backend.dashboard.index', compact(
+        return view('backend.dashboard.overview', compact(
             'serviceUnits',
             'approvedByUnit',
             'bestByUnit',

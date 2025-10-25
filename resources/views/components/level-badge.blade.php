@@ -1,23 +1,54 @@
-@props(['level' => null])
+@props([
+    'level' => null,
+    // ถ้าอยากบังคับข้อความเอง ส่ง textOverride เข้ามา เช่น "—"
+    'textOverride' => null,
+    // ถ้าจะ override สีเองก็ทำได้โดยส่ง colorOverride="#ff00ff"
+    'colorOverride' => null,
+])
 
 @php
     use Illuminate\Support\Str;
 
-    $mapText = config('assessment.level_text', []);
-    $mapBg = config('assessment.level_badge_class', []);
-    $mapTextC = config('assessment.level_badge_text_color', []);
+    // ข้อความของระดับ
+    $LEVEL_TEXT = array_merge(
+        [
+            'basic' => 'ระดับพื้นฐาน',
+            'medium' => 'ระดับกลาง',
+            'advanced' => 'ระดับสูง',
+            'unassessed' => 'ยังไม่ได้ประเมิน',
+        ],
+        (array) config('tmc.level_text', []),
+    );
 
-    $text = $mapText[$level] ?? '—';
-    $bg = $mapBg[$level] ?? 'secondary';
-    $tcol = $mapTextC[$level] ?? ($mapTextC['default'] ?? '#212529');
+    // สีหลักของแต่ละระดับ (ใช้บนแผนที่)
+    // fallback ไว้ให้ ถ้า config('tmc.level_colors') ไม่มี key นั้น
+    $LEVEL_COLORS = array_replace(
+        [
+            'basic' => '#FF4560', // ชมพู
+            'medium' => '#FEB019', // ส้ม
+            'advanced' => '#00E396', // เขียว
+            'unassessed' => '#A8A8A8', // เทา
+        ],
+        (array) config('tmc.level_colors'),
+    );
 
-    // ถ้าเป็นโค้ดสี #xxxxxx ให้ใช้ style, ถ้าเป็นยูทิลิตี้เช่น pink-900 ให้ใช้ class text-*
-    $textClass = Str::startsWith($tcol, '#') ? null : 'text-' . $tcol;
-    $style = Str::startsWith($tcol, '#') ? "color: {$tcol}" : null;
+    $normalizedLevel = $level ?: 'unassessed';
 
-    $classes = trim("badge bg-{$bg} " . ($textClass ?? ''));
+    // เลือกข้อความ
+    $text = $textOverride ?? ($LEVEL_TEXT[$normalizedLevel] ?? '—');
+
+    // เลือกสีหลัก (var(--c))
+    $color = $colorOverride ?? ($LEVEL_COLORS[$normalizedLevel] ?? '#A8A8A8');
+
+    // output structure:
+    // <span class="level-badge-map" style="--c: {color}">
+    //    <span class="dot"></span>
+    //    <span class="name">{text}</span>
+    // </span>
+
 @endphp
 
-<span {{ $attributes->merge(['class' => $classes]) }} @if ($style) style="{{ $style }}" @endif>
-    {{ $text }}
+<span {{ $attributes->merge(['class' => 'level-badge-map d-inline-flex align-items-center']) }} style="--c: {{ $color }};">
+    <span class="dot"></span>
+    <span class="name">{{ $text }}</span>
 </span>
