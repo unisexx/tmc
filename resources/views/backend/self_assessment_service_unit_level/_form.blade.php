@@ -231,9 +231,9 @@
             </div>
 
             {{-- ปุ่มควบคุมการทำงาน --}}
-            <div class="d-flex flex-column flex-sm-row justify-content-between gap-2">
-                <a href="{{ route('backend.self-assessment-service-unit-level.index') }}" class="btn btn-outline-secondary px-4 fw-semibold">
-                    <i class="ph-duotone ph-arrow-left"></i> กลับหน้าแรก
+            <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+                <a href="{{ route('backend.self-assessment-service-unit-level.index') }}" class="btn btn-light">
+                    <i class="ti ti-arrow-left"></i> ย้อนกลับ
                 </a>
                 <button id="btnNext" type="submit" class="btn btn-primary px-4 fw-semibold" {{ $oldLv ? '' : 'disabled' }}>
                     ไปขั้นถัดไป ประเมินตนเองตามเกณฑ์องค์ประกอบ 6 ด้าน

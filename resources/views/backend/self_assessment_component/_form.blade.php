@@ -1,4 +1,3 @@
-{{-- resources/views/backend/assessment/_form.blade.php --}}
 @push('css')
     <style>
         .section-empty {
@@ -15,8 +14,11 @@
             background: var(--bs-body-bg);
             border-top: 1px solid var(--bs-border-color);
             padding: .75rem 1rem;
-            text-align: right;
             z-index: 100;
+        }
+
+        .autosave-status {
+            font-size: .8rem;
         }
     </style>
 @endpush
@@ -46,7 +48,6 @@
                 <x-level-badge :level="$summary['level'] ?? null" class="ms-1" />
             </div>
 
-
             <div class="vr"></div>
 
             {{-- ปีงบประมาณ --}}
@@ -66,7 +67,6 @@
             </div>
         </div>
 
-
         <div class="alert alert-primary d-flex align-items-center mb-4 shadow-sm border-0 rounded-3">
             <i class="ph-duotone ph-clipboard-text fs-4 me-3"></i>
             <div>
@@ -75,8 +75,6 @@
                 เมื่อทำครบทั้งหมดแล้ว จึงจะสามารถกด <span class="fw-semibold">“ส่งแบบประเมินให้ สคร./สสจ. พิจารณา”</span> ได้
             </div>
         </div>
-
-
 
         <div class="accordion" id="accComp">
             @foreach ($components as $comp)
@@ -135,11 +133,11 @@
                                                 @endphp
                                                 <div class="d-flex gap-3">
                                                     <label class="form-check">
-                                                        <input type="radio" class="form-check-input" name="answers[{{ $q->id }}][bool]" value="1" @checked($current === '1')>
+                                                        <input type="radio" class="form-check-input autosave-watch" name="answers[{{ $q->id }}][bool]" value="1" @checked($current === '1')>
                                                         <span class="form-check-label">มี</span>
                                                     </label>
                                                     <label class="form-check">
-                                                        <input type="radio" class="form-check-input" name="answers[{{ $q->id }}][bool]" value="0" @checked($current === '0')>
+                                                        <input type="radio" class="form-check-input autosave-watch" name="answers[{{ $q->id }}][bool]" value="0" @checked($current === '0')>
                                                         <span class="form-check-label">ไม่มี</span>
                                                     </label>
                                                 </div>
@@ -151,10 +149,13 @@
                                                 @foreach ($opts as $i => $opt)
                                                     @php $oid = "q{$q->id}_{$i}"; @endphp
                                                     <div class="form-check">
-                                                        <input id="{{ $oid }}" type="radio" class="form-check-input" name="answers[{{ $q->id }}][text]" value="{{ $opt }}" @checked($current === $opt)>
+                                                        <input id="{{ $oid }}" type="radio" class="form-check-input autosave-watch" name="answers[{{ $q->id }}][text]" value="{{ $opt }}" @checked($current === $opt)>
                                                         <label for="{{ $oid }}" class="form-check-label">{{ $opt }}</label>
                                                     </div>
                                                 @endforeach
+                                            @else
+                                                {{-- text / etc. (ถ้ามี type อื่นในอนาคต) --}}
+                                                <textarea class="form-control autosave-watch" name="answers[{{ $q->id }}][text]" rows="2">{{ old("answers.$q->id.text", $ans?->answer_text) }}</textarea>
                                             @endif
                                         </div>
                                     @empty
@@ -172,6 +173,7 @@
             @endforeach
         </div>
 
+        {{-- ข้อเสนอเพื่อการพัฒนา --}}
         <div class="card mt-3">
             <div class="card-header py-2">
                 <h6 class="mb-0">ข้อเสนอเพื่อการพัฒนา / แผนยกระดับหน่วยบริการ</h6>
@@ -203,12 +205,12 @@
 
                             <div class="mb-2">
                                 <label class="form-label mb-1">ข้อเสนอ/แผน (พิมพ์เป็นข้อ)</label>
-                                <textarea name="suggestions[{{ $i }}][text]" class="form-control" rows="2">{{ old("suggestions.$i.text", $row['text'] ?? '') }}</textarea>
+                                <textarea name="suggestions[{{ $i }}][text]" class="form-control autosave-watch" rows="2">{{ old("suggestions.$i.text", $row['text'] ?? '') }}</textarea>
                             </div>
 
                             <div class="d-flex align-items-center gap-2">
                                 <div class="flex-grow-1">
-                                    <input type="file" name="suggestions[{{ $i }}][file]" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                                    <input type="file" name="suggestions[{{ $i }}][file]" class="form-control autosave-watch-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
                                     @if (!empty($row['attachment_path']))
                                         <div class="form-text">
                                             ไฟล์ปัจจุบัน:
@@ -216,7 +218,7 @@
                                         </div>
                                     @endif
                                 </div>
-                                <button type="button" class="btn btn-outline-danger btn-remove-suggestion">
+                                <button type="button" class="btn btn-outline-danger btn-remove-suggestion autosave-watch-click">
                                     <i class="ti ti-trash"></i>
                                 </button>
                             </div>
@@ -225,13 +227,13 @@
                         <div class="border rounded p-2 suggestion-item">
                             <div class="mb-2">
                                 <label class="form-label mb-1">ข้อเสนอ/แผน (พิมพ์เป็นข้อ)</label>
-                                <textarea name="suggestions[0][text]" class="form-control" rows="2"></textarea>
+                                <textarea name="suggestions[0][text]" class="form-control autosave-watch" rows="2"></textarea>
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <div class="flex-grow-1">
-                                    <input type="file" name="suggestions[0][file]" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                                    <input type="file" name="suggestions[0][file]" class="form-control autosave-watch-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
                                 </div>
-                                <button type="button" class="btn btn-outline-danger btn-remove-suggestion">
+                                <button type="button" class="btn btn-outline-danger btn-remove-suggestion autosave-watch-click">
                                     <i class="ti ti-trash"></i>
                                 </button>
                             </div>
@@ -240,23 +242,27 @@
                 </div>
 
                 <div class="text-end mt-3">
-                    <button type="button" id="btnAddSuggestion" class="btn btn-outline-primary">
+                    <button type="button" id="btnAddSuggestion" class="btn btn-outline-primary autosave-watch-click">
                         <i class="ti ti-plus"></i> เพิ่มข้อเสนอ
                     </button>
                 </div>
             </div>
         </div>
 
-        {{-- ปรับปุ่มด้านล่าง --}}
+        {{-- footer sticky --}}
         <div class="sticky-action d-flex justify-content-between align-items-center flex-wrap gap-2">
-            {{-- ปุ่มฝั่งซ้าย --}}
-            <a href="{{ route('backend.self-assessment-service-unit-level.edit', $suLevel->id) }}" class="btn btn-outline-secondary">
-                <i class="ti ti-arrow-left"></i> กลับขั้นตอนที่ 1 พิจารณาสถานะหน่วยบริการ
-            </a>
+            {{-- ซ้าย --}}
+            <div class="d-flex flex-column">
+                <a href="{{ route('backend.self-assessment-service-unit-level.edit', $suLevel->id) }}" class="btn btn-light">
+                    <i class="ti ti-arrow-left"></i> กลับขั้นตอนที่ 1 พิจารณาสถานะหน่วยบริการ
+                </a>
 
+                <div id="autosaveStatus" class="text-muted autosave-status mt-2">
+                    ยังไม่บันทึกอัตโนมัติ
+                </div>
+            </div>
 
-
-            {{-- ปุ่มฝั่งขวา --}}
+            {{-- ขวา --}}
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-outline-primary" onclick="document.getElementById('__action').value='save'">
                     <i class="ti ti-device-floppy"></i> บันทึกแบบร่าง
@@ -274,41 +280,237 @@
 @push('js')
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const list = document.getElementById('suggestionList');
-            const addBtn = document.getElementById('btnAddSuggestion');
 
+            const formEl = document.getElementById('selfAssessForm');
+            const autosaveStatus = document.getElementById('autosaveStatus');
+            const addBtn = document.getElementById('btnAddSuggestion');
+            const list = document.getElementById('suggestionList');
+
+            // -------- utility: next index ของ suggestion --------
             const nextIndex = () => list.querySelectorAll('.suggestion-item').length;
 
+            // -------- template row suggestion ใหม่ --------
             const makeItem = (idx) => {
                 const wrap = document.createElement('div');
                 wrap.className = 'border rounded p-2 suggestion-item';
                 wrap.innerHTML = `
             <div class="mb-2">
                 <label class="form-label mb-1">ข้อเสนอ/แผน (พิมพ์เป็นข้อ)</label>
-                <textarea name="suggestions[${idx}][text]" class="form-control" rows="2" required></textarea>
+                <textarea name="suggestions[${idx}][text]" class="form-control autosave-watch" rows="2" required></textarea>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <div class="flex-grow-1">
-                    <input type="file" name="suggestions[${idx}][file]" class="form-control"
+                    <input type="file" name="suggestions[${idx}][file]" class="form-control autosave-watch-file"
                            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
                 </div>
-                <button type="button" class="btn btn-outline-danger btn-remove-suggestion">
+                <button type="button" class="btn btn-outline-danger btn-remove-suggestion autosave-watch-click">
                     <i class="ti ti-trash"></i>
                 </button>
             </div>`;
                 return wrap;
             };
 
+            // เพิ่มข้อเสนอ
             addBtn?.addEventListener('click', () => {
                 list.appendChild(makeItem(nextIndex()));
+                markDirtyAndSchedule();
             });
 
+            // ลบข้อเสนอ (อย่างน้อยต้องเหลือ 1 แถว)
             list.addEventListener('click', (e) => {
                 if (e.target.closest('.btn-remove-suggestion')) {
                     const items = list.querySelectorAll('.suggestion-item');
-                    if (items.length > 1) e.target.closest('.suggestion-item').remove();
+                    if (items.length > 1) {
+                        e.target.closest('.suggestion-item').remove();
+                        markDirtyAndSchedule();
+                    }
                 }
             });
+
+            // -------------------------------
+            // AUTO SAVE LOGIC + COUNTDOWN
+            // -------------------------------
+
+            let saveTimeout = null; // setTimeout สำหรับยิง autosave
+            let isSaving = false; // flag ระหว่าง fetch
+            let lastPayload = null; // ป้องกันยิงซ้ำ payload เดิม
+            let lastScheduleAt = 0; // timestamp ms ล่าสุดที่ user เปลี่ยนค่า
+            let countdownTimer = null; // setInterval สำหรับนับถอยหลัง
+            let countdownRemain = 0; // วินาทีที่เหลือก่อน autosave
+
+            const AUTOSAVE_WAIT_SECONDS = 5; // default คือ 5 วินาที
+
+            // ผูก event change/input ให้ trigger autosave
+            function bindAutoWatch() {
+                document.querySelectorAll('.autosave-watch').forEach(el => {
+                    el.removeEventListener('change', markDirtyAndSchedule);
+                    el.removeEventListener('input', markDirtyAndSchedule);
+                    el.addEventListener('change', markDirtyAndSchedule);
+                    el.addEventListener('input', markDirtyAndSchedule);
+                });
+
+                document.querySelectorAll('.autosave-watch-file').forEach(el => {
+                    el.removeEventListener('change', markDirtyAndSchedule);
+                    el.addEventListener('change', markDirtyAndSchedule);
+                });
+
+                document.querySelectorAll('.autosave-watch-click').forEach(el => {
+                    el.removeEventListener('click', markDirtyAndSchedule);
+                    el.addEventListener('click', markDirtyAndSchedule);
+                });
+            }
+
+            bindAutoWatch();
+
+            function markDirtyAndSchedule() {
+                // ถ้ากำลังบันทึกอยู่ ให้รอจนบันทึกเสร็จก่อนค่อยเริ่มรอบใหม่
+                if (isSaving) {
+                    return;
+                }
+
+                // เคลียร์ autosave เก่า
+                if (saveTimeout) clearTimeout(saveTimeout);
+
+                // รีเซ็ต countdown
+                countdownRemain = AUTOSAVE_WAIT_SECONDS;
+                lastScheduleAt = Date.now();
+
+                // อัปเดตข้อความสถานะตอนเริ่มนับถอยหลัง
+                updateCountdownStatus();
+
+                // เริ่ม interval สำหรับนับถอยหลัง (ถ้ายังไม่เริ่ม)
+                startCountdownInterval();
+
+                // ตั้งเวลายิง autosave จริง
+                saveTimeout = setTimeout(() => {
+                    doAutoSave();
+                }, AUTOSAVE_WAIT_SECONDS * 1000);
+            }
+
+            function startCountdownInterval() {
+                // ถ้ายังไม่มี interval ให้เริ่มใหม่
+                if (countdownTimer) return;
+
+                countdownTimer = setInterval(() => {
+                    // ถ้ากำลังบันทึก → ไม่ต้องลด countdown/ไม่ต้องอัปเดตนับถอยหลัง
+                    if (isSaving) return;
+
+                    if (countdownRemain > 0) {
+                        countdownRemain -= 1;
+                    }
+
+                    updateCountdownStatus();
+
+                    if (countdownRemain <= 0) {
+                        clearInterval(countdownTimer);
+                        countdownTimer = null;
+                    }
+                }, 1000);
+            }
+
+            function updateCountdownStatus() {
+                if (!autosaveStatus) return;
+
+                if (countdownRemain <= 0) {
+                    // ปล่อยว่าง รอ doAutoSave() เป็นคนเขียนสถานะต่อ
+                    return;
+                }
+
+                autosaveStatus.textContent = `จะบันทึกอัตโนมัติในอีก ${countdownRemain} วินาที...`;
+                autosaveStatus.classList.remove('text-success', 'text-danger');
+                autosaveStatus.classList.add('text-muted');
+            }
+
+            async function doAutoSave() {
+                if (isSaving) return;
+
+                isSaving = true;
+
+                // หยุด countdown UI ชั่วคราว
+                if (countdownTimer) {
+                    clearInterval(countdownTimer);
+                    countdownTimer = null;
+                }
+                countdownRemain = 0;
+
+                if (autosaveStatus) {
+                    autosaveStatus.textContent = 'กำลังบันทึกอัตโนมัติ...';
+                    autosaveStatus.classList.remove('text-success', 'text-danger');
+                    autosaveStatus.classList.add('text-muted');
+                }
+
+                // เตรียมข้อมูลส่ง
+                const fd = new FormData(formEl);
+                fd.set('__action', 'autosave');
+
+                // ทำ snapshot payload เป็น string เพื่อกันยิงซ้ำ
+                const simpleObj = {};
+                for (const [k, v] of fd.entries()) {
+                    if (v instanceof File) {
+                        simpleObj[k] = v.name || 'FILE_SELECTED';
+                    } else {
+                        simpleObj[k] = v;
+                    }
+                }
+                const simpleJson = JSON.stringify(simpleObj);
+
+                // ถ้า payload เดิมเหมือนรอบก่อน → ไม่ยิงจริง
+                if (simpleJson === lastPayload) {
+                    isSaving = false;
+                    countdownRemain = 0;
+                    autosaveStatus.textContent = 'บันทึกอัตโนมัติล่าสุดยังเป็นข้อมูลเดิม';
+                    autosaveStatus.classList.remove('text-muted', 'text-danger');
+                    autosaveStatus.classList.add('text-success');
+                    formEl.querySelector('#__action').value = 'save';
+                    return;
+                }
+                lastPayload = simpleJson;
+
+                try {
+                    const resp = await fetch(formEl.dataset.autosaveUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': formEl.querySelector('input[name=_token]').value,
+                        },
+                        body: fd,
+                    });
+
+                    if (!resp.ok) {
+                        throw new Error('HTTP ' + resp.status);
+                    }
+
+                    const data = await resp.json();
+
+                    if (autosaveStatus) {
+                        const now = new Date();
+                        const hh = now.getHours().toString().padStart(2, '0');
+                        const mm = now.getMinutes().toString().padStart(2, '0');
+                        const dd = now.getDate().toString().padStart(2, '0');
+                        const mn = (now.getMonth() + 1).toString().padStart(2, '0');
+                        const yy = now.getFullYear().toString();
+
+                        autosaveStatus.textContent = `บันทึกอัตโนมัติแล้ว ${hh}:${mm} น. ${dd}/${mn}/${yy}`;
+                        autosaveStatus.classList.remove('text-muted', 'text-danger');
+                        autosaveStatus.classList.add('text-success');
+                    }
+                } catch (err) {
+                    if (autosaveStatus) {
+                        autosaveStatus.textContent = 'บันทึกอัตโนมัติผิดพลาด กรุณากด "บันทึกแบบร่าง" ด้วยตนเอง';
+                        autosaveStatus.classList.remove('text-muted', 'text-success');
+                        autosaveStatus.classList.add('text-danger');
+                    }
+                } finally {
+                    isSaving = false;
+                    // กันไม่ให้ submit จริงหลุดเป็น autosave
+                    formEl.querySelector('#__action').value = 'save';
+                }
+            }
+
+            // ตรงนี้เราตัด beforeunload ออกไปเลย
+            // ไม่ bind อะไรกับ window.beforeunload อีก
+            // formEl.addEventListener('submit', ...) ไม่ต้องถอด beforeunload แล้ว
+
         });
     </script>
 @endpush

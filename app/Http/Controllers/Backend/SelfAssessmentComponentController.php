@@ -1,6 +1,5 @@
 <?php
 
-// app/Http/Controllers/Backend/SelfAssessmentComponentController.php
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
@@ -131,12 +130,22 @@ class SelfAssessmentComponentController extends Controller
         // ล็อกสิทธิ์แก้ไขตาม parent
         $locked = in_array($suLevel->approval_status, ['pending', 'reviewing', 'approved', 'rejected'], true);
         if ($locked) {
+            // ถ้าเป็น autosave ให้ตอบเป็น JSON 403
+            if ($req->ajax() || $req->wantsJson()) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'locked',
+                ], 403);
+            }
+
             flash_notify('รายการนี้ถูกส่ง/กำลังตรวจ/เสร็จสิ้น ไม่สามารถแก้ไขได้', 'warning');
             return back();
         }
 
-        $action = $req->input('__action', 'save'); // save | submit
+        $action = $req->input('__action', 'save'); // save | submit | autosave
 
+        // note: autosave ไม่ validate ไฟล์แนบหนัก ๆ ทุกครั้งก็ได้
+        // แต่เพื่อความง่าย จะใช้ validate เดิม
         $req->validate([
             'answers'            => ['nullable', 'array'],
             'answers.*.bool'     => ['nullable', Rule::in(['0', '1', 0, 1, true, false])],
@@ -150,7 +159,7 @@ class SelfAssessmentComponentController extends Controller
 
         return DB::transaction(function () use ($req, $suLevel, $year, $round, $level, $action) {
 
-            // upsert แบบฟอร์ม (ไม่มี status ของตัวเองแล้ว)
+            // upsert ฟอร์ม
             $form = AssessmentForm::firstOrCreate(
                 [
                     'service_unit_id' => $suLevel->service_unit_id,
@@ -171,7 +180,9 @@ class SelfAssessmentComponentController extends Controller
                 $bool = null;
                 if (array_key_exists('bool', $payload)) {
                     $v    = $payload['bool'];
-                    $bool = in_array($v, ['1', 1, true], true) ? true : (in_array($v, ['0', 0, false], true) ? false : null);
+                    $bool = in_array($v, ['1', 1, true], true)
+                        ? true
+                        : (in_array($v, ['0', 0, false], true) ? false : null);
                 }
                 $ans->answer_bool = $bool;
                 $ans->answer_text = $payload['text'] ?? null;
@@ -235,7 +246,26 @@ class SelfAssessmentComponentController extends Controller
                     $sg->delete();
                 });
 
-            // ถ้ากดส่ง ให้ตรวจครบถ้วนก่อน แล้วอัปเดตสถานะที่ parent
+            /*
+            |--------------------------------------------------------------------------
+            | ACTION BRANCHES
+            |--------------------------------------------------------------------------
+             */
+
+            // =============== AUTOSAVE DRAFT (AJAX) ===============
+            if ($action === 'autosave') {
+                // ไม่เช็คความครบถ้วน, ไม่อัพเดต parent status
+                // ตอบ JSON ให้ JS ไปอัปเดต badge "บันทึกล่าสุด ..."
+
+                return response()->json([
+                    'ok'          => true,
+                    'saved_at'    => now()->format('Y-m-d H:i:s'),
+                    'saved_at_th' => now()->format('H:i น. d/m/Y'),
+                    'status'      => 'draft',
+                ]);
+            }
+
+            // =============== SUBMIT (ส่งให้ สคร./สสจ.) ===============
             if ($action === 'submit') {
                 $levelId = optional(AssessmentLevel::where('code', $form->level_code)->first())->id;
                 $totalQ  = AssessmentQuestion::where('assessment_level_id', $levelId)
@@ -260,11 +290,11 @@ class SelfAssessmentComponentController extends Controller
                     'submitted_at'    => now(),
                 ]);
 
-                // TODO: แจ้งเตือนผู้กำกับฯ ตามสิทธิ์ของระบบ (Notification/Queue/Email)
                 flash_notify('ส่งแบบประเมินให้ สคร./สสจ. แล้ว', 'success');
                 return redirect()->route('backend.self-assessment-service-unit-level.index');
             }
 
+            // =============== MANUAL SAVE DRAFT (ปุ่ม "บันทึกแบบร่าง") ===============
             flash_notify('บันทึกแบบร่างแล้ว', 'success');
             return back();
         });

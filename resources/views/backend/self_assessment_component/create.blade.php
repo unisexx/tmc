@@ -1,8 +1,10 @@
-{{-- resources/views/backend/self/create.blade.php --}}
+{{-- resources/views/backend/self_assessment_component/create.blade.php --}}
 @extends('layouts.main')
+
 @section('title', 'แบบประเมินตนเอง 6 องค์ประกอบ')
+
 @section('content')
-    <form method="post" action="{{ route('backend.self-assessment-component.save', ['suLevelId' => $suLevel->id]) }}" enctype="multipart/form-data">
+    <form id="selfAssessForm" method="post" action="{{ route('backend.self-assessment-component.save', ['suLevelId' => $suLevel->id]) }}" enctype="multipart/form-data" data-autosave-url="{{ route('backend.self-assessment-component.autosave', ['suLevelId' => $suLevel->id]) }}">
         @csrf
         <input type="hidden" name="level_code" value="{{ $level->code }}">
         <input type="hidden" name="assess_year" value="{{ $year }}">
@@ -17,6 +19,8 @@
             'sectionsByComp' => $sectionsByComp,
             'questionsBySection' => $questionsBySection,
             'answerMap' => $answerMap ?? collect(),
+            'suLevel' => $suLevel,
+            'summary' => $summary,
         ])
     </form>
 @endsection

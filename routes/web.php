@@ -164,6 +164,8 @@ Route::middleware(['auth'])->group(function () {
         // ประเมินตนเอง (6 องค์ประกอบ)
         Route::get('/self-assessments/{suLevelId}/create', [SelfAssessmentComponentController::class, 'create'])->name('self-assessment-component.create');
         Route::post('/self-assessments/{suLevelId}/save', [SelfAssessmentComponentController::class, 'save'])->name('self-assessment-component.save'); // เซฟทับเสมอ
+        Route::post('/self-assessments/{suLevelId}/autosave', [SelfAssessmentComponentController::class, 'save'])
+            ->name('self-assessment-component.autosave'); // 🌟 AUTOSAVE (XHR) 🌟
 
         // export ผลการประเมิน
         Route::get('self-assessment-service-unit-level/{id}/export-pdf', [SelfAssessmentServiceUnitLevelController::class, 'exportPdf'])->name('self-assessment-service-unit-level.export-pdf');
